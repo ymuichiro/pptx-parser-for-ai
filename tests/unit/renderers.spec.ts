@@ -1,3 +1,6 @@
+import * as fs from "node:fs/promises";
+import * as os from "node:os";
+import * as path from "node:path";
 import { describe, expect, it } from "vitest";
 import { SlideRenderer } from "../../src/renderers";
 import { renderChart } from "../../src/renderers/components/chart";
@@ -13,7 +16,7 @@ import { renderText } from "../../src/renderers/components/text";
 import { renderTwoColumn } from "../../src/renderers/components/two-column";
 import { renderContentElement } from "../../src/renderers/components";
 import type { Bounds, ContentElement, PresentationDSL } from "../../src/types";
-import type { SlideAdapter } from "../../src/renderers";
+import type { SlideAdapter, SlideTemplateContext } from "../../src/renderers";
 import { testTheme } from "../helpers/theme";
 import { MockPresentation, MockSlide } from "../helpers/mock-slide";
 
@@ -352,5 +355,218 @@ describe("SlideRenderer", () => {
     await renderer.renderSlides(presentation, dsl, themeWithLogo);
     const imageCalls = presentation.slides.flatMap((slide) => slide.calls).filter((call) => call.kind === "image");
     expect(imageCalls.length).toBeGreaterThan(0);
+  });
+
+  it("applies imported template background and placeholder bounds on content slide", async () => {
+    const renderer = new SlideRenderer();
+    const presentation = new MockPresentation();
+
+    const tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), "renderer-template-context-"));
+    const assetsDir = path.join(tempRoot, "assets");
+    await fs.mkdir(assetsDir, { recursive: true });
+    await fs.writeFile(path.join(assetsDir, "header.png"), Buffer.from([0x89, 0x50, 0x4e, 0x47]));
+
+    const templateContext: SlideTemplateContext = {
+      assetBaseDir: tempRoot,
+      templatePackage: {
+        template: {
+          id: "sample",
+          source: {
+            file: "sample.potx",
+            sha256: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            importedAt: "2026-02-10T00:00:00.000Z"
+          }
+        },
+        theme: {
+          palette: {
+            primary: "0B5FFF",
+            secondary: "00A99D",
+            accent: "FF6A00",
+            "text-dark": "1A1A1A",
+            "text-light": "FFFFFF",
+            "background-light": "FAFAFA",
+            "background-dark": "121212"
+          },
+          fonts: {
+            title: "Noto Sans",
+            heading: "Noto Sans",
+            body: "Noto Sans JP",
+            caption: "Noto Sans JP"
+          },
+          slideSize: "16:9"
+        },
+        layout: {
+          kind: "title-body",
+          placeholders: {
+            title: {
+              bounds: { x: 1.2, y: 0.25, w: 7.6, h: 0.7 },
+              style: {
+                fontFace: "Noto Sans",
+                fontSizePt: 30,
+                color: "primary"
+              }
+            },
+            body: {
+              bounds: { x: 1.0, y: 1.4, w: 8.0, h: 3.5 },
+              style: {
+                fontFace: "Noto Sans JP",
+                fontSizePt: 18,
+                color: "text-dark"
+              }
+            }
+          }
+        },
+        background: {
+          mode: "editable",
+          color: "background-light",
+          objects: [
+            {
+              type: "shape",
+              shape: "rect",
+              x: 0,
+              y: 0,
+              w: 10,
+              h: 0.4,
+              fill: "primary"
+            },
+            {
+              type: "image",
+              x: 8.8,
+              y: 0,
+              w: 1.2,
+              h: 0.4,
+              source: "assets/header.png"
+            }
+          ]
+        },
+        manifest: {
+          warnings: [],
+          unsupported: []
+        }
+      }
+    };
+
+    const dsl: PresentationDSL = {
+      version: "1.0",
+      theme: "corporate-blue",
+      metadata: { title: "template" },
+      slides: [
+        {
+          type: "content",
+          title: "Template Styled",
+          content: [{ type: "text", content: "Body text" }]
+        }
+      ]
+    };
+
+    await renderer.renderSlides(presentation, dsl, testTheme, templateContext);
+
+    const slide = presentation.slides[0];
+    if (slide === undefined) {
+      throw new Error("expected slide");
+    }
+
+    const shapeCalls = slide.calls.filter((call) => call.kind === "shape");
+    const imageCalls = slide.calls.filter((call) => call.kind === "image");
+    const textCalls = slide.calls.filter((call) => call.kind === "text");
+    expect(shapeCalls.length).toBeGreaterThanOrEqual(2);
+    expect(imageCalls.length).toBe(1);
+    expect(textCalls.length).toBeGreaterThanOrEqual(2);
+
+    const titleCall = textCalls[0];
+    if (titleCall?.kind !== "text") {
+      throw new Error("expected title text call");
+    }
+    const titleOptions = (titleCall.payload as { options?: Record<string, unknown> }).options;
+    expect(titleOptions?.x).toBe(1.2);
+    expect(titleOptions?.y).toBe(0.25);
+    expect(titleOptions?.fontFace).toBe("Noto Sans");
+    expect(titleOptions?.fontSize).toBe(30);
+
+    const bodyCall = textCalls[textCalls.length - 1];
+    if (bodyCall?.kind !== "text") {
+      throw new Error("expected body text call");
+    }
+    const bodyOptions = (bodyCall.payload as { options?: Record<string, unknown> }).options;
+    expect((bodyOptions?.x as number) >= 1.0).toBe(true);
+    expect((bodyOptions?.y as number) >= 1.4).toBe(true);
+    expect((bodyOptions?.w as number) <= 8.01).toBe(true);
+    expect((bodyOptions?.h as number) <= 3.51).toBe(true);
+  });
+
+  it("fails closed when template image path contains traversal", async () => {
+    const renderer = new SlideRenderer();
+    const presentation = new MockPresentation();
+
+    const dsl: PresentationDSL = {
+      version: "1.0",
+      theme: "corporate-blue",
+      metadata: { title: "invalid-template-path" },
+      slides: [
+        {
+          type: "content",
+          title: "Invalid",
+          content: [{ type: "text", content: "x" }]
+        }
+      ]
+    };
+
+    const templateContext: SlideTemplateContext = {
+      assetBaseDir: process.cwd(),
+      templatePackage: {
+        template: {
+          id: "invalid",
+          source: {
+            file: "invalid.potx",
+            sha256: "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+            importedAt: "2026-02-10T00:00:00.000Z"
+          }
+        },
+        theme: {
+          palette: {
+            primary: "0B5FFF",
+            secondary: "00A99D",
+            accent: "FF6A00",
+            "text-dark": "1A1A1A",
+            "text-light": "FFFFFF",
+            "background-light": "FAFAFA",
+            "background-dark": "121212"
+          },
+          fonts: {
+            title: "Noto Sans",
+            heading: "Noto Sans",
+            body: "Noto Sans JP",
+            caption: "Noto Sans JP"
+          },
+          slideSize: "16:9"
+        },
+        layout: {
+          kind: "title-body",
+          placeholders: {
+            title: {
+              bounds: { x: 1, y: 0.3, w: 8, h: 0.7 },
+              style: { fontFace: "Noto Sans" }
+            },
+            body: {
+              bounds: { x: 1, y: 1.5, w: 8, h: 3.2 },
+              style: { fontFace: "Noto Sans JP" }
+            }
+          }
+        },
+        background: {
+          mode: "editable",
+          image: "../secrets.png",
+          objects: []
+        },
+        manifest: {
+          warnings: [],
+          unsupported: []
+        }
+      }
+    };
+
+    await expect(renderer.renderSlides(presentation, dsl, testTheme, templateContext)).rejects.toThrowError(
+      /invalid/i
+    );
   });
 });

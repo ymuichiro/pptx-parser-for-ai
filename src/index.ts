@@ -1,13 +1,16 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
+import * as yaml from "js-yaml";
 import PptxGenJS from "pptxgenjs";
 import { DEFAULT_THEME_NAME } from "./constants";
-import { IOError, ValidationError } from "./errors";
+import { IOError, ParseError, ValidationError } from "./errors";
 import { LayoutEngine } from "./layout";
 import { DSLParser } from "./parser";
 import { QAEngine } from "./qa";
 import { SlideRenderer } from "./renderers";
 import type { PresentationAdapter } from "./renderers";
+import type { ImportedTemplatePackage } from "./template-importer/types";
+import { parseImportedTemplatePackage } from "./template-importer/types";
 import { ThemeManager } from "./theme";
 import { ensureOutputDir } from "./utils/paths";
 import type {
@@ -22,6 +25,9 @@ export interface RendererOptions {
   qaConfig?: QAConfig;
   allowRemoteImages?: boolean;
   themeDir?: string;
+  templatePackage?: ImportedTemplatePackage;
+  templatePackagePath?: string;
+  templateAssetBaseDir?: string;
 }
 
 export interface GenerationMetadata {
@@ -34,6 +40,11 @@ export interface GenerationResult {
   outputPath: string;
   qaResult?: QAResult;
   metadata: GenerationMetadata;
+}
+
+interface ResolvedTemplateRenderContext {
+  templatePackage: ImportedTemplatePackage;
+  assetBaseDir: string;
 }
 
 function resolveLayoutName(theme: ThemeDefinition): { layoutName: string } {
@@ -53,13 +64,32 @@ export class PPTXRenderer {
   private readonly parser: DSLParser;
   private readonly renderer: SlideRenderer;
   private readonly qa?: QAEngine;
+  private readonly templatePackage: ImportedTemplatePackage | undefined;
+  private readonly templatePackagePath: string | undefined;
+  private readonly templateAssetBaseDir: string | undefined;
+  private cachedTemplateContext?: ResolvedTemplateRenderContext;
 
   public constructor(options?: RendererOptions) {
+    if (options?.templatePackage !== undefined && options.templatePackagePath !== undefined) {
+      throw new ValidationError(["RendererOptions.templatePackage and templatePackagePath cannot be used together"]);
+    }
+
     this.themeManager = new ThemeManager(options?.themeDir !== undefined ? { themeDir: options.themeDir } : undefined);
     this.parser = new DSLParser({
       allowRemoteImages: options?.allowRemoteImages ?? false
     });
     this.renderer = new SlideRenderer();
+    this.templatePackage = undefined;
+    this.templatePackagePath = options?.templatePackagePath;
+    this.templateAssetBaseDir = options?.templateAssetBaseDir;
+
+    if (options?.templatePackage !== undefined) {
+      try {
+        this.templatePackage = parseImportedTemplatePackage(options.templatePackage);
+      } catch (error) {
+        throw new ValidationError(["RendererOptions.templatePackage is invalid"], error);
+      }
+    }
 
     if (options?.enableQA) {
       this.qa = new QAEngine(options.qaConfig);
@@ -82,12 +112,19 @@ export class PPTXRenderer {
     }
 
     const normalized = this.parser.normalize(dsl);
-    const theme = await this.themeManager.loadTheme(normalized.theme ?? DEFAULT_THEME_NAME);
+    const baseTheme = await this.themeManager.loadTheme(normalized.theme ?? DEFAULT_THEME_NAME);
+    const templateContext = await this.resolveTemplateContext();
+    const theme = this.mergeThemeWithTemplate(baseTheme, templateContext?.templatePackage);
 
     const presentation = new PptxGenJS();
     this.setupPresentation(presentation, normalized, theme);
 
-    await this.renderer.renderSlides(presentation as unknown as PresentationAdapter, normalized, theme);
+    await this.renderer.renderSlides(
+      presentation as unknown as PresentationAdapter,
+      normalized,
+      theme,
+      templateContext
+    );
 
     await ensureOutputDir(outputPath);
     await this.writeAtomic(presentation, outputPath);
@@ -121,6 +158,78 @@ export class PPTXRenderer {
     }
 
     return response;
+  }
+
+  private mergeThemeWithTemplate(theme: ThemeDefinition, templatePackage: ImportedTemplatePackage | undefined): ThemeDefinition {
+    if (templatePackage === undefined) {
+      return theme;
+    }
+
+    return {
+      ...theme,
+      colors: {
+        ...theme.colors,
+        ...templatePackage.theme.palette
+      },
+      typography: {
+        ...theme.typography,
+        fonts: {
+          ...theme.typography.fonts,
+          ...templatePackage.theme.fonts
+        }
+      },
+      layout: {
+        ...theme.layout,
+        slideSize: templatePackage.theme.slideSize
+      }
+    };
+  }
+
+  private async resolveTemplateContext(): Promise<ResolvedTemplateRenderContext | undefined> {
+    if (this.templatePackage !== undefined) {
+      return {
+        templatePackage: this.templatePackage,
+        assetBaseDir: path.resolve(this.templateAssetBaseDir ?? process.cwd())
+      };
+    }
+
+    if (this.templatePackagePath === undefined) {
+      return undefined;
+    }
+
+    if (this.cachedTemplateContext !== undefined) {
+      return this.cachedTemplateContext;
+    }
+
+    const safePath = path.resolve(this.templatePackagePath);
+
+    let rawYaml: string;
+    try {
+      rawYaml = await fs.readFile(safePath, "utf-8");
+    } catch (error) {
+      throw new IOError(`Failed to read template package: ${safePath}`, error);
+    }
+
+    let parsed: unknown;
+    try {
+      parsed = yaml.load(rawYaml, { schema: yaml.JSON_SCHEMA }) as unknown;
+    } catch (error) {
+      throw new ParseError(`Failed to parse template package YAML: ${safePath}`, error);
+    }
+
+    let templatePackage: ImportedTemplatePackage;
+    try {
+      templatePackage = parseImportedTemplatePackage(parsed);
+    } catch (error) {
+      throw new ValidationError([`Template package validation failed: ${safePath}`], error);
+    }
+
+    this.cachedTemplateContext = {
+      templatePackage,
+      assetBaseDir: path.dirname(safePath)
+    };
+
+    return this.cachedTemplateContext;
   }
 
   private setupPresentation(presentation: PptxGenJS, dsl: PresentationDSL, theme: ThemeDefinition): void {
@@ -158,5 +267,6 @@ export * from "./layout";
 export * from "./parser";
 export * from "./qa";
 export * from "./renderers";
+export * from "./template-importer";
 export * from "./theme";
 export * from "./types";

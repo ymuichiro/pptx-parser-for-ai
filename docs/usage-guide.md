@@ -93,3 +93,57 @@ try {
 - PR では `npm run quality:check` を必須化
 - DSL/テーマはコードレビュー対象に含める
 - 生成結果は `example:test` でスモーク検証してからリリース
+
+## 8. テンプレートインポート（推奨フロー）
+
+`.pptx` / `.potx` から `template.yaml + assets/` を抽出できます。
+
+```ts
+import { TemplateImporter } from "pptx-parser-for-ai";
+
+const importer = new TemplateImporter({ templateId: "acme-template" });
+const imported = await importer.importFromFile("./input/company-template.potx", "./templates/acme");
+
+console.log(imported.layout.kind); // "title-body"
+console.log(imported.theme.palette.primary);
+```
+
+出力内容:
+- `./templates/acme/template.yaml`
+- `./templates/acme/manifest.json`
+- `./templates/acme/assets/*`
+
+制約:
+- 対応レイアウトは `title + body` のみ
+- title/body プレースホルダが1つずつない場合は失敗（Fail Closed）
+
+## 9. インポート済みテンプレートを使って生成
+
+`template.yaml` を `PPTXRenderer` に渡すと、content slide の配置・背景・装飾が反映されます。
+
+```ts
+import { PPTXRenderer, type PresentationDSL } from "pptx-parser-for-ai";
+
+const renderer = new PPTXRenderer({
+  templatePackagePath: "./templates/acme/template.yaml"
+});
+
+const dsl: PresentationDSL = {
+  version: "1.0",
+  theme: "corporate-blue",
+  metadata: { title: "Template Applied" },
+  slides: [
+    {
+      type: "content",
+      title: "Imported Layout",
+      content: [{ type: "text", content: "Title/body placeholder に合わせて配置されます。" }]
+    }
+  ]
+};
+
+await renderer.generate(dsl, "./output-template-applied.pptx");
+```
+
+オブジェクトで渡す場合:
+- `templatePackage` に `ImportedTemplatePackage` を指定
+- `templateAssetBaseDir` に `assets/` の基準ディレクトリを指定

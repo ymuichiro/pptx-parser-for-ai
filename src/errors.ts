@@ -3,6 +3,7 @@ export type ErrorPhase =
   | "validate"
   | "normalize"
   | "theme"
+  | "template-import"
   | "layout"
   | "render"
   | "io"
@@ -64,5 +65,11 @@ export class IOError extends PPTXLibraryError {
 export class QAError extends PPTXLibraryError {
   public constructor(message: string, causeError?: unknown) {
     super("QA_ERROR", "qa", message, causeError);
+  }
+}
+
+export class TemplateImportError extends PPTXLibraryError {
+  public constructor(message: string, causeError?: unknown) {
+    super("TEMPLATE_IMPORT_ERROR", "template-import", message, causeError);
   }
 }
