@@ -1,0 +1,38 @@
+version: "1.0"
+theme: "corporate-blue"
+metadata:
+  title: "Quarterly Business Review"
+  author: "Platform Team"
+  company: "Example Inc"
+  date: "2026-02-10"
+slides:
+  - type: title
+    content:
+      title: "Q1 Business Review"
+      subtitle: "Performance Overview"
+      date: "2026-02-10"
+      logo: false
+  - type: content
+    title: "Highlights"
+    layout: auto
+    content:
+      - type: bullet-list
+        style: checkmark
+        items:
+          - "Revenue increased by 18%"
+          - "On-time delivery improved"
+          - text: "Security posture"
+            subItems:
+              - "No high vulnerabilities"
+              - "CI quality gates stabilized"
+      - type: stat-callout
+        value: "98.7%"
+        label: "Service Availability"
+        trend: "+0.9%"
+        color: success
+      - type: table
+        style: striped
+        headers: ["Metric", "Q4", "Q1", "Delta"]
+        rows:
+          - ["Revenue", "120", "142", "+18%"]
+          - ["Defects", "42", "31", "-26%"]

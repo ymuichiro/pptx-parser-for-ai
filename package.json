@@ -1,0 +1,55 @@
+{
+  "name": "pptx-parser-for-ai",
+  "version": "0.1.0",
+  "description": "Secure and deterministic PPTX generator from declarative DSL",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist",
+    "themes",
+    "example"
+  ],
+  "scripts": {
+    "clean": "rm -rf dist coverage .tmp",
+    "build": "npm run clean && tsc -p tsconfig.build.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "lint": "eslint \"src/**/*.ts\" \"tests/**/*.ts\" \"example/**/*.ts\"",
+    "test": "npm run test:unit && npm run test:integration && npm run test:security && npm run example:test",
+    "test:unit": "vitest run tests/unit --reporter=dot --pool=forks --poolOptions.forks.singleFork",
+    "test:integration": "vitest run tests/integration --reporter=dot --pool=forks --poolOptions.forks.singleFork",
+    "test:security": "vitest run tests/security --reporter=dot --pool=forks --poolOptions.forks.singleFork && npm run security:audit",
+    "test:coverage": "vitest run tests/unit tests/integration tests/security --coverage --pool=forks --poolOptions.forks.singleFork",
+    "test:perf": "vitest run tests/performance --reporter=dot --pool=forks --poolOptions.forks.singleFork",
+    "test:fuzz": "vitest run tests/fuzz --reporter=dot --pool=forks --poolOptions.forks.singleFork",
+    "security:audit": "npm audit --omit=dev --audit-level=high",
+    "example:test": "tsx example/run-example-tests.ts",
+    "quality:check": "npm run lint && npm run typecheck && npm run test:coverage && npm run test:integration && npm run test:security && npm run test:perf && npm run test:fuzz && npm run example:test && npm run build"
+  },
+  "keywords": [
+    "pptx",
+    "dsl",
+    "typescript"
+  ],
+  "author": "",
+  "license": "MIT",
+  "type": "commonjs",
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "dependencies": {
+    "js-yaml": "^4.1.0",
+    "pptxgenjs": "^3.12.0",
+    "zod": "^3.24.1"
+  },
+  "devDependencies": {
+    "@types/js-yaml": "^4.0.9",
+    "@types/node": "^22.13.4",
+    "@typescript-eslint/eslint-plugin": "^8.24.1",
+    "@typescript-eslint/parser": "^8.24.1",
+    "@vitest/coverage-v8": "^3.2.4",
+    "eslint": "^9.20.1",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.3",
+    "vitest": "^3.0.5"
+  }
+}

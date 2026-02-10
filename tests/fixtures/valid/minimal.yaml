@@ -1,0 +1,15 @@
+version: "1.0"
+theme: "corporate-blue"
+metadata:
+  title: "Minimal"
+slides:
+  - type: title
+    content:
+      title: "Hello"
+      subtitle: "World"
+      logo: false
+  - type: content
+    title: "Body"
+    content:
+      - type: text
+        content: "Sample text"

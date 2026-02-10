@@ -1,0 +1,53 @@
+version: "1.0"
+theme: "modern-minimal"
+metadata:
+  title: "System Architecture"
+  author: "Architecture Guild"
+  date: "2026-02-10"
+slides:
+  - type: section
+    title: "Architecture"
+    subtitle: "Service Topology"
+    background:
+      color: primary
+      opacity: 1
+  - type: content
+    title: "Service Connections"
+    layout: auto
+    content:
+      - type: network-diagram
+        layout: hierarchical
+        nodes:
+          - id: edge
+            label: Edge
+            color: primary
+          - id: app
+            label: App
+            color: accent
+          - id: db
+            label: DB
+            color: success
+        edges:
+          - from: edge
+            to: app
+            label: HTTPS
+          - from: app
+            to: db
+            label: SQL
+      - type: flowchart
+        direction: horizontal
+        steps:
+          - id: start
+            label: Receive
+            shape: rounded
+          - id: process
+            label: Process
+            shape: rectangle
+          - id: done
+            label: Respond
+            shape: rounded
+        flows:
+          - from: start
+            to: process
+          - from: process
+            to: done

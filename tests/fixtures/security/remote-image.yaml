@@ -1,0 +1,10 @@
+version: "1.0"
+theme: "corporate-blue"
+metadata:
+  title: "Remote"
+slides:
+  - type: content
+    title: "Image"
+    content:
+      - type: image
+        source: "https://example.com/image.png"

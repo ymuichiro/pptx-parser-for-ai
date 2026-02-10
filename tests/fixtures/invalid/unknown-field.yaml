@@ -1,0 +1,11 @@
+version: "1.0"
+theme: "corporate-blue"
+metadata:
+  title: "Invalid"
+slides:
+  - type: content
+    title: "Bad"
+    content:
+      - type: text
+        content: "Hello"
+        unexpected: true

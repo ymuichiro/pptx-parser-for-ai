@@ -1,0 +1,16 @@
+version: "1.0"
+theme: "corporate-blue"
+metadata:
+  title: "Invalid Edge"
+slides:
+  - type: content
+    title: "Bad Diagram"
+    content:
+      - type: network-diagram
+        layout: hierarchical
+        nodes:
+          - id: web
+            label: web
+        edges:
+          - from: web
+            to: db

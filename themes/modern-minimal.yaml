@@ -1,0 +1,60 @@
+name: Modern Minimal
+version: "1.0"
+colors:
+  primary: "222222"
+  secondary: "DDDDDD"
+  accent: "0EA5E9"
+  text-dark: "1F2937"
+  text-light: "FFFFFF"
+  background-light: "FFFFFF"
+  background-dark: "111827"
+  success: "16A34A"
+  warning: "D97706"
+  error: "DC2626"
+typography:
+  fonts:
+    title: Helvetica Neue
+    heading: Helvetica
+    body: Helvetica
+    caption: Helvetica
+  sizes:
+    title: 38
+    heading: 24
+    subheading: 16
+    body: 13
+    caption: 10
+    statValue: 42
+  weights:
+    bold: true
+    normal: false
+layout:
+  slideSize: "16:9"
+  margins:
+    default: 0.55
+    titleSlide: 1.1
+  spacing:
+    elementGap: 0.2
+    paragraphSpacing: 0.1
+  grid:
+    columns: 12
+    gutter: 0.15
+defaults:
+  titleSlide:
+    background: background-light
+    titleColor: text-dark
+    subtitleColor: primary
+  contentSlide:
+    background: background-light
+    titleColor: text-dark
+  bulletStyle:
+    character: "-"
+    color: accent
+    indent: 0.25
+  tableStyle:
+    headerBackground: primary
+    headerText: text-light
+    rowAlternate: secondary
+    borderColor: primary
+effects:
+  titleUnderline:
+    enabled: false

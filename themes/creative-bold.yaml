@@ -1,0 +1,66 @@
+name: Creative Bold
+version: "1.0"
+colors:
+  primary: "0F172A"
+  secondary: "FDE047"
+  accent: "F43F5E"
+  text-dark: "111827"
+  text-light: "FFFFFF"
+  background-light: "FEFCE8"
+  background-dark: "0F172A"
+  success: "22C55E"
+  warning: "F59E0B"
+  error: "E11D48"
+typography:
+  fonts:
+    title: Impact
+    heading: Arial Black
+    body: Arial
+    caption: Arial
+  sizes:
+    title: 42
+    heading: 28
+    subheading: 20
+    body: 15
+    caption: 11
+    statValue: 52
+  weights:
+    bold: true
+    normal: false
+layout:
+  slideSize: "16:9"
+  margins:
+    default: 0.45
+    titleSlide: 0.9
+  spacing:
+    elementGap: 0.25
+    paragraphSpacing: 0.1
+  grid:
+    columns: 12
+    gutter: 0.22
+defaults:
+  titleSlide:
+    background: background-dark
+    titleColor: secondary
+    subtitleColor: text-light
+  contentSlide:
+    background: background-light
+    titleColor: primary
+  bulletStyle:
+    character: "◆"
+    color: accent
+    indent: 0.28
+  tableStyle:
+    headerBackground: primary
+    headerText: text-light
+    rowAlternate: background-light
+    borderColor: accent
+effects:
+  cardShadow:
+    type: outer
+    blur: 8
+    offset: 3
+    color: "000000"
+    opacity: 0.15
+  titleUnderline:
+    enabled: false

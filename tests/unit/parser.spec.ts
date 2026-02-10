@@ -1,0 +1,94 @@
+import * as fs from "node:fs/promises";
+import * as path from "node:path";
+import { describe, expect, it } from "vitest";
+import { DSLParser } from "../../src/parser";
+import type { PresentationDSL } from "../../src/types";
+
+const fixture = (relativePath: string) => path.resolve(process.cwd(), "tests", "fixtures", relativePath);
+
+describe("DSLParser", () => {
+  it("parses a valid DSL", async () => {
+    const parser = new DSLParser();
+    const content = await fs.readFile(fixture("valid/minimal.yaml"), "utf-8");
+    const parsed = parser.parse(content);
+
+    expect(parsed.metadata.title).toBe("Minimal");
+    expect(parsed.slides.length).toBe(2);
+  });
+
+  it("rejects unknown fields", async () => {
+    const parser = new DSLParser();
+    const content = await fs.readFile(fixture("invalid/unknown-field.yaml"), "utf-8");
+
+    expect(() => parser.parse(content)).toThrowError(/unrecognized key/i);
+  });
+
+  it("rejects invalid edge references", async () => {
+    const parser = new DSLParser();
+    const content = await fs.readFile(fixture("invalid/invalid-edge.yaml"), "utf-8");
+    const parsedYaml = parser.parse.bind(parser, content);
+
+    expect(parsedYaml).toThrowError(/unknown node/i);
+  });
+
+  it("blocks remote image source by default", async () => {
+    const parser = new DSLParser();
+    const content = await fs.readFile(fixture("security/remote-image.yaml"), "utf-8");
+
+    expect(() => parser.parse(content)).toThrowError(/remote URL is disabled/i);
+  });
+
+  it("allows remote image when explicitly enabled", async () => {
+    const parser = new DSLParser({ allowRemoteImages: true });
+    const content = await fs.readFile(fixture("security/remote-image.yaml"), "utf-8");
+
+    expect(() => parser.parse(content)).not.toThrow();
+  });
+
+  it("normalizes defaults", async () => {
+    const parser = new DSLParser();
+    const raw: PresentationDSL = {
+      version: "1.0",
+      theme: "corporate-blue",
+      metadata: { title: "normalize" },
+      slides: [
+        {
+          type: "content",
+          title: "title",
+          content: [{ type: "text", content: "hello" }]
+        }
+      ]
+    };
+
+    const result = parser.validate(raw);
+    expect(result.isValid).toBe(true);
+
+    const normalized = parser.normalize(raw);
+    const slide = normalized.slides[0];
+    if (slide?.type !== "content") {
+      throw new Error("expected content slide");
+    }
+
+    expect(slide.layout).toBe("auto");
+    const text = slide.content[0];
+    if (text?.type !== "text") {
+      throw new Error("expected text element");
+    }
+    expect(text.style).toBe("body");
+    expect(text.align).toBe("left");
+  });
+
+  it("rejects overlong strings", () => {
+    const parser = new DSLParser();
+    const huge = "x".repeat(10_001);
+    const result = parser.validate({
+      version: "1.0",
+      theme: "corporate-blue",
+      metadata: { title: huge },
+      slides: []
+    });
+
+    expect(result.isValid).toBe(false);
+    expect(result.errors.some((error) => error.includes("String length"))).toBe(true);
+  });
+});
