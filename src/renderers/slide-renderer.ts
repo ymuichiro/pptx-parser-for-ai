@@ -1,5 +1,16 @@
-import type { ContentSlide, PresentationDSL, Slide, ThemeDefinition, TitleSlide } from "../types";
+import * as path from "node:path";
+import { RenderError } from "../errors";
+import type {
+  Bounds,
+  ContentSlide,
+  ElementArea,
+  PresentationDSL,
+  Slide,
+  ThemeDefinition,
+  TitleSlide
+} from "../types";
 import { LayoutEngine } from "../layout";
+import type { ImportedTemplateImageObject, ImportedTemplatePackage, ImportedTemplateShapeObject } from "../template-importer/types";
 import type { ComponentRenderContext, SlideAdapter } from "./base-renderer";
 import { renderContentElement } from "./components";
 import { resolveThemeColor } from "../utils/color";
@@ -7,6 +18,11 @@ import { SLIDE_DIMENSIONS } from "../constants";
 
 export interface PresentationAdapter {
   addSlide(): SlideAdapter;
+}
+
+export interface SlideTemplateContext {
+  templatePackage: ImportedTemplatePackage;
+  assetBaseDir: string;
 }
 
 function applyBackground(slide: SlideAdapter, theme: ThemeDefinition, tokenOrLiteral: string): void {
@@ -26,14 +42,185 @@ function applyBackground(slide: SlideAdapter, theme: ThemeDefinition, tokenOrLit
   });
 }
 
+function resolveTemplateAssetPath(assetBaseDir: string, relativeAssetPath: string): string {
+  const normalized = path.posix.normalize(relativeAssetPath.replace(/\\/g, "/"));
+  if (normalized.startsWith("/") || normalized.split("/").includes("..")) {
+    throw new RenderError(`Template asset path is invalid: ${relativeAssetPath}`);
+  }
+
+  return path.resolve(assetBaseDir, normalized);
+}
+
+function mapImportedShape(shapeName: string): string {
+  const normalized = shapeName.toLowerCase();
+  const shapeMap: Record<string, string> = {
+    rect: "rect",
+    rectangle: "rect",
+    roundrect: "roundRect",
+    ellipse: "ellipse",
+    oval: "ellipse",
+    triangle: "triangle",
+    rttriangle: "rtTriangle",
+    chevron: "chevron",
+    diamond: "diamond",
+    pentagon: "pentagon",
+    hexagon: "hexagon",
+    line: "line"
+  };
+
+  return shapeMap[normalized] ?? "rect";
+}
+
+function applyTemplateBackground(
+  slide: SlideAdapter,
+  theme: ThemeDefinition,
+  templateContext: SlideTemplateContext,
+  fallbackColor: string
+): void {
+  const dimensions = SLIDE_DIMENSIONS[theme.layout.slideSize];
+  const templateBackground = templateContext.templatePackage.background;
+
+  if (templateBackground.image !== undefined) {
+    slide.addImage({
+      path: resolveTemplateAssetPath(templateContext.assetBaseDir, templateBackground.image),
+      x: 0,
+      y: 0,
+      w: dimensions.width,
+      h: dimensions.height
+    });
+  } else if (templateBackground.color !== undefined) {
+    applyBackground(slide, theme, templateBackground.color);
+  } else {
+    applyBackground(slide, theme, fallbackColor);
+  }
+
+  for (const backgroundObject of templateBackground.objects) {
+    if (backgroundObject.type === "shape") {
+      renderTemplateShapeObject(slide, theme, backgroundObject);
+      continue;
+    }
+
+    renderTemplateImageObject(slide, templateContext.assetBaseDir, backgroundObject);
+  }
+}
+
+function renderTemplateShapeObject(slide: SlideAdapter, theme: ThemeDefinition, shapeObject: ImportedTemplateShapeObject): void {
+  const options: Record<string, unknown> = {
+    x: shapeObject.x,
+    y: shapeObject.y,
+    w: shapeObject.w,
+    h: shapeObject.h
+  };
+
+  if (shapeObject.fill !== undefined) {
+    options.fill = {
+      color: resolveThemeColor(theme, shapeObject.fill, "background-light")
+    };
+  }
+
+  if (shapeObject.lineColor !== undefined) {
+    options.line = {
+      color: resolveThemeColor(theme, shapeObject.lineColor, "text-dark"),
+      width: 1
+    };
+  }
+
+  slide.addShape(mapImportedShape(shapeObject.shape), options);
+
+  if (shapeObject.text !== undefined) {
+    slide.addText(shapeObject.text, {
+      x: shapeObject.x,
+      y: shapeObject.y,
+      w: shapeObject.w,
+      h: shapeObject.h,
+      fontFace: theme.typography.fonts.body,
+      fontSize: theme.typography.sizes.body,
+      color: resolveThemeColor(theme, "text-dark", "text-dark"),
+      valign: "mid",
+      align: "center"
+    });
+  }
+}
+
+function renderTemplateImageObject(slide: SlideAdapter, assetBaseDir: string, imageObject: ImportedTemplateImageObject): void {
+  slide.addImage({
+    path: resolveTemplateAssetPath(assetBaseDir, imageObject.source),
+    x: imageObject.x,
+    y: imageObject.y,
+    w: imageObject.w,
+    h: imageObject.h
+  });
+}
+
+function calculateAreaFrame(areas: ElementArea[]): Bounds | undefined {
+  const firstArea = areas[0];
+  if (firstArea === undefined) {
+    return undefined;
+  }
+
+  let minX = firstArea.bounds.x;
+  let minY = firstArea.bounds.y;
+  let maxX = firstArea.bounds.x + firstArea.bounds.w;
+  let maxY = firstArea.bounds.y + firstArea.bounds.h;
+
+  for (const area of areas.slice(1)) {
+    minX = Math.min(minX, area.bounds.x);
+    minY = Math.min(minY, area.bounds.y);
+    maxX = Math.max(maxX, area.bounds.x + area.bounds.w);
+    maxY = Math.max(maxY, area.bounds.y + area.bounds.h);
+  }
+
+  return {
+    x: minX,
+    y: minY,
+    w: maxX - minX,
+    h: maxY - minY
+  };
+}
+
+function remapBounds(sourceBounds: Bounds, sourceFrame: Bounds, targetFrame: Bounds): Bounds {
+  if (sourceFrame.w <= 0 || sourceFrame.h <= 0) {
+    return targetFrame;
+  }
+
+  return {
+    x: targetFrame.x + ((sourceBounds.x - sourceFrame.x) / sourceFrame.w) * targetFrame.w,
+    y: targetFrame.y + ((sourceBounds.y - sourceFrame.y) / sourceFrame.h) * targetFrame.h,
+    w: (sourceBounds.w / sourceFrame.w) * targetFrame.w,
+    h: (sourceBounds.h / sourceFrame.h) * targetFrame.h
+  };
+}
+
+function remapAreasToPlaceholder(areas: ElementArea[], targetPlaceholderBounds: Bounds): ElementArea[] {
+  const sourceFrame = calculateAreaFrame(areas);
+  if (sourceFrame === undefined) {
+    return areas;
+  }
+
+  return areas.map((area) => ({
+    element: area.element,
+    bounds: remapBounds(area.bounds, sourceFrame, targetPlaceholderBounds)
+  }));
+}
+
 export class SlideRenderer {
-  public async renderSlides(pres: PresentationAdapter, dsl: PresentationDSL, theme: ThemeDefinition): Promise<void> {
+  public async renderSlides(
+    pres: PresentationAdapter,
+    dsl: PresentationDSL,
+    theme: ThemeDefinition,
+    templateContext?: SlideTemplateContext
+  ): Promise<void> {
     for (const slide of dsl.slides) {
-      await this.renderSlide(pres, slide, theme);
+      await this.renderSlide(pres, slide, theme, templateContext);
     }
   }
 
-  public async renderSlide(pres: PresentationAdapter, slideDefinition: Slide, theme: ThemeDefinition): Promise<void> {
+  public async renderSlide(
+    pres: PresentationAdapter,
+    slideDefinition: Slide,
+    theme: ThemeDefinition,
+    templateContext?: SlideTemplateContext
+  ): Promise<void> {
     const slide = pres.addSlide();
 
     if (slideDefinition.type === "title") {
@@ -42,7 +229,7 @@ export class SlideRenderer {
     }
 
     if (slideDefinition.type === "content") {
-      await this.renderContentSlide(slide, slideDefinition, theme);
+      await this.renderContentSlide(slide, slideDefinition, theme, templateContext);
       return;
     }
 
@@ -114,22 +301,34 @@ export class SlideRenderer {
     }
   }
 
-  private async renderContentSlide(slide: SlideAdapter, definition: ContentSlide, theme: ThemeDefinition): Promise<void> {
-    applyBackground(slide, theme, theme.defaults.contentSlide.background);
+  private async renderContentSlide(
+    slide: SlideAdapter,
+    definition: ContentSlide,
+    theme: ThemeDefinition,
+    templateContext?: SlideTemplateContext
+  ): Promise<void> {
+    if (templateContext !== undefined) {
+      applyTemplateBackground(slide, theme, templateContext, theme.defaults.contentSlide.background);
+    } else {
+      applyBackground(slide, theme, theme.defaults.contentSlide.background);
+    }
 
+    const titlePlaceholder = templateContext?.templatePackage.layout.placeholders.title;
     slide.addText(definition.title, {
-      x: 0.5,
-      y: 0.2,
-      w: 9,
-      h: 0.5,
-      fontFace: theme.typography.fonts.heading,
-      fontSize: theme.typography.sizes.heading,
+      x: titlePlaceholder?.bounds.x ?? 0.5,
+      y: titlePlaceholder?.bounds.y ?? 0.2,
+      w: titlePlaceholder?.bounds.w ?? 9,
+      h: titlePlaceholder?.bounds.h ?? 0.5,
+      fontFace: titlePlaceholder?.style.fontFace ?? theme.typography.fonts.heading,
+      fontSize: titlePlaceholder?.style.fontSizePt ?? theme.typography.sizes.heading,
       bold: true,
-      color: resolveThemeColor(theme, theme.defaults.contentSlide.titleColor, "text-dark")
+      color: resolveThemeColor(theme, titlePlaceholder?.style.color ?? theme.defaults.contentSlide.titleColor, "text-dark")
     });
 
     const engine = new LayoutEngine(theme);
     const result = engine.calculateLayout(definition.content, definition.layout ?? "auto");
+    const bodyBounds = templateContext?.templatePackage.layout.placeholders.body.bounds;
+    const areas = bodyBounds !== undefined ? remapAreasToPlaceholder(result.areas, bodyBounds) : result.areas;
 
     const context: ComponentRenderContext = {
       renderElement: async (nestedSlide, nestedElement, bounds, nestedTheme) => {
@@ -137,7 +336,7 @@ export class SlideRenderer {
       }
     };
 
-    for (const area of result.areas) {
+    for (const area of areas) {
       await renderContentElement(slide, area.element, area.bounds, theme, context);
     }
   }

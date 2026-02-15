@@ -5,7 +5,11 @@
 ```ts
 import {
   PPTXRenderer,
+  TemplateImporter,
+  parseImportedTemplatePackage,
   type RendererOptions,
+  type TemplateImportOptions,
+  type ImportedTemplatePackage,
   type GenerationResult,
   type PresentationDSL,
   type ThemeDefinition,
@@ -27,12 +31,41 @@ import {
 - `qaConfig?: { autoFix?: boolean; maxIterations?: number }`
 - `allowRemoteImages?: boolean`
 - `themeDir?: string`
+- `templatePackage?: ImportedTemplatePackage`
+- `templatePackagePath?: string` (`template.yaml` のパス)
+- `templateAssetBaseDir?: string` (`templatePackage` オブジェクト利用時の `assets/` 基準ディレクトリ)
 
 ### `generateFromFile(dslPath: string, outputPath: string): Promise<GenerationResult>`
 - YAML DSL ファイルを読み込み、`.pptx` を生成
 
 ### `generate(dsl: PresentationDSL, outputPath: string): Promise<GenerationResult>`
 - DSL オブジェクトから `.pptx` を生成
+- `templatePackage` / `templatePackagePath` を設定した場合、以下を反映:
+  - palette/fonts/slideSize をテーマへマージ
+  - content slide の title/body placeholder を配置に反映
+  - 背景色/背景画像/装飾オブジェクトを反映
+
+## Class: `TemplateImporter`
+
+### `new TemplateImporter(options?: TemplateImportOptions)`
+
+`TemplateImportOptions`
+- `templateId?: string`
+
+### `importFromFile(templatePath: string, outputDir: string): Promise<ImportedTemplatePackage>`
+- `.pptx` / `.potx` からテンプレート情報を抽出
+- `outputDir` に `template.yaml`, `manifest.json`, `assets/` を出力
+
+`ImportedTemplatePackage` 主な構造
+- `template`: id, source（file, sha256, importedAt）
+- `theme`: palette, fonts, slideSize
+- `layout`: kind (`title-body`), placeholders (title/body)
+- `background`: color/image/objects
+- `manifest`: warnings/unsupported
+
+### `parseImportedTemplatePackage(input: unknown): ImportedTemplatePackage`
+- `template.yaml` を厳格検証（Fail Closed）
+- `assets/` 参照は相対パスのみ許可（絶対パス・`..` を拒否）
 
 ## Result: `GenerationResult`
 - `success: boolean`
