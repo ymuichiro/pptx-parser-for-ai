@@ -1,5 +1,6 @@
 # Documentation Index
 
+- [Functional Requirements](./functional-requirements.md)
 - [Usage Guide](./usage-guide.md)
 - [API Reference](./api-reference.md)
 - [Example Guide](../example/README.md)
