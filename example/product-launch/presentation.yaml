@@ -1,0 +1,58 @@
+version: "1.0"
+theme: "modern-minimal"
+metadata:
+  title: "Product Launch Narrative"
+  author: "Product Marketing"
+  company: "Contoso"
+  date: "2026-02-16"
+slides:
+  - type: title
+    content:
+      title: "Nimbus AI Suite"
+      subtitle: "Launch Plan"
+      date: "2026-02-16"
+      logo: false
+  - type: content
+    title: "Launch Narrative"
+    content:
+      - type: two-column
+        ratio: "1:1"
+        left:
+          - type: text
+            style: heading
+            content: "Customer Problem"
+          - type: bullet-list
+            items:
+              - "Fragmented workflows"
+              - "Slow decision cycles"
+              - "High integration cost"
+        right:
+          - type: text
+            style: heading
+            content: "Our Positioning"
+          - type: bullet-list
+            style: pros
+            items:
+              - "Unified command surface"
+              - "Built-in governance"
+              - "Fast onboarding"
+  - type: content
+    title: "Launch Funnel"
+    layout: auto
+    content:
+      - type: chart
+        chartType: bar
+        title: "Pipeline Projection"
+        data:
+          labels: ["Awareness", "Qualified", "Pilot", "Won"]
+          series:
+            - name: "Accounts"
+              values: [250, 110, 45, 20]
+              color: accent
+      - type: table
+        style: striped
+        headers: ["Stage", "Owner", "Target Date"]
+        rows:
+          - ["Messaging sign-off", "PMM", "2026-03-01"]
+          - ["Sales enablement", "Revenue Ops", "2026-03-08"]
+          - ["GA event", "Marketing", "2026-03-20"]

@@ -29,6 +29,18 @@ async function run(): Promise<void> {
     {
       input: path.resolve(process.cwd(), "example", "network", "presentation.yaml"),
       output: path.join(outputDir, "network-output.pptx")
+    },
+    {
+      input: path.resolve(process.cwd(), "example", "template-gallery", "presentation.yaml"),
+      output: path.join(outputDir, "template-gallery-output.pptx")
+    },
+    {
+      input: path.resolve(process.cwd(), "example", "security-brief", "presentation.yaml"),
+      output: path.join(outputDir, "security-brief-output.pptx")
+    },
+    {
+      input: path.resolve(process.cwd(), "example", "product-launch", "presentation.yaml"),
+      output: path.join(outputDir, "product-launch-output.pptx")
     }
   ];
 

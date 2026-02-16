@@ -1,0 +1,61 @@
+version: "1.0"
+theme: "creative-bold"
+metadata:
+  title: "Board Strategy Update"
+  author: "Strategy Office"
+  company: "Northwind Holdings"
+  date: "2026-02-16"
+slides:
+  - type: title
+    content:
+      title: "Board Strategy Update"
+      subtitle: "FY2026 Growth Themes"
+      date: "2026-02-16"
+      logo: false
+  - type: content
+    title: "Growth Signals"
+    layout: auto
+    content:
+      - type: chart
+        chartType: line
+        title: "Revenue Trend"
+        data:
+          labels: ["Q1", "Q2", "Q3", "Q4"]
+          series:
+            - name: "Revenue"
+              values: [102, 118, 129, 147]
+              color: primary
+      - type: stat-callout
+        value: "23%"
+        label: "YoY Growth"
+        trend: "+5pt"
+        color: success
+      - type: icon-grid
+        columns: 3
+        items:
+          - icon: "rocket"
+            title: "New Product"
+            description: "2 flagship launches"
+          - icon: "globe"
+            title: "Global Expansion"
+            description: "APAC channel opened"
+          - icon: "shield"
+            title: "Risk Control"
+            description: "Zero Sev-1 incidents"
+  - type: content
+    title: "Execution Plan"
+    content:
+      - type: two-column
+        ratio: "2:1"
+        left:
+          - type: numbered-list
+            items:
+              - "H1: enterprise upsell motions"
+              - "H2: AI-assisted support rollout"
+              - "FY end: margin optimization"
+        right:
+          - type: bullet-list
+            style: checkmark
+            items:
+              - "Program PMO assigned"
+              - "Quarterly steering reviews"

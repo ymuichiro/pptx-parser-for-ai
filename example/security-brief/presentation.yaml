@@ -1,0 +1,64 @@
+version: "1.0"
+theme: "corporate-blue"
+metadata:
+  title: "Security Operations Brief"
+  author: "Security Engineering"
+  company: "Example Enterprise"
+  date: "2026-02-16"
+slides:
+  - type: section
+    title: "Security Operations"
+    subtitle: "Weekly Brief"
+    background:
+      color: primary
+      opacity: 1
+  - type: content
+    title: "Incident Overview"
+    layout: auto
+    content:
+      - type: table
+        style: bordered
+        headers: ["Category", "Last Week", "This Week", "Delta"]
+        rows:
+          - ["Critical", 1, 0, "-1"]
+          - ["High", 4, 2, "-2"]
+          - ["Medium", 12, 9, "-3"]
+      - type: stat-callout
+        value: "99.97%"
+        label: "Patch SLA Compliance"
+        trend: "+0.12%"
+        color: success
+      - type: bullet-list
+        style: checkmark
+        items:
+          - "All internet-facing systems patched"
+          - "No unresolved critical findings"
+          - text: "Audit readiness"
+            subItems:
+              - "Evidence package updated"
+              - "Control owners validated"
+  - type: content
+    title: "Threat Containment Flow"
+    content:
+      - type: flowchart
+        direction: horizontal
+        steps:
+          - id: detect
+            label: Detect
+            shape: rounded
+          - id: triage
+            label: Triage
+            shape: rectangle
+          - id: isolate
+            label: Isolate
+            shape: rectangle
+          - id: recover
+            label: Recover
+            shape: rounded
+        flows:
+          - from: detect
+            to: triage
+          - from: triage
+            to: isolate
+          - from: isolate
+            to: recover
