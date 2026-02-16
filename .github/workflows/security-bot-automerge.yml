@@ -1,0 +1,125 @@
+name: Security Bot Auto Merge
+
+on:
+  pull_request_target:
+    types: [opened, reopened, synchronize, ready_for_review]
+
+permissions:
+  contents: write
+  pull-requests: write
+  security-events: read
+
+concurrency:
+  group: security-bot-automerge-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  verify-and-automerge:
+    if: >-
+      github.event.pull_request.draft == false &&
+      contains(fromJson('["dependabot[bot]","defenderbot[bot]"]'), github.event.pull_request.user.login)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Fetch Dependabot metadata
+        id: metadata
+        if: github.event.pull_request.user.login == 'dependabot[bot]'
+        uses: dependabot/fetch-metadata@v2
+        with:
+          alert-lookup: true
+
+      - name: Evaluate security merge policy
+        id: policy
+        env:
+          BOT_LOGIN: ${{ github.event.pull_request.user.login }}
+          GHSA_ID: ${{ steps.metadata.outputs.ghsa-id }}
+          MAINTAINER_CHANGES: ${{ steps.metadata.outputs.maintainer-changes }}
+          HAS_SECURITY_LABEL: ${{ contains(github.event.pull_request.labels.*.name, 'security') || contains(github.event.pull_request.labels.*.name, 'security-update') }}
+        run: |
+          set -euo pipefail
+
+          should_merge="false"
+
+          if [ "${BOT_LOGIN}" = "dependabot[bot]" ]; then
+            if [ "${MAINTAINER_CHANGES}" = "true" ]; then
+              echo "Dependabot PR has maintainer changes. Skip auto-merge."
+            elif [ -n "${GHSA_ID}" ] || [ "${HAS_SECURITY_LABEL}" = "true" ]; then
+              should_merge="true"
+            else
+              echo "Dependabot PR is not a security update. Skip auto-merge."
+            fi
+          else
+            should_merge="true"
+          fi
+
+          echo "should-merge=${should_merge}" >> "${GITHUB_OUTPUT}"
+
+      - name: Validate changed files
+        if: steps.policy.outputs.should-merge == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          set -euo pipefail
+
+          gh api "repos/${REPOSITORY}/pulls/${PR_NUMBER}/files?per_page=100" \
+            --paginate \
+            --jq '.[].filename' > /tmp/changed-files.txt
+
+          while IFS= read -r file; do
+            case "${file}" in
+              package.json|package-lock.json|npm-shrinkwrap.json|yarn.lock|pnpm-lock.yaml|.github/workflows/*.yml|.github/workflows/*.yaml)
+                ;;
+              *)
+                echo "Unexpected file in bot PR: ${file}"
+                exit 1
+                ;;
+            esac
+          done < /tmp/changed-files.txt
+
+      - name: Wait for verification checks
+        if: steps.policy.outputs.should-merge == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          set -euo pipefail
+          max_attempts=120
+          sleep_seconds=15
+
+          for attempt in $(seq 1 "${max_attempts}"); do
+            status_json="$(gh pr checks "${PR_NUMBER}" -R "${REPOSITORY}" --json workflow,bucket)"
+            total_checks="$(echo "${status_json}" | jq '[.[] | select(.workflow != "Security Bot Auto Merge")] | length')"
+            failed_checks="$(echo "${status_json}" | jq '[.[] | select(.workflow != "Security Bot Auto Merge" and (.bucket == "fail" or .bucket == "cancel"))] | length')"
+            pending_checks="$(echo "${status_json}" | jq '[.[] | select(.workflow != "Security Bot Auto Merge" and .bucket == "pending")] | length')"
+
+            if [ "${failed_checks}" -gt 0 ]; then
+              echo "Detected failed checks."
+              gh pr checks "${PR_NUMBER}" -R "${REPOSITORY}"
+              exit 1
+            fi
+
+            if [ "${total_checks}" -gt 0 ] && [ "${pending_checks}" -eq 0 ]; then
+              echo "All verification checks completed successfully."
+              break
+            fi
+
+            if [ "${attempt}" -eq "${max_attempts}" ]; then
+              echo "Timed out waiting for checks."
+              exit 1
+            fi
+
+            echo "Waiting for checks (${attempt}/${max_attempts})..."
+            sleep "${sleep_seconds}"
+          done
+
+      - name: Merge pull request
+        if: steps.policy.outputs.should-merge == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          set -euo pipefail
+          gh pr merge "${PR_NUMBER}" -R "${REPOSITORY}" --squash

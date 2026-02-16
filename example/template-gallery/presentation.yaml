@@ -7,6 +7,7 @@ metadata:
   date: "2026-02-16"
 slides:
   - type: title
+    background: dark
     content:
       title: "Board Strategy Update"
       subtitle: "FY2026 Growth Themes"
@@ -33,13 +34,13 @@ slides:
       - type: icon-grid
         columns: 3
         items:
-          - icon: "rocket"
+          - icon: "N"
             title: "New Product"
             description: "2 flagship launches"
-          - icon: "globe"
+          - icon: "G"
             title: "Global Expansion"
             description: "APAC channel opened"
-          - icon: "shield"
+          - icon: "R"
             title: "Risk Control"
             description: "Zero Sev-1 incidents"
   - type: content
@@ -59,3 +60,8 @@ slides:
             items:
               - "Program PMO assigned"
               - "Quarterly steering reviews"
+          - type: stat-callout
+            value: "92%"
+            label: "Milestones On Track"
+            trend: "+8pt"
+            color: success

@@ -19,7 +19,7 @@ slides:
         ratio: "1:1"
         left:
           - type: text
-            style: heading
+            style: body
             content: "Customer Problem"
           - type: bullet-list
             items:
@@ -28,7 +28,7 @@ slides:
               - "High integration cost"
         right:
           - type: text
-            style: heading
+            style: body
             content: "Our Positioning"
           - type: bullet-list
             style: pros
@@ -36,6 +36,11 @@ slides:
               - "Unified command surface"
               - "Built-in governance"
               - "Fast onboarding"
+      - type: stat-callout
+        value: "45"
+        label: "Pilot Accounts in 60 Days"
+        trend: "+12 wk/wk"
+        color: accent
   - type: content
     title: "Launch Funnel"
     layout: auto

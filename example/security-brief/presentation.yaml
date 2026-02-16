@@ -38,27 +38,22 @@ slides:
               - "Evidence package updated"
               - "Control owners validated"
   - type: content
-    title: "Threat Containment Flow"
+    title: "Containment Playbook"
     content:
-      - type: flowchart
-        direction: horizontal
-        steps:
-          - id: detect
-            label: Detect
-            shape: rounded
-          - id: triage
-            label: Triage
-            shape: rectangle
-          - id: isolate
-            label: Isolate
-            shape: rectangle
-          - id: recover
-            label: Recover
-            shape: rounded
-        flows:
-          - from: detect
-            to: triage
-          - from: triage
-            to: isolate
-          - from: isolate
-            to: recover
+      - type: two-column
+        ratio: "1:1"
+        left:
+          - type: numbered-list
+            items:
+              - "Detect and classify in SIEM"
+              - "Triage based on blast radius"
+              - "Isolate affected assets"
+              - "Recover and monitor for recurrence"
+        right:
+          - type: table
+            style: minimal
+            headers: ["Phase", "Target Time"]
+            rows:
+              - ["Detection", "15 min"]
+              - ["Containment", "60 min"]
+              - ["Recovery", "4 hr"]
