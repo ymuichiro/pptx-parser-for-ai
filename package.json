@@ -37,7 +37,7 @@
     "node": ">=20.0.0"
   },
   "dependencies": {
-    "fast-xml-parser": "^5.1.0",
+    "fast-xml-parser": "^5.3.6",
     "js-yaml": "^4.1.0",
     "jszip": "^3.10.1",
     "pptxgenjs": "^3.12.0",
