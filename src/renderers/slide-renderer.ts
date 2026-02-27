@@ -4,6 +4,9 @@ import type {
   Bounds,
   ContentSlide,
   ElementArea,
+  FooterChrome,
+  PresentationMetadata,
+  PresentationChrome,
   PresentationDSL,
   Slide,
   ThemeDefinition,
@@ -23,6 +26,14 @@ export interface PresentationAdapter {
 export interface SlideTemplateContext {
   templatePackage: ImportedTemplatePackage;
   assetBaseDir: string;
+}
+
+interface SlideRenderContext {
+  slideIndex: number;
+  totalSlides: number;
+  metadata: PresentationMetadata;
+  chrome?: PresentationChrome;
+  footerOnDarkBackground?: boolean;
 }
 
 function applyBackground(slide: SlideAdapter, theme: ThemeDefinition, tokenOrLiteral: string): void {
@@ -93,6 +104,12 @@ function applyTemplateBackground(
   } else {
     applyBackground(slide, theme, fallbackColor);
   }
+
+  applyTemplateBackgroundObjects(slide, theme, templateContext);
+}
+
+function applyTemplateBackgroundObjects(slide: SlideAdapter, theme: ThemeDefinition, templateContext: SlideTemplateContext): void {
+  const templateBackground = templateContext.templatePackage.background;
 
   for (const backgroundObject of templateBackground.objects) {
     if (backgroundObject.type === "shape") {
@@ -203,6 +220,22 @@ function remapAreasToPlaceholder(areas: ElementArea[], targetPlaceholderBounds: 
   }));
 }
 
+function interpolateFooterText(template: string, metadata: PresentationMetadata): string {
+  const replacements: Record<string, string> = {
+    title: metadata.title,
+    author: metadata.author ?? "",
+    company: metadata.company ?? "",
+    date: metadata.date ?? "",
+    copyright: metadata.copyright ?? "",
+    footerText: metadata.footerText ?? ""
+  };
+
+  return template
+    .replace(/\{(title|author|company|date|copyright|footerText)\}/g, (_match, key: string) => replacements[key] ?? "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 export class SlideRenderer {
   public async renderSlides(
     pres: PresentationAdapter,
@@ -210,8 +243,17 @@ export class SlideRenderer {
     theme: ThemeDefinition,
     templateContext?: SlideTemplateContext
   ): Promise<void> {
-    for (const slide of dsl.slides) {
-      await this.renderSlide(pres, slide, theme, templateContext);
+    for (const [slideIndex, slide] of dsl.slides.entries()) {
+      const context: SlideRenderContext = {
+        slideIndex,
+        totalSlides: dsl.slides.length,
+        metadata: dsl.metadata
+      };
+      if (dsl.chrome !== undefined) {
+        context.chrome = dsl.chrome;
+      }
+
+      await this.renderSlide(pres, slide, theme, templateContext, context);
     }
   }
 
@@ -219,37 +261,118 @@ export class SlideRenderer {
     pres: PresentationAdapter,
     slideDefinition: Slide,
     theme: ThemeDefinition,
-    templateContext?: SlideTemplateContext
+    templateContext?: SlideTemplateContext,
+    renderContext?: SlideRenderContext
   ): Promise<void> {
     const slide = pres.addSlide();
+    const footerOnDarkBackground = this.shouldRenderFooterOnDarkBackground(slideDefinition);
 
     if (slideDefinition.type === "title") {
-      await this.renderTitleSlide(slide, slideDefinition, theme);
-      return;
-    }
-
-    if (slideDefinition.type === "content") {
+      await this.renderTitleSlide(slide, slideDefinition, theme, templateContext);
+    } else if (slideDefinition.type === "content") {
       await this.renderContentSlide(slide, slideDefinition, theme, templateContext);
-      return;
+    } else if (slideDefinition.type === "section") {
+      await this.renderSectionSlide(slide, slideDefinition, theme, templateContext);
+    } else {
+      await this.renderBlankSlide(slide, slideDefinition, theme, templateContext);
     }
 
-    if (slideDefinition.type === "section") {
-      await this.renderSectionSlide(slide, slideDefinition, theme);
-      return;
+    if (renderContext !== undefined) {
+      this.renderHeaderDivider(slide, theme, {
+        ...renderContext,
+        footerOnDarkBackground
+      });
+      this.renderFooter(slide, theme, templateContext, {
+        ...renderContext,
+        footerOnDarkBackground
+      });
     }
-
-    await this.renderBlankSlide(slide, slideDefinition, theme);
   }
 
-  private async renderTitleSlide(slide: SlideAdapter, definition: TitleSlide, theme: ThemeDefinition): Promise<void> {
+  private renderHeaderDivider(slide: SlideAdapter, theme: ThemeDefinition, renderContext: SlideRenderContext): void {
+    if (renderContext.footerOnDarkBackground === true) {
+      return;
+    }
+
+    const divider = renderContext.chrome?.header?.divider;
+    if (divider?.enabled !== true) {
+      return;
+    }
+
+    const dimensions = SLIDE_DIMENSIONS[theme.layout.slideSize];
+    const x = divider.x ?? 0.4;
+    const y = divider.y ?? 1.22;
+    const w = divider.w ?? Math.max(0.1, dimensions.width - x * 2);
+    const lineColor = resolveThemeColor(theme, divider.color ?? "DEE2E6", "text-dark");
+    const lineWidth = divider.width ?? 0.8;
+
+    slide.addShape("line", {
+      x,
+      y,
+      w,
+      h: 0,
+      line: {
+        color: lineColor,
+        width: lineWidth
+      }
+    });
+  }
+
+  private shouldRenderFooterOnDarkBackground(slideDefinition: Slide): boolean {
+    if (slideDefinition.type === "title" || slideDefinition.type === "section") {
+      return true;
+    }
+
+    if (slideDefinition.type !== "blank") {
+      return false;
+    }
+
+    const { background } = slideDefinition;
+    if (typeof background === "string") {
+      return background === "dark";
+    }
+
+    if (background?.color !== undefined) {
+      const normalized = background.color.toLowerCase();
+      return normalized.includes("dark") || normalized === "primary";
+    }
+
+    return false;
+  }
+
+  private async renderTitleSlide(
+    slide: SlideAdapter,
+    definition: TitleSlide,
+    theme: ThemeDefinition,
+    templateContext?: SlideTemplateContext
+  ): Promise<void> {
     const defaultBg = theme.defaults.titleSlide.background;
-    if (typeof definition.background === "string") {
+    const fallbackBg =
+      typeof definition.background === "string"
+        ? definition.background === "dark"
+          ? "background-dark"
+          : "background-light"
+        : definition.background?.color ?? defaultBg;
+
+    if (templateContext !== undefined) {
+      applyBackground(slide, theme, fallbackBg);
+      applyTemplateBackgroundObjects(slide, theme, templateContext);
+    } else if (typeof definition.background === "string") {
       applyBackground(slide, theme, definition.background === "dark" ? "background-dark" : "background-light");
     } else if (definition.background !== undefined) {
       applyBackground(slide, theme, definition.background.color);
     } else {
       applyBackground(slide, theme, defaultBg);
     }
+
+    const titleColor =
+      templateContext === undefined
+        ? resolveThemeColor(theme, theme.defaults.titleSlide.titleColor, "text-light")
+        : resolveThemeColor(theme, "text-light", "text-light");
+    const subtitleColor =
+      templateContext === undefined
+        ? resolveThemeColor(theme, theme.defaults.titleSlide.subtitleColor, "secondary")
+        : resolveThemeColor(theme, "text-light", "text-light");
 
     slide.addText(definition.content.title, {
       x: 0.7,
@@ -259,7 +382,7 @@ export class SlideRenderer {
       fontFace: theme.typography.fonts.title,
       fontSize: theme.typography.sizes.title,
       bold: true,
-      color: resolveThemeColor(theme, theme.defaults.titleSlide.titleColor, "text-light"),
+      color: titleColor,
       align: "center",
       valign: "mid"
     });
@@ -272,7 +395,7 @@ export class SlideRenderer {
         h: 0.6,
         fontFace: theme.typography.fonts.heading,
         fontSize: theme.typography.sizes.subheading,
-        color: resolveThemeColor(theme, theme.defaults.titleSlide.subtitleColor, "secondary"),
+        color: subtitleColor,
         align: "center"
       });
     }
@@ -285,7 +408,7 @@ export class SlideRenderer {
         h: 0.3,
         fontFace: theme.typography.fonts.caption,
         fontSize: theme.typography.sizes.caption,
-        color: resolveThemeColor(theme, theme.defaults.titleSlide.subtitleColor, "secondary"),
+        color: subtitleColor,
         align: "center"
       });
     }
@@ -344,9 +467,25 @@ export class SlideRenderer {
   private async renderSectionSlide(
     slide: SlideAdapter,
     definition: Extract<Slide, { type: "section" }>,
-    theme: ThemeDefinition
+    theme: ThemeDefinition,
+    templateContext?: SlideTemplateContext
   ): Promise<void> {
-    applyBackground(slide, theme, definition.background?.color ?? "primary");
+    const fallbackBg = definition.background?.color ?? "primary";
+    if (templateContext !== undefined) {
+      applyBackground(slide, theme, fallbackBg);
+      applyTemplateBackgroundObjects(slide, theme, templateContext);
+    } else {
+      applyBackground(slide, theme, fallbackBg);
+    }
+
+    const titleColor =
+      templateContext === undefined
+        ? resolveThemeColor(theme, "text-light", "text-light")
+        : resolveThemeColor(theme, theme.defaults.contentSlide.titleColor, "text-dark");
+    const subtitleColor =
+      templateContext === undefined
+        ? resolveThemeColor(theme, "secondary", "secondary")
+        : resolveThemeColor(theme, "accent", "accent");
 
     slide.addText(definition.title, {
       x: 1,
@@ -357,7 +496,7 @@ export class SlideRenderer {
       fontSize: theme.typography.sizes.title,
       bold: true,
       align: "center",
-      color: resolveThemeColor(theme, "text-light", "text-light")
+      color: titleColor
     });
 
     if (definition.subtitle !== undefined) {
@@ -369,7 +508,7 @@ export class SlideRenderer {
         fontFace: theme.typography.fonts.heading,
         fontSize: theme.typography.sizes.subheading,
         align: "center",
-        color: resolveThemeColor(theme, "secondary", "secondary")
+        color: subtitleColor
       });
     }
   }
@@ -377,7 +516,8 @@ export class SlideRenderer {
   private async renderBlankSlide(
     slide: SlideAdapter,
     definition: Extract<Slide, { type: "blank" }>,
-    theme: ThemeDefinition
+    theme: ThemeDefinition,
+    templateContext?: SlideTemplateContext
   ): Promise<void> {
     const bg = definition.background;
     if (typeof bg === "string") {
@@ -388,6 +528,10 @@ export class SlideRenderer {
       applyBackground(slide, theme, "background-light");
     }
 
+    if (templateContext !== undefined) {
+      applyTemplateBackgroundObjects(slide, theme, templateContext);
+    }
+
     const context: ComponentRenderContext = {
       renderElement: async (nestedSlide, nestedElement, bounds, nestedTheme) => {
         await renderContentElement(nestedSlide, nestedElement, bounds, nestedTheme, context);
@@ -395,16 +539,153 @@ export class SlideRenderer {
     };
 
     for (const element of definition.elements) {
-      const bounds =
+      const defaultBounds = {
+        x: 0.8,
+        y: 0.8,
+        w: 8.4,
+        h: 4.0
+      };
+      const positionedBounds =
         element.type === "custom-shape"
           ? element.position
-          : {
-              x: 0.8,
-              y: 0.8,
-              w: 8.4,
-              h: 4.0
-            };
+          : ("position" in element && typeof element.position === "object" ? element.position : undefined) ??
+            ("bounds" in element && typeof element.bounds === "object" ? element.bounds : undefined);
+      const bounds = positionedBounds ?? defaultBounds;
       await renderContentElement(slide, element, bounds, theme, context);
     }
+  }
+
+  private renderFooter(
+    slide: SlideAdapter,
+    theme: ThemeDefinition,
+    templateContext: SlideTemplateContext | undefined,
+    renderContext: SlideRenderContext
+  ): void {
+    const templateFooter = templateContext?.templatePackage.chrome?.footer;
+    if (templateFooter !== undefined) {
+      this.renderTemplateFooter(slide, theme, renderContext, templateFooter);
+      return;
+    }
+
+    const footer = renderContext.chrome?.footer;
+    if (footer?.enabled !== true) {
+      return;
+    }
+
+    const dimensions = SLIDE_DIMENSIONS[theme.layout.slideSize];
+    const defaultColorToken =
+      renderContext.footerOnDarkBackground === true
+        ? "text-light"
+        : theme.colors["muted-text"] !== undefined
+          ? "muted-text"
+          : "text-dark";
+    const textColor = resolveThemeColor(theme, footer.color ?? defaultColorToken, defaultColorToken);
+    const fontFace = footer.fontFace ?? theme.typography.fonts.caption;
+    const fontSize = footer.fontSize ?? theme.typography.sizes.caption;
+    const leftText = this.resolveFooterLeftText(renderContext.metadata, footer);
+    const divider = footer.divider;
+
+    if (divider?.enabled === true) {
+      const dividerX = divider.x ?? 0.4;
+      const dividerY = divider.y ?? dimensions.height - 0.205;
+      const dividerW = divider.w ?? Math.max(0.1, dimensions.width - dividerX * 2);
+      slide.addShape("line", {
+        x: dividerX,
+        y: dividerY,
+        w: dividerW,
+        h: 0,
+        line: {
+          color: resolveThemeColor(theme, divider.color ?? "DEE2E6", "text-dark"),
+          width: divider.width ?? 0.8
+        }
+      });
+    }
+
+    if (leftText !== undefined && leftText.length > 0) {
+      slide.addText(leftText, {
+        x: 0.4,
+        y: dimensions.height - 0.14,
+        w: dimensions.width - 1.0,
+        h: 0.12,
+        fontFace,
+        fontSize,
+        color: textColor
+      });
+    }
+
+    if (footer.showSlideNumber ?? true) {
+      slide.addText(String(renderContext.slideIndex + 1), {
+        x: dimensions.width - 0.3,
+        y: dimensions.height - 0.14,
+        w: 0.24,
+        h: 0.12,
+        fontFace,
+        fontSize,
+        bold: true,
+        color: textColor,
+        align: "right"
+      });
+    }
+  }
+
+  private renderTemplateFooter(
+    slide: SlideAdapter,
+    theme: ThemeDefinition,
+    renderContext: SlideRenderContext,
+    footer: NonNullable<NonNullable<SlideTemplateContext["templatePackage"]["chrome"]>["footer"]>
+  ): void {
+    const dimensions = SLIDE_DIMENSIONS[theme.layout.slideSize];
+    const defaultColorToken = renderContext.footerOnDarkBackground ? "text-light" : "text-dark";
+    const textColor = resolveThemeColor(theme, footer.color ?? defaultColorToken, defaultColorToken);
+    const fontFace = footer.fontFace ?? theme.typography.fonts.caption;
+    const fontSize = footer.fontSizePt ?? theme.typography.sizes.caption;
+    const leftTextY = 0.12;
+    const pageNumberY = renderContext.footerOnDarkBackground ? dimensions.height - 0.24 : 0.12;
+
+    if (footer.leftText !== undefined) {
+      slide.addText(footer.leftText, {
+        x: 0.1,
+        y: leftTextY,
+        w: 2.8,
+        h: 0.16,
+        fontFace,
+        fontSize,
+        color: textColor
+      });
+    }
+
+    if (footer.showSlideNumber ?? true) {
+      slide.addText(String(renderContext.slideIndex + 1), {
+        x: dimensions.width - 0.3,
+        y: pageNumberY,
+        w: 0.24,
+        h: 0.16,
+        fontFace,
+        fontSize,
+        bold: true,
+        color: textColor,
+        align: "right"
+      });
+    }
+  }
+
+  private resolveFooterLeftText(metadata: PresentationMetadata, footer: FooterChrome): string | undefined {
+    if (footer.leftText !== undefined) {
+      return interpolateFooterText(footer.leftText, metadata);
+    }
+
+    if (metadata.footerText !== undefined) {
+      return interpolateFooterText(metadata.footerText, metadata);
+    }
+
+    const parts = [metadata.company, metadata.copyright].filter(
+      (part): part is string => typeof part === "string" && part.trim().length > 0
+    );
+
+    if (parts.length === 0) {
+      return undefined;
+    }
+
+    return parts.join(" | ");
   }
 }

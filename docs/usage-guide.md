@@ -42,6 +42,42 @@ const renderer = new PPTXRenderer();
 await renderer.generate(dsl, "./output.pptx");
 ```
 
+## 3.1 ヘッダー線・フッター（DSL chrome）
+
+テンプレートインポートを使わない場合でも、`chrome` で全スライド共通のヘッダー区切り線とフッターを指定できます。
+
+```ts
+const dsl: PresentationDSL = {
+  version: "1.0",
+  theme: "venture-teal",
+  metadata: {
+    title: "Sample",
+    company: "Contoso",
+    copyright: "Copyright (c) 2026 Contoso"
+  },
+  chrome: {
+    header: {
+      divider: {
+        enabled: true,
+        y: 1.2,
+        color: "neutral-border"
+      }
+    },
+    footer: {
+      enabled: true,
+      leftText: "{company} | {copyright}",
+      showSlideNumber: true,
+      divider: {
+        enabled: true,
+        y: 5.42,
+        color: "neutral-border"
+      }
+    }
+  },
+  slides: [/* ... */]
+};
+```
+
 ## 4. オプション
 
 ```ts

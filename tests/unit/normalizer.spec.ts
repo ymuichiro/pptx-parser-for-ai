@@ -105,4 +105,38 @@ describe("DSLNormalizer", () => {
     }
     expect(blankSlide.background).toBe("light");
   });
+
+  it("normalizes chrome defaults when chrome is configured", () => {
+    const normalizer = new DSLNormalizer();
+    const normalized = normalizer.normalize({
+      version: "1.0",
+      theme: "corporate-blue",
+      metadata: { title: "chrome" },
+      chrome: {
+        header: {
+          divider: {
+            y: 1.2
+          }
+        },
+        footer: {
+          leftText: "{company}",
+          divider: {
+            y: 5.42
+          }
+        }
+      },
+      slides: [
+        {
+          type: "content",
+          title: "a",
+          content: [{ type: "text", content: "b" }]
+        }
+      ]
+    });
+
+    expect(normalized.chrome?.header?.divider?.enabled).toBe(true);
+    expect(normalized.chrome?.footer?.enabled).toBe(true);
+    expect(normalized.chrome?.footer?.showSlideNumber).toBe(true);
+    expect(normalized.chrome?.footer?.divider?.enabled).toBe(true);
+  });
 });

@@ -24,10 +24,11 @@ export function renderText(slide: SlideAdapter, element: TextElement, bounds: Bo
     y: bounds.y,
     w: bounds.w,
     h: bounds.h,
-    fontFace: fontMap[style],
-    fontSize: sizeMap[style],
-    color: resolveThemeColor(theme, "text-dark", "text-dark"),
+    fontFace: element.fontFace ?? fontMap[style],
+    fontSize: element.fontSize ?? sizeMap[style],
+    color: resolveThemeColor(theme, element.color ?? "text-dark", "text-dark"),
+    bold: element.bold ?? false,
     align: element.align ?? "left",
-    valign: "top"
+    valign: element.valign ?? "top"
   });
 }

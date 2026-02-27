@@ -66,6 +66,15 @@ export interface ImportedTemplatePackage {
     image?: string;
     objects: ImportedTemplateObject[];
   };
+  chrome?: {
+    footer?: {
+      leftText?: string;
+      showSlideNumber?: boolean;
+      color?: string;
+      fontFace?: string;
+      fontSizePt?: number;
+    };
+  };
   manifest: {
     warnings: string[];
     unsupported: string[];
@@ -191,6 +200,21 @@ const importedTemplatePackageSchema = z
         objects: z.array(z.union([shapeObjectSchema, imageObjectSchema])).max(MAX_ARRAY_LENGTH)
       })
       .strict(),
+    chrome: z
+      .object({
+        footer: z
+          .object({
+            leftText: boundedString.optional(),
+            showSlideNumber: z.boolean().optional(),
+            color: colorRefSchema.optional(),
+            fontFace: boundedString.optional(),
+            fontSizePt: z.number().positive().finite().optional()
+          })
+          .strict()
+          .optional()
+      })
+      .strict()
+      .optional(),
     manifest: z
       .object({
         warnings: z.array(z.string().max(MAX_STRING_LENGTH)).max(MAX_ARRAY_LENGTH),

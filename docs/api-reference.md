@@ -75,6 +75,10 @@ import {
 
 ## Core DSL Types
 - `PresentationDSL`
+  - `metadata`: `title/author/company/date` に加え `copyright`, `footerText` を指定可能
+  - `chrome?`
+    - `header.divider`: ヘッダー領域と本文を分離する区切り線
+    - `footer`: 左テキスト + ページ番号 + 任意の区切り線
 - `Slide` (`title` / `content` / `section` / `blank`)
 - `ContentElement`
   - `text`

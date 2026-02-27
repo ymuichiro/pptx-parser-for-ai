@@ -5,6 +5,7 @@ export interface PresentationDSL {
   version: string;
   theme: string | ThemeDefinition;
   metadata: PresentationMetadata;
+  chrome?: PresentationChrome;
   slides: Slide[];
 }
 
@@ -13,6 +14,43 @@ export interface PresentationMetadata {
   author?: string;
   company?: string;
   date?: string;
+  copyright?: string;
+  footerText?: string;
+}
+
+export interface DividerChrome {
+  enabled?: boolean;
+  x?: number;
+  y?: number;
+  w?: number;
+  color?: string;
+  width?: number;
+}
+
+export interface HeaderChrome {
+  divider?: DividerChrome;
+}
+
+export interface FooterChrome {
+  enabled?: boolean;
+  leftText?: string;
+  showSlideNumber?: boolean;
+  color?: string;
+  fontFace?: string;
+  fontSize?: number;
+  divider?: DividerChrome;
+}
+
+export interface PresentationChrome {
+  header?: HeaderChrome;
+  footer?: FooterChrome;
+}
+
+export interface ElementPosition {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
 }
 
 export type Slide = TitleSlide | ContentSlide | SectionSlide | BlankSlide;
@@ -67,6 +105,12 @@ export interface TextElement {
   content: string;
   style?: TextStyle;
   align?: Alignment;
+  position?: ElementPosition;
+  color?: string;
+  fontFace?: string;
+  fontSize?: number;
+  bold?: boolean;
+  valign?: "top" | "mid" | "bottom";
 }
 
 export interface BulletItem {
@@ -78,11 +122,13 @@ export interface BulletListElement {
   type: "bullet-list";
   style?: "default" | "pros" | "cons" | "checkmark";
   items: Array<string | BulletItem>;
+  position?: ElementPosition;
 }
 
 export interface NumberedListElement {
   type: "numbered-list";
   items: string[];
+  position?: ElementPosition;
 }
 
 export interface StatCalloutElement {
@@ -91,6 +137,7 @@ export interface StatCalloutElement {
   label: string;
   trend?: string;
   color?: string;
+  position?: ElementPosition;
 }
 
 export interface ImageElement {
@@ -99,6 +146,7 @@ export interface ImageElement {
   caption?: string;
   sizing?: "contain" | "cover" | "crop";
   position?: "center" | "left" | "right";
+  bounds?: ElementPosition;
 }
 
 export interface TableHighlightRule {
@@ -113,6 +161,7 @@ export interface TableElement {
   headers: string[];
   rows: Array<Array<string | number>>;
   highlight?: TableHighlightRule[];
+  position?: ElementPosition;
 }
 
 export interface ChartSeries {
@@ -125,6 +174,7 @@ export interface ChartElement {
   type: "chart";
   chartType: "bar" | "line" | "pie" | "doughnut" | "scatter";
   title?: string;
+  position?: ElementPosition;
   data: {
     labels: string[];
     series: ChartSeries[];
@@ -132,6 +182,8 @@ export interface ChartElement {
   options?: {
     showValues?: boolean;
     showLegend?: boolean;
+    valuePrefix?: string;
+    valueSuffix?: string;
   };
 }
 
@@ -154,6 +206,7 @@ export interface NetworkDiagramElement {
   layout: "hierarchical" | "force-directed" | "circular";
   nodes: NetworkNode[];
   edges: NetworkEdge[];
+  position?: ElementPosition;
 }
 
 export interface FlowchartStep {
@@ -173,6 +226,7 @@ export interface FlowchartElement {
   direction: "horizontal" | "vertical";
   steps: FlowchartStep[];
   flows: FlowchartFlow[];
+  position?: ElementPosition;
 }
 
 export interface IconGridItem {
@@ -185,6 +239,7 @@ export interface IconGridElement {
   type: "icon-grid";
   columns: number;
   items: IconGridItem[];
+  position?: ElementPosition;
 }
 
 export interface TwoColumnElement {
@@ -192,11 +247,12 @@ export interface TwoColumnElement {
   left: ContentElement[];
   right: ContentElement[];
   ratio?: "1:1" | "2:1" | "1:2";
+  position?: ElementPosition;
 }
 
 export interface CustomShapeElement {
   type: "custom-shape";
-  shape: "rectangle" | "circle" | "triangle" | "arrow";
+  shape: "rectangle" | "circle" | "triangle" | "arrow" | "rounded-rectangle";
   position: {
     x: number;
     y: number;

@@ -1,0 +1,68 @@
+name: Venture Teal
+version: "1.0"
+colors:
+  primary: "1A1A2E"
+  secondary: "E6FAF3"
+  accent: "16C79A"
+  text-dark: "1A1A2E"
+  text-light: "FFFFFF"
+  muted-text: "888888"
+  background-light: "F8F9FA"
+  background-dark: "1A1A2E"
+  success: "16C79A"
+  warning: "F5A623"
+  error: "D64550"
+  neutral-border: "DEE2E6"
+typography:
+  fonts:
+    title: Trebuchet MS
+    heading: Trebuchet MS
+    body: Calibri
+    caption: Calibri
+  sizes:
+    title: 40
+    heading: 20
+    subheading: 16
+    body: 14
+    caption: 11
+    statValue: 64
+  weights:
+    bold: true
+    normal: false
+layout:
+  slideSize: "16:9"
+  margins:
+    default: 0.5
+    titleSlide: 0.9
+  spacing:
+    elementGap: 0.22
+    paragraphSpacing: 0.12
+  grid:
+    columns: 12
+    gutter: 0.18
+defaults:
+  titleSlide:
+    background: background-dark
+    titleColor: text-light
+    subtitleColor: accent
+  contentSlide:
+    background: background-light
+    titleColor: text-dark
+  bulletStyle:
+    character: "•"
+    color: accent
+    indent: 0.28
+  tableStyle:
+    headerBackground: primary
+    headerText: text-light
+    rowAlternate: secondary
+    borderColor: neutral-border
+effects:
+  cardShadow:
+    type: outer
+    blur: 6
+    offset: 2
+    color: "000000"
+    opacity: 0.08
+  titleUnderline:
+    enabled: false

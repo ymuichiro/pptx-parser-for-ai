@@ -5,13 +5,59 @@ import { themeDefinitionSchema } from "../theme/schema";
 
 const boundedString = z.string().min(1).max(MAX_STRING_LENGTH);
 const optionalBoundedString = z.string().min(1).max(MAX_STRING_LENGTH).optional();
+const elementPositionSchema = z
+  .object({
+    x: z.number(),
+    y: z.number(),
+    w: z.number().positive(),
+    h: z.number().positive()
+  })
+  .strict();
 
 const metadataSchema = z
   .object({
     title: boundedString,
     author: optionalBoundedString,
     company: optionalBoundedString,
-    date: optionalBoundedString
+    date: optionalBoundedString,
+    copyright: optionalBoundedString,
+    footerText: optionalBoundedString
+  })
+  .strict();
+
+const dividerChromeSchema = z
+  .object({
+    enabled: z.boolean().optional(),
+    x: z.number().nonnegative().optional(),
+    y: z.number().nonnegative().optional(),
+    w: z.number().positive().optional(),
+    color: optionalBoundedString,
+    width: z.number().positive().optional()
+  })
+  .strict();
+
+const headerChromeSchema = z
+  .object({
+    divider: dividerChromeSchema.optional()
+  })
+  .strict();
+
+const footerChromeSchema = z
+  .object({
+    enabled: z.boolean().optional(),
+    leftText: optionalBoundedString,
+    showSlideNumber: z.boolean().optional(),
+    color: optionalBoundedString,
+    fontFace: optionalBoundedString,
+    fontSize: z.number().positive().optional(),
+    divider: dividerChromeSchema.optional()
+  })
+  .strict();
+
+const presentationChromeSchema = z
+  .object({
+    header: headerChromeSchema.optional(),
+    footer: footerChromeSchema.optional()
   })
   .strict();
 
@@ -20,7 +66,13 @@ const textElementSchema = z
     type: z.literal("text"),
     content: boundedString,
     style: z.union([z.literal("title"), z.literal("heading"), z.literal("body"), z.literal("caption")]).optional(),
-    align: z.union([z.literal("left"), z.literal("center"), z.literal("right")]).optional()
+    align: z.union([z.literal("left"), z.literal("center"), z.literal("right")]).optional(),
+    position: elementPositionSchema.optional(),
+    color: optionalBoundedString,
+    fontFace: optionalBoundedString,
+    fontSize: z.number().positive().optional(),
+    bold: z.boolean().optional(),
+    valign: z.union([z.literal("top"), z.literal("mid"), z.literal("bottom")]).optional()
   })
   .strict();
 
@@ -35,14 +87,16 @@ const bulletListElementSchema = z
   .object({
     type: z.literal("bullet-list"),
     style: z.union([z.literal("default"), z.literal("pros"), z.literal("cons"), z.literal("checkmark")]).optional(),
-    items: z.array(z.union([boundedString, bulletItemSchema])).max(MAX_ARRAY_LENGTH)
+    items: z.array(z.union([boundedString, bulletItemSchema])).max(MAX_ARRAY_LENGTH),
+    position: elementPositionSchema.optional()
   })
   .strict();
 
 const numberedListElementSchema = z
   .object({
     type: z.literal("numbered-list"),
-    items: z.array(boundedString).max(MAX_ARRAY_LENGTH)
+    items: z.array(boundedString).max(MAX_ARRAY_LENGTH),
+    position: elementPositionSchema.optional()
   })
   .strict();
 
@@ -52,7 +106,8 @@ const statCalloutElementSchema = z
     value: boundedString,
     label: boundedString,
     trend: optionalBoundedString,
-    color: optionalBoundedString
+    color: optionalBoundedString,
+    position: elementPositionSchema.optional()
   })
   .strict();
 
@@ -62,7 +117,8 @@ const imageElementSchema = z
     source: boundedString,
     caption: optionalBoundedString,
     sizing: z.union([z.literal("contain"), z.literal("cover"), z.literal("crop")]).optional(),
-    position: z.union([z.literal("center"), z.literal("left"), z.literal("right")]).optional()
+    position: z.union([z.literal("center"), z.literal("left"), z.literal("right")]).optional(),
+    bounds: elementPositionSchema.optional()
   })
   .strict();
 
@@ -72,6 +128,7 @@ const tableElementSchema = z
     style: z.union([z.literal("default"), z.literal("striped"), z.literal("bordered"), z.literal("minimal")]).optional(),
     headers: z.array(boundedString).min(1).max(MAX_ARRAY_LENGTH),
     rows: z.array(z.array(z.union([boundedString, z.number()])).max(MAX_ARRAY_LENGTH)).max(MAX_ARRAY_LENGTH),
+    position: elementPositionSchema.optional(),
     highlight: z
       .array(
         z
@@ -98,6 +155,7 @@ const chartElementSchema = z
       z.literal("scatter")
     ]),
     title: optionalBoundedString,
+    position: elementPositionSchema.optional(),
     data: z
       .object({
         labels: z.array(boundedString).min(1).max(MAX_ARRAY_LENGTH),
@@ -118,7 +176,9 @@ const chartElementSchema = z
     options: z
       .object({
         showValues: z.boolean().optional(),
-        showLegend: z.boolean().optional()
+        showLegend: z.boolean().optional(),
+        valuePrefix: optionalBoundedString,
+        valueSuffix: optionalBoundedString
       })
       .strict()
       .optional()
@@ -129,6 +189,7 @@ const networkDiagramElementSchema = z
   .object({
     type: z.literal("network-diagram"),
     layout: z.union([z.literal("hierarchical"), z.literal("force-directed"), z.literal("circular")]),
+    position: elementPositionSchema.optional(),
     nodes: z
       .array(
         z
@@ -161,6 +222,7 @@ const flowchartElementSchema = z
   .object({
     type: z.literal("flowchart"),
     direction: z.union([z.literal("horizontal"), z.literal("vertical")]),
+    position: elementPositionSchema.optional(),
     steps: z
       .array(
         z
@@ -191,6 +253,7 @@ const iconGridElementSchema = z
   .object({
     type: z.literal("icon-grid"),
     columns: z.number().int().positive().max(12),
+    position: elementPositionSchema.optional(),
     items: z
       .array(
         z
@@ -214,7 +277,8 @@ const twoColumnElementSchema: z.ZodTypeAny = z.lazy(() =>
       type: z.literal("two-column"),
       left: z.array(contentElementSchema).max(MAX_ARRAY_LENGTH),
       right: z.array(contentElementSchema).max(MAX_ARRAY_LENGTH),
-      ratio: z.union([z.literal("1:1"), z.literal("2:1"), z.literal("1:2")]).optional()
+      ratio: z.union([z.literal("1:1"), z.literal("2:1"), z.literal("1:2")]).optional(),
+      position: elementPositionSchema.optional()
     })
     .strict()
 );
@@ -238,15 +302,8 @@ contentElementSchema = z.lazy(() =>
 const customShapeElementSchema = z
   .object({
     type: z.literal("custom-shape"),
-    shape: z.union([z.literal("rectangle"), z.literal("circle"), z.literal("triangle"), z.literal("arrow")]),
-    position: z
-      .object({
-        x: z.number(),
-        y: z.number(),
-        w: z.number().positive(),
-        h: z.number().positive()
-      })
-      .strict(),
+    shape: z.union([z.literal("rectangle"), z.literal("circle"), z.literal("triangle"), z.literal("arrow"), z.literal("rounded-rectangle")]),
+    position: elementPositionSchema,
     fill: optionalBoundedString,
     border: z
       .object({
@@ -334,6 +391,7 @@ export const presentationDSLSchema = z
     version: z.string().min(1).max(10),
     theme: z.union([boundedString, themeDefinitionSchema]),
     metadata: metadataSchema,
+    chrome: presentationChromeSchema.optional(),
     slides: z.array(slideSchema).min(1).max(MAX_ARRAY_LENGTH)
   })
   .strict();

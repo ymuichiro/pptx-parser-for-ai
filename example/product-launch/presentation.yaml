@@ -1,0 +1,96 @@
+version: "1.0"
+theme: "venture-teal"
+metadata:
+  title: "Product Launch Blueprint"
+  author: "Product Marketing"
+  company: "Contoso"
+  date: "2026-02-16"
+slides:
+  - type: title
+    background: dark
+    content:
+      title: "Nimbus AI Suite"
+      subtitle: "Launch Blueprint"
+      date: "2026-02-16"
+      logo: false
+  - type: content
+    title: "Launch Narrative"
+    content:
+      - type: two-column
+        ratio: "1:1"
+        left:
+          - type: text
+            style: body
+            content: "Customer Pain"
+          - type: bullet-list
+            items:
+              - "Teams work in disconnected tools"
+              - "Decision cycles are too slow for modern demand"
+              - "Operational context is missing from planning"
+        right:
+          - type: text
+            style: body
+            content: "Our Positioning"
+          - type: bullet-list
+            style: pros
+            items:
+              - "Unified command surface for GTM and operations"
+              - "Governance and audit readiness by design"
+              - "Fast onboarding with reusable playbooks"
+      - type: stat-callout
+        value: "60"
+        label: "Pilot Accounts in First Quarter"
+        trend: "+14 wk/wk"
+        color: accent
+  - type: content
+    title: "Go-to-Market System"
+    layout: auto
+    content:
+      - type: icon-grid
+        columns: 3
+        items:
+          - icon: "example/assets/icons/rocket-solid.png"
+            title: "Activation Loop"
+            description: "Template-based onboarding in under 48 hours"
+          - icon: "example/assets/icons/laptop-solid.png"
+            title: "Self-Serve Hub"
+            description: "Guided setup for admins and operators"
+          - icon: "example/assets/icons/search-dollar.png"
+            title: "Revenue Intelligence"
+            description: "Pipeline and conversion visibility in one view"
+      - type: chart
+        chartType: bar
+        title: "Pipeline Projection"
+        data:
+          labels: ["Awareness", "Qualified", "Pilot", "Won"]
+          series:
+            - name: "Accounts"
+              values: [320, 150, 60, 28]
+              color: accent
+      - type: table
+        style: striped
+        headers: ["Stage", "Owner", "Target Date"]
+        rows:
+          - ["Messaging sign-off", "PMM", "2026-03-01"]
+          - ["Sales enablement", "Revenue Ops", "2026-03-08"]
+          - ["Launch event", "Marketing", "2026-03-20"]
+  - type: content
+    title: "Readiness Checklist"
+    layout: auto
+    content:
+      - type: two-column
+        ratio: "2:1"
+        left:
+          - type: numbered-list
+            items:
+              - "Lock launch scope and success metrics with Sales and CS"
+              - "Complete security and legal review for regulated customers"
+              - "Train field teams with objection handling and demo kits"
+              - "Publish post-launch operating cadence and escalation path"
+        right:
+          - type: bullet-list
+            style: checkmark
+            items:
+              - "SLA and support ownership confirmed"
+              - "Usage analytics and alerting configured"
+              - "Executive dashboard shared weekly"

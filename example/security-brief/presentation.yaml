@@ -1,0 +1,59 @@
+version: "1.0"
+theme: "corporate-blue"
+metadata:
+  title: "Security Operations Brief"
+  author: "Security Engineering"
+  company: "Example Enterprise"
+  date: "2026-02-16"
+slides:
+  - type: section
+    title: "Security Operations"
+    subtitle: "Weekly Brief"
+    background:
+      color: primary
+      opacity: 1
+  - type: content
+    title: "Incident Overview"
+    layout: auto
+    content:
+      - type: table
+        style: bordered
+        headers: ["Category", "Last Week", "This Week", "Delta"]
+        rows:
+          - ["Critical", 1, 0, "-1"]
+          - ["High", 4, 2, "-2"]
+          - ["Medium", 12, 9, "-3"]
+      - type: stat-callout
+        value: "99.97%"
+        label: "Patch SLA Compliance"
+        trend: "+0.12%"
+        color: success
+      - type: bullet-list
+        style: checkmark
+        items:
+          - "All internet-facing systems patched"
+          - "No unresolved critical findings"
+          - text: "Audit readiness"
+            subItems:
+              - "Evidence package updated"
+              - "Control owners validated"
+  - type: content
+    title: "Containment Playbook"
+    content:
+      - type: two-column
+        ratio: "1:1"
+        left:
+          - type: numbered-list
+            items:
+              - "Detect and classify in SIEM"
+              - "Triage based on blast radius"
+              - "Isolate affected assets"
+              - "Recover and monitor for recurrence"
+        right:
+          - type: table
+            style: minimal
+            headers: ["Phase", "Target Time"]
+            rows:
+              - ["Detection", "15 min"]
+              - ["Containment", "60 min"]
+              - ["Recovery", "4 hr"]

@@ -4,10 +4,16 @@
   "description": "Secure and deterministic PPTX generator from declarative DSL",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "require": "./dist/index.js"
+    }
+  },
+  "sideEffects": false,
   "files": [
     "dist",
-    "themes",
-    "example"
+    "themes"
   ],
   "scripts": {
     "clean": "rm -rf dist coverage .tmp",
@@ -22,22 +28,35 @@
     "test:perf": "vitest run tests/performance --reporter=dot --pool=forks --poolOptions.forks.singleFork",
     "test:fuzz": "vitest run tests/fuzz --reporter=dot --pool=forks --poolOptions.forks.singleFork",
     "security:audit": "npm audit --omit=dev --audit-level=high",
+    "security:all": "npm run test:security && npm run security:audit",
     "example:test": "tsx example/run-example-tests.ts",
-    "quality:check": "npm run lint && npm run typecheck && npm run test:coverage && npm run test:integration && npm run test:security && npm run test:perf && npm run test:fuzz && npm run example:test && npm run build"
+    "quality:check": "npm run lint && npm run typecheck && npm run test:coverage && npm run test:integration && npm run test:security && npm run test:perf && npm run test:fuzz && npm run example:test && npm run build",
+    "prepublishOnly": "npm run quality:check"
   },
   "keywords": [
     "pptx",
     "dsl",
     "typescript"
   ],
-  "author": "",
+  "author": "ymuichiro",
   "license": "MIT",
   "type": "commonjs",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ymuichiro/pptx-parser-for-ai.git"
+  },
+  "homepage": "https://github.com/ymuichiro/pptx-parser-for-ai#readme",
+  "bugs": {
+    "url": "https://github.com/ymuichiro/pptx-parser-for-ai/issues"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
   "engines": {
     "node": ">=20.0.0"
   },
   "dependencies": {
-    "fast-xml-parser": "^5.1.0",
+    "fast-xml-parser": "^5.4.1",
     "js-yaml": "^4.1.0",
     "jszip": "^3.10.1",
     "pptxgenjs": "^3.12.0",

@@ -1,7 +1,7 @@
 import type { SlideAdapter } from "../../src/renderers";
 
 export interface SlideCall {
-  kind: "text" | "shape" | "image" | "table";
+  kind: "text" | "shape" | "image" | "table" | "chart";
   payload: unknown;
 }
 
@@ -33,6 +33,13 @@ export class MockSlide implements SlideAdapter {
     this.calls.push({
       kind: "table",
       payload: { rows, options }
+    });
+  }
+
+  public addChart(chartType: string, data: Array<Record<string, unknown>>, options: Record<string, unknown>): void {
+    this.calls.push({
+      kind: "chart",
+      payload: { chartType, data, options }
     });
   }
 

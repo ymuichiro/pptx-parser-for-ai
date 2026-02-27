@@ -6,7 +6,8 @@ const shapeMap: Record<CustomShapeElement["shape"], string> = {
   rectangle: "rect",
   circle: "ellipse",
   triangle: "triangle",
-  arrow: "chevron"
+  arrow: "chevron",
+  "rounded-rectangle": "roundRect"
 };
 
 export function renderCustomShape(
@@ -16,18 +17,24 @@ export function renderCustomShape(
   theme: ThemeDefinition
 ): void {
   const bounds = element.position ?? fallbackBounds;
-
-  slide.addShape(shapeMap[element.shape], {
+  const options: Record<string, unknown> = {
     x: bounds.x,
     y: bounds.y,
     w: bounds.w,
     h: bounds.h,
     fill: {
       color: resolveThemeColor(theme, element.fill ?? "primary", "primary")
-    },
-    line: {
-      color: resolveThemeColor(theme, element.border?.color ?? "text-dark", "text-dark"),
-      width: element.border?.width ?? 1
     }
+  };
+
+  if (element.border !== undefined) {
+    options.line = {
+      color: resolveThemeColor(theme, element.border.color, "text-dark"),
+      width: element.border.width
+    };
+  }
+
+  slide.addShape(shapeMap[element.shape], {
+    ...options
   });
 }
