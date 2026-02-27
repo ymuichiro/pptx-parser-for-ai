@@ -2,8 +2,10 @@ import * as path from "node:path";
 import { PPTXRenderer } from "../../src";
 
 async function main(): Promise<void> {
+  const templatePath = path.resolve(process.cwd(), "example", "templates", "venture-teal", "template.yaml");
   const renderer = new PPTXRenderer({
-    enableQA: true
+    enableQA: true,
+    templatePackagePath: templatePath
   });
 
   const inputPath = path.resolve(process.cwd(), "example", "network", "presentation.yaml");

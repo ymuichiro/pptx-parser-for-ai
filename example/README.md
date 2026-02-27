@@ -6,10 +6,11 @@ This directory provides production-style sample decks and scripts.
 
 - `basic`: business review deck with bullets, stat-callout, and table
 - `network`: architecture deck with network-diagram and flowchart
-- `template-gallery`: executive strategy deck with chart, icon-grid, and two-column layout
+- `template-gallery`: premium strategy deck
 - `security-brief`: security operations weekly report template
-- `product-launch`: product launch narrative and funnel metrics
+- `product-launch`: launch blueprint with icon-driven GTM narrative
 - `template-import`: import a `.pptx/.potx` file as a reusable template package
+- `templates/venture-teal/template.yaml`: shared template for common decorations and placeholder bounds
 
 ## Run all examples
 

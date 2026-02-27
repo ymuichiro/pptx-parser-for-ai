@@ -13,6 +13,7 @@ import type { ImportedTemplatePackage } from "./template-importer/types";
 import { parseImportedTemplatePackage } from "./template-importer/types";
 import { ThemeManager } from "./theme";
 import { ensureOutputDir } from "./utils/paths";
+import { applyKeynoteChartCompatibilityFix } from "./utils/chart-compat";
 import type {
   PresentationDSL,
   QAConfig,
@@ -28,6 +29,7 @@ export interface RendererOptions {
   templatePackage?: ImportedTemplatePackage;
   templatePackagePath?: string;
   templateAssetBaseDir?: string;
+  disableChartCompatibilityPatch?: boolean;
 }
 
 export interface GenerationMetadata {
@@ -67,6 +69,7 @@ export class PPTXRenderer {
   private readonly templatePackage: ImportedTemplatePackage | undefined;
   private readonly templatePackagePath: string | undefined;
   private readonly templateAssetBaseDir: string | undefined;
+  private readonly disableChartCompatibilityPatch: boolean;
   private cachedTemplateContext?: ResolvedTemplateRenderContext;
 
   public constructor(options?: RendererOptions) {
@@ -82,6 +85,7 @@ export class PPTXRenderer {
     this.templatePackage = undefined;
     this.templatePackagePath = options?.templatePackagePath;
     this.templateAssetBaseDir = options?.templateAssetBaseDir;
+    this.disableChartCompatibilityPatch = options?.disableChartCompatibilityPatch ?? false;
 
     if (options?.templatePackage !== undefined) {
       try {
@@ -254,6 +258,9 @@ export class PPTXRenderer {
 
     try {
       await presentation.writeFile({ fileName: tempPath });
+      if (!this.disableChartCompatibilityPatch) {
+        await applyKeynoteChartCompatibilityFix(tempPath);
+      }
       await fs.rename(tempPath, outputPath);
     } catch (error) {
       await fs.rm(tempPath, { force: true });

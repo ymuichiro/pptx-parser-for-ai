@@ -3,6 +3,8 @@ import type {
   BlankSlide,
   ContentElement,
   ContentSlide,
+  FooterChrome,
+  PresentationChrome,
   PresentationDSL,
   Slide,
   TitleSlide,
@@ -50,12 +52,19 @@ function normalizeContentElement(element: ContentElement): ContentElement {
         style: element.style ?? "default"
       };
     case "chart":
+      const normalizedChartOptions: NonNullable<typeof element.options> = {
+        showLegend: element.options?.showLegend ?? true,
+        showValues: element.options?.showValues ?? false
+      };
+      if (element.options?.valuePrefix !== undefined) {
+        normalizedChartOptions.valuePrefix = element.options.valuePrefix;
+      }
+      if (element.options?.valueSuffix !== undefined) {
+        normalizedChartOptions.valueSuffix = element.options.valueSuffix;
+      }
       return {
         ...element,
-        options: {
-          showLegend: element.options?.showLegend ?? true,
-          showValues: element.options?.showValues ?? false
-        }
+        options: normalizedChartOptions
       };
     case "network-diagram":
       return {
@@ -124,9 +133,54 @@ function normalizeSlide(slide: Slide): Slide {
   }
 }
 
+function normalizeChrome(chrome: PresentationChrome | undefined): PresentationChrome | undefined {
+  if (chrome === undefined) {
+    return undefined;
+  }
+
+  const normalized: PresentationChrome = {};
+
+  if (chrome.header !== undefined) {
+    if (chrome.header.divider !== undefined) {
+      normalized.header = {
+        divider: {
+          ...chrome.header.divider,
+          enabled: chrome.header.divider.enabled ?? true
+        }
+      };
+    } else {
+      normalized.header = {};
+    }
+  }
+
+  if (chrome.footer !== undefined) {
+    const normalizedFooter: FooterChrome = {
+      ...chrome.footer,
+      enabled: chrome.footer.enabled ?? true,
+      showSlideNumber: chrome.footer.showSlideNumber ?? true
+    };
+
+    if (chrome.footer.divider !== undefined) {
+      normalizedFooter.divider = {
+        ...chrome.footer.divider,
+        enabled: chrome.footer.divider.enabled ?? true
+      };
+    }
+
+    normalized.footer = normalizedFooter;
+  }
+
+  if (normalized.header === undefined && normalized.footer === undefined) {
+    return undefined;
+  }
+
+  return normalized;
+}
+
 export class DSLNormalizer {
   public normalize(dsl: PresentationDSL): PresentationDSL {
     const cloned = cloneDSL(dsl);
+    const normalizedChrome = normalizeChrome(cloned.chrome);
 
     return {
       ...cloned,
@@ -136,6 +190,7 @@ export class DSLNormalizer {
         ...cloned.metadata,
         title: cloned.metadata.title || "Untitled"
       },
+      ...(normalizedChrome !== undefined ? { chrome: normalizedChrome } : {}),
       slides: cloned.slides.map(normalizeSlide)
     };
   }

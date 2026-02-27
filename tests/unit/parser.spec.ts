@@ -78,6 +78,49 @@ describe("DSLParser", () => {
     expect(text.align).toBe("left");
   });
 
+  it("accepts chrome config and footer metadata fields", () => {
+    const parser = new DSLParser();
+    const raw: PresentationDSL = {
+      version: "1.0",
+      theme: "corporate-blue",
+      metadata: {
+        title: "chrome",
+        company: "Contoso",
+        copyright: "Copyright (c) 2026 Contoso"
+      },
+      chrome: {
+        header: {
+          divider: {
+            y: 1.2,
+            color: "DDDDDD"
+          }
+        },
+        footer: {
+          leftText: "{company} | {copyright}",
+          divider: {
+            y: 5.42,
+            color: "DDDDDD"
+          }
+        }
+      },
+      slides: [
+        {
+          type: "content",
+          title: "x",
+          content: [{ type: "text", content: "y" }]
+        }
+      ]
+    };
+
+    const result = parser.validate(raw);
+    expect(result.isValid).toBe(true);
+
+    const normalized = parser.normalize(raw);
+    expect(normalized.chrome?.header?.divider?.enabled).toBe(true);
+    expect(normalized.chrome?.footer?.enabled).toBe(true);
+    expect(normalized.chrome?.footer?.showSlideNumber).toBe(true);
+  });
+
   it("rejects overlong strings", () => {
     const parser = new DSLParser();
     const huge = "x".repeat(10_001);

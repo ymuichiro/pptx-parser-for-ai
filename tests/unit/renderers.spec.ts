@@ -81,7 +81,7 @@ describe("component renderers", () => {
     );
 
     expect(slide.count("table")).toBe(1);
-    expect(slide.count("shape")).toBeGreaterThan(0);
+    expect(slide.count("chart")).toBe(1);
   });
 
   it("renders image and rejects remote image URL", async () => {
@@ -186,6 +186,31 @@ describe("component renderers", () => {
     );
 
     expect(slide.count("shape")).toBeGreaterThan(5);
+  });
+
+  it("renders icon-grid image icons for local/data sources only", () => {
+    const slide = new MockSlide();
+
+    renderIconGrid(
+      slide,
+      {
+        type: "icon-grid",
+        columns: 3,
+        items: [
+          { icon: "example/assets/icons/car-solid.png", title: "Local" },
+          {
+            icon: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO8B2C8AAAAASUVORK5CYII=",
+            title: "Inline"
+          },
+          { icon: "https://example.com/icon.png", title: "Remote" }
+        ]
+      },
+      bounds,
+      testTheme
+    );
+
+    expect(slide.count("image")).toBe(2);
+    expect(slide.count("text")).toBe(3);
   });
 
   it("renders two-column and generic dispatcher", async () => {
@@ -492,6 +517,351 @@ describe("SlideRenderer", () => {
     expect((bodyOptions?.y as number) >= 1.4).toBe(true);
     expect((bodyOptions?.w as number) <= 8.01).toBe(true);
     expect((bodyOptions?.h as number) <= 3.51).toBe(true);
+  });
+
+  it("applies template objects to title/section and renders footer chrome", async () => {
+    const renderer = new SlideRenderer();
+    const presentation = new MockPresentation();
+
+    const templateContext: SlideTemplateContext = {
+      assetBaseDir: process.cwd(),
+      templatePackage: {
+        template: {
+          id: "chrome-sample",
+          source: {
+            file: "sample.potx",
+            sha256: "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+            importedAt: "2026-02-10T00:00:00.000Z"
+          }
+        },
+        theme: {
+          palette: {
+            primary: "0B5FFF",
+            secondary: "00A99D",
+            accent: "FF6A00",
+            "text-dark": "1A1A1A",
+            "text-light": "FFFFFF",
+            "background-light": "FAFAFA",
+            "background-dark": "121212"
+          },
+          fonts: {
+            title: "Noto Sans",
+            heading: "Noto Sans",
+            body: "Noto Sans JP",
+            caption: "Noto Sans JP"
+          },
+          slideSize: "16:9"
+        },
+        layout: {
+          kind: "title-body",
+          placeholders: {
+            title: {
+              bounds: { x: 1.2, y: 0.25, w: 7.6, h: 0.7 },
+              style: {
+                fontFace: "Noto Sans",
+                fontSizePt: 30,
+                color: "primary"
+              }
+            },
+            body: {
+              bounds: { x: 1.0, y: 1.4, w: 8.0, h: 3.5 },
+              style: {
+                fontFace: "Noto Sans JP",
+                fontSizePt: 18,
+                color: "text-dark"
+              }
+            }
+          }
+        },
+        background: {
+          mode: "editable",
+          color: "background-light",
+          objects: [
+            {
+              type: "shape",
+              shape: "rect",
+              x: 0,
+              y: 0,
+              w: 10,
+              h: 0.08,
+              fill: "accent"
+            },
+            {
+              type: "shape",
+              shape: "rect",
+              x: 0,
+              y: 5.2,
+              w: 10,
+              h: 0.4,
+              fill: "background-dark"
+            }
+          ]
+        },
+        chrome: {
+          footer: {
+            leftText: "Footer Text",
+            showSlideNumber: true,
+            color: "text-light",
+            fontFace: "Noto Sans JP",
+            fontSizePt: 11
+          }
+        },
+        manifest: {
+          warnings: [],
+          unsupported: []
+        }
+      }
+    };
+
+    const dsl: PresentationDSL = {
+      version: "1.0",
+      theme: "corporate-blue",
+      metadata: { title: "template-chrome" },
+      slides: [
+        {
+          type: "title",
+          content: { title: "Title Slide" }
+        },
+        {
+          type: "section",
+          title: "Section Slide"
+        },
+        {
+          type: "content",
+          title: "Content Slide",
+          content: [{ type: "text", content: "Body" }]
+        }
+      ]
+    };
+
+    await renderer.renderSlides(presentation, dsl, testTheme, templateContext);
+    expect(presentation.slides.length).toBe(3);
+
+    presentation.slides.forEach((slide, index) => {
+      expect(slide.count("shape")).toBeGreaterThan(1);
+      const texts = slide.calls
+        .filter((call) => call.kind === "text")
+        .flatMap((call) => {
+          const payload = call.payload as { text: string | Array<{ text: string }> };
+          return typeof payload.text === "string" ? [payload.text] : payload.text.map((item) => item.text);
+        });
+      expect(texts).toContain("Footer Text");
+      expect(texts).toContain(String(index + 1));
+    });
+  });
+
+  it("uses adaptive footer placement and default color when template footer color is omitted", async () => {
+    const renderer = new SlideRenderer();
+    const presentation = new MockPresentation();
+
+    const templateContext: SlideTemplateContext = {
+      assetBaseDir: process.cwd(),
+      templatePackage: {
+        template: {
+          id: "adaptive-footer",
+          source: {
+            file: "sample.potx",
+            sha256: "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+            importedAt: "2026-02-10T00:00:00.000Z"
+          }
+        },
+        theme: {
+          palette: {
+            primary: "0B5FFF",
+            secondary: "00A99D",
+            accent: "FF6A00",
+            "text-dark": "2C2C2C",
+            "text-light": "FFFFFF",
+            "background-light": "FAFAFA",
+            "background-dark": "121212"
+          },
+          fonts: {
+            title: "Noto Sans",
+            heading: "Noto Sans",
+            body: "Noto Sans JP",
+            caption: "Noto Sans JP"
+          },
+          slideSize: "16:9"
+        },
+        layout: {
+          kind: "title-body",
+          placeholders: {
+            title: {
+              bounds: { x: 1.2, y: 0.25, w: 7.6, h: 0.7 },
+              style: {
+                fontFace: "Noto Sans",
+                fontSizePt: 30,
+                color: "primary"
+              }
+            },
+            body: {
+              bounds: { x: 1.0, y: 1.4, w: 8.0, h: 3.5 },
+              style: {
+                fontFace: "Noto Sans JP",
+                fontSizePt: 18,
+                color: "text-dark"
+              }
+            }
+          }
+        },
+        background: {
+          mode: "editable",
+          color: "background-light",
+          objects: []
+        },
+        chrome: {
+          footer: {
+            leftText: "Footer Text",
+            showSlideNumber: true,
+            fontFace: "Noto Sans JP",
+            fontSizePt: 10
+          }
+        },
+        manifest: {
+          warnings: [],
+          unsupported: []
+        }
+      }
+    };
+
+    const dsl: PresentationDSL = {
+      version: "1.0",
+      theme: "corporate-blue",
+      metadata: { title: "adaptive-footer-check" },
+      slides: [
+        {
+          type: "title",
+          background: "dark",
+          content: { title: "Title Slide" }
+        },
+        {
+          type: "content",
+          title: "Content Slide",
+          content: [{ type: "text", content: "Body" }]
+        }
+      ]
+    };
+
+    await renderer.renderSlides(presentation, dsl, testTheme, templateContext);
+
+    const titleFooterCall = presentation.slides[0]?.calls.find((call) => {
+      if (call.kind !== "text") {
+        return false;
+      }
+      const payload = call.payload as { text: string };
+      return payload.text === "Footer Text";
+    });
+    const contentFooterCall = presentation.slides[1]?.calls.find((call) => {
+      if (call.kind !== "text") {
+        return false;
+      }
+      const payload = call.payload as { text: string };
+      return payload.text === "Footer Text";
+    });
+    const titlePageNumberCall = presentation.slides[0]?.calls.find((call) => {
+      if (call.kind !== "text") {
+        return false;
+      }
+      const payload = call.payload as { text: string };
+      return payload.text === "1";
+    });
+    const contentPageNumberCall = presentation.slides[1]?.calls.find((call) => {
+      if (call.kind !== "text") {
+        return false;
+      }
+      const payload = call.payload as { text: string };
+      return payload.text === "2";
+    });
+
+    if (
+      titleFooterCall?.kind !== "text" ||
+      contentFooterCall?.kind !== "text" ||
+      titlePageNumberCall?.kind !== "text" ||
+      contentPageNumberCall?.kind !== "text"
+    ) {
+      throw new Error("expected footer text calls");
+    }
+
+    const titleFooterOptions = (titleFooterCall.payload as { options?: Record<string, unknown> }).options;
+    const contentFooterOptions = (contentFooterCall.payload as { options?: Record<string, unknown> }).options;
+    const titlePageNumberOptions = (titlePageNumberCall.payload as { options?: Record<string, unknown> }).options;
+    const contentPageNumberOptions = (contentPageNumberCall.payload as { options?: Record<string, unknown> }).options;
+
+    expect((titleFooterOptions?.y as number) < 1).toBe(true);
+    expect((contentFooterOptions?.y as number) < 1).toBe(true);
+    expect((titlePageNumberOptions?.y as number) > 5).toBe(true);
+    expect((contentPageNumberOptions?.y as number) < 1).toBe(true);
+    expect(titleFooterOptions?.color).toBe("FFFFFF");
+    expect(contentFooterOptions?.color).toBe("2C2C2C");
+  });
+
+  it("renders DSL chrome header divider and footer with metadata placeholders", async () => {
+    const renderer = new SlideRenderer();
+    const presentation = new MockPresentation();
+
+    const dsl: PresentationDSL = {
+      version: "1.0",
+      theme: "corporate-blue",
+      metadata: {
+        title: "dsl-chrome",
+        company: "Contoso Mobility",
+        copyright: "Copyright (c) 2026 Contoso Mobility"
+      },
+      chrome: {
+        header: {
+          divider: {
+            enabled: true,
+            y: 1.18,
+            color: "DDDDDD",
+            width: 1
+          }
+        },
+        footer: {
+          enabled: true,
+          leftText: "{company} | {copyright}",
+          showSlideNumber: true,
+          color: "text-dark",
+          divider: {
+            enabled: true,
+            y: 5.42,
+            color: "DDDDDD",
+            width: 1
+          }
+        }
+      },
+      slides: [
+        {
+          type: "content",
+          title: "Overview",
+          content: [{ type: "text", content: "Body" }]
+        }
+      ]
+    };
+
+    await renderer.renderSlides(presentation, dsl, testTheme);
+    const slide = presentation.slides[0];
+    if (slide === undefined) {
+      throw new Error("expected slide");
+    }
+
+    const lineCalls = slide.calls.filter((call) => {
+      if (call.kind !== "shape") {
+        return false;
+      }
+      const payload = call.payload as { shapeName?: string };
+      return payload.shapeName === "line";
+    });
+    expect(lineCalls.length).toBe(2);
+
+    const texts = slide.calls
+      .filter((call) => call.kind === "text")
+      .flatMap((call) => {
+        const payload = call.payload as { text: string | Array<{ text: string }> };
+        return typeof payload.text === "string" ? [payload.text] : payload.text.map((item) => item.text);
+      });
+
+    expect(texts).toContain("Contoso Mobility | Copyright (c) 2026 Contoso Mobility");
+    expect(texts).toContain("1");
   });
 
   it("fails closed when template image path contains traversal", async () => {

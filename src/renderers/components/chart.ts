@@ -2,18 +2,82 @@ import type { Bounds, ChartElement, ThemeDefinition } from "../../types";
 import type { SlideAdapter } from "../base-renderer";
 import { resolveThemeColor } from "../../utils/color";
 
+function buildDataLabelFormatCode(valuePrefix: string, valueSuffix: string): string {
+  const escapeLiteral = (value: string): string => value.replace(/"/g, "\"\"");
+  const prefix = valuePrefix.trim();
+  const suffix = valueSuffix.trim();
+
+  let formatCode = "#,##0";
+  if (prefix.length > 0) {
+    formatCode = `"${escapeLiteral(prefix)}"${formatCode}`;
+  }
+  if (suffix.length > 0) {
+    formatCode = `${formatCode}"${escapeLiteral(suffix)}"`;
+  }
+  return formatCode;
+}
+
 export function renderChart(slide: SlideAdapter, element: ChartElement, bounds: Bounds, theme: ThemeDefinition): void {
-  // `pptxgenjs` の chart API 依存を最小化するため、ここでは決定的な簡易バー描画を行う。
-  const baseY = bounds.y + bounds.h * 0.85;
-  const maxValue = Math.max(...element.data.series.flatMap((series) => series.values), 1);
-  const barCount = element.data.labels.length;
-  const barWidth = Math.max(0.1, bounds.w / (barCount * Math.max(1, element.data.series.length) + barCount + 1));
+  const chartData = element.data.series.map((series) => ({
+    name: series.name,
+    labels: element.data.labels,
+    values: series.values
+  }));
+  const chartColors = element.data.series.map((series) => resolveThemeColor(theme, series.color ?? "primary", "primary"));
+  const labelColor =
+    theme.colors["muted-text"] !== undefined
+      ? resolveThemeColor(theme, "muted-text", "text-dark")
+      : resolveThemeColor(theme, "text-dark", "text-dark");
+  const bodyFontFace = theme.typography.fonts.body;
+  const headingFontFace = theme.typography.fonts.heading;
+  const valuePrefix = element.options?.valuePrefix ?? "";
+  const valueSuffix = element.options?.valueSuffix ?? "";
+  const chartType = element.chartType === "bar" ? "bar" : element.chartType;
+  const showValues = element.options?.showValues ?? false;
+  const chartOptions: Record<string, unknown> = {
+    x: bounds.x,
+    y: bounds.y,
+    w: bounds.w,
+    h: bounds.h,
+    chartColors,
+    showLegend: element.options?.showLegend ?? false,
+    showValue: showValues
+  };
+
+  if (element.chartType === "bar") {
+    chartOptions.barDir = "col";
+    chartOptions.barGrouping = "clustered";
+    chartOptions.barGapWidthPct = 140;
+    chartOptions.catAxisLabelPos = "nextTo";
+    chartOptions.catAxisLabelRotate = 0;
+    chartOptions.catAxisLabelFontFace = bodyFontFace;
+    chartOptions.catAxisLabelFontSize = 11;
+    chartOptions.catAxisLabelColor = labelColor;
+    chartOptions.catAxisMajorTickMark = "none";
+    chartOptions.catAxisMinorTickMark = "none";
+    chartOptions.catGridLine = { style: "none" };
+    chartOptions.valAxisHidden = true;
+    chartOptions.valAxisLabelPos = "none";
+    chartOptions.valAxisLineShow = false;
+    chartOptions.valAxisMajorTickMark = "none";
+    chartOptions.valAxisMinorTickMark = "none";
+    chartOptions.valGridLine = { style: "none" };
+    chartOptions.catAxisHidden = false;
+    chartOptions.dataLabelColor = resolveThemeColor(theme, "text-dark", "text-dark");
+    chartOptions.dataLabelFontFace = headingFontFace;
+    chartOptions.dataLabelFontSize = 11;
+    chartOptions.dataLabelFontBold = true;
+    chartOptions.dataLabelPosition = "outEnd";
+    chartOptions.dataLabelFormatCode = buildDataLabelFormatCode(valuePrefix, valueSuffix);
+  }
+
+  slide.addChart(chartType, chartData, chartOptions);
 
   if (element.title !== undefined) {
     slide.addText(element.title, {
       x: bounds.x,
       y: bounds.y,
-      w: bounds.w,
+      w: bounds.w * 0.8,
       h: 0.3,
       fontFace: theme.typography.fonts.heading,
       fontSize: theme.typography.sizes.caption,
@@ -21,51 +85,4 @@ export function renderChart(slide: SlideAdapter, element: ChartElement, bounds: 
       align: "left"
     });
   }
-
-  element.data.labels.forEach((label, labelIndex) => {
-    const xLabel = bounds.x + barWidth + labelIndex * barWidth * (element.data.series.length + 1);
-
-    element.data.series.forEach((series, seriesIndex) => {
-      const value = series.values[labelIndex] ?? 0;
-      const normalizedHeight = (value / maxValue) * bounds.h * 0.6;
-      const x = xLabel + seriesIndex * barWidth;
-      const y = baseY - normalizedHeight;
-
-      slide.addShape("rect", {
-        x,
-        y,
-        w: barWidth * 0.8,
-        h: Math.max(0.05, normalizedHeight),
-        fill: {
-          color: resolveThemeColor(theme, series.color ?? "primary", "primary")
-        },
-        line: {
-          color: resolveThemeColor(theme, "text-dark", "text-dark"),
-          width: 0
-        }
-      });
-
-      if (element.options?.showValues ?? false) {
-        slide.addText(String(value), {
-          x,
-          y: Math.max(bounds.y, y - 0.2),
-          w: barWidth,
-          h: 0.2,
-          fontSize: 8,
-          color: resolveThemeColor(theme, "text-dark", "text-dark"),
-          align: "center"
-        });
-      }
-    });
-
-    slide.addText(label, {
-      x: xLabel,
-      y: baseY + 0.05,
-      w: barWidth * Math.max(1, element.data.series.length),
-      h: 0.2,
-      fontSize: 8,
-      color: resolveThemeColor(theme, "text-dark", "text-dark"),
-      align: "center"
-    });
-  });
 }

@@ -2,7 +2,11 @@ import * as path from "node:path";
 import { PPTXRenderer } from "../../src";
 
 async function main(): Promise<void> {
-  const renderer = new PPTXRenderer({ enableQA: true });
+  const templatePath = path.resolve(process.cwd(), "example", "templates", "venture-teal", "template.yaml");
+  const renderer = new PPTXRenderer({
+    enableQA: true,
+    templatePackagePath: templatePath
+  });
 
   const inputPath = path.resolve(process.cwd(), "example", "security-brief", "presentation.yaml");
   const outputPath = path.resolve(process.cwd(), "example", "security-brief", "output-security-brief.pptx");
