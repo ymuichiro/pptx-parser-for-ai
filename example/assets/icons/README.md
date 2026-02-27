@@ -1,6 +1,6 @@
 # Icon Assets
 
-These icon PNG files were extracted from `example/AIレンタカー_事業計画書.pptx` to preserve the same visual style in sample YAML decks.
+These icon PNG files are bundled sample assets for the example YAML decks.
 
 They are referenced by:
 
