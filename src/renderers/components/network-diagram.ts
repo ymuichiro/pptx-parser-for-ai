@@ -2,7 +2,7 @@ import type { Bounds, NetworkDiagramElement, ThemeDefinition } from "../../types
 import { ForceDirectedLayout } from "../../layout/algorithms/force-directed";
 import { HierarchicalLayout } from "../../layout/algorithms/hierarchical";
 import type { NodePosition } from "../../layout/algorithms/hierarchical";
-import { resolveThemeColor } from "../../utils/color";
+import { StyleResolver } from "../../theme/style-resolver";
 import type { SlideAdapter } from "../base-renderer";
 
 const NODE_WIDTH = 1.3;
@@ -30,8 +30,10 @@ export function renderNetworkDiagram(
   slide: SlideAdapter,
   element: NetworkDiagramElement,
   bounds: Bounds,
-  theme: ThemeDefinition
+  theme: ThemeDefinition,
+  resolver: StyleResolver = new StyleResolver(theme)
 ): void {
+  const style = resolver.resolveNetworkStyle(element.styleRef ?? "default");
   let positions: Map<string, NodePosition>;
 
   if (element.layout === "hierarchical") {
@@ -63,7 +65,7 @@ export function renderNetworkDiagram(
       w: toCenterX - fromCenterX,
       h: toCenterY - fromCenterY,
       line: {
-        color: resolveThemeColor(theme, "text-dark", "text-dark"),
+        color: resolver.resolveColor(style.edgeColor, "text-dark"),
         width: 1,
         dashType: edge.style === "dashed" ? "dash" : "solid"
       }
@@ -76,7 +78,7 @@ export function renderNetworkDiagram(
         w: 0.8,
         h: 0.2,
         fontSize: 8,
-        color: resolveThemeColor(theme, "text-dark", "text-dark"),
+        color: resolver.resolveColor(style.labelColor, "text-dark"),
         align: "center"
       });
     }
@@ -94,10 +96,10 @@ export function renderNetworkDiagram(
       w: NODE_WIDTH,
       h: NODE_HEIGHT,
       fill: {
-        color: resolveThemeColor(theme, node.color ?? "primary", "primary")
+        color: resolver.resolveColor(node.color ?? style.nodeFillColor, "primary")
       },
       line: {
-        color: resolveThemeColor(theme, "text-dark", "text-dark"),
+        color: resolver.resolveColor(style.nodeBorderColor, "neutral-border"),
         width: 1
       }
     });
@@ -110,7 +112,7 @@ export function renderNetworkDiagram(
       fontFace: theme.typography.fonts.caption,
       fontSize: 9,
       bold: true,
-      color: resolveThemeColor(theme, "text-light", "text-light"),
+      color: resolver.resolveColor(style.nodeTextColor, "text-light"),
       align: "center",
       valign: "mid"
     });

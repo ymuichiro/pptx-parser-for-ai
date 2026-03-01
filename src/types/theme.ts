@@ -1,8 +1,112 @@
 export type SlideSize = "16:9" | "16:10" | "4:3";
 
+export interface NamedComponentStyles<T> {
+  defaultStyleRef: string;
+  styles: Record<string, T>;
+}
+
+export interface TextComponentStyle {
+  fontFace?: string;
+  fontSize?: number;
+  color: string;
+  bold?: boolean;
+  align?: "left" | "center" | "right";
+  valign?: "top" | "mid" | "bottom";
+  lineSpacingMultiple?: number;
+  paragraphSpacing?: number;
+}
+
+export interface ListComponentStyle {
+  fontFace?: string;
+  fontSize?: number;
+  color: string;
+  bulletCharacter: string;
+  bulletColor: string;
+  indent: number;
+  lineSpacingMultiple?: number;
+  paragraphSpacing?: number;
+}
+
+export interface TableComponentStyle {
+  headerBackground: string;
+  headerText: string;
+  rowAlternate: string;
+  borderColor: string;
+  textColor?: string;
+  fontFace?: string;
+  fontSize?: number;
+}
+
+export interface ChartComponentStyle {
+  seriesPalette?: string[];
+  axisLabelColor: string;
+  gridColor: string;
+  dataLabelColor: string;
+  titleColor: string;
+  legendColor: string;
+  labelFontSize?: number;
+  dataLabelFontSize?: number;
+}
+
+export interface ImageComponentStyle {
+  frameFillColor?: string;
+  borderColor?: string;
+  borderWidth?: number;
+  captionColor: string;
+  captionFontFace?: string;
+  captionFontSize?: number;
+  shadow?: boolean;
+}
+
+export interface StatCalloutComponentStyle {
+  fillColor: string;
+  borderColor: string;
+  valueColor: string;
+  labelColor: string;
+  trendColor?: string;
+  accentLineColor?: string;
+  shadow?: boolean;
+}
+
+export interface IconGridComponentStyle {
+  cardFillColor: string;
+  cardBorderColor: string;
+  titleColor: string;
+  descriptionColor: string;
+}
+
+export interface FlowchartComponentStyle {
+  stepFillColor: string;
+  stepBorderColor: string;
+  stepTextColor: string;
+  edgeColor: string;
+  labelColor: string;
+}
+
+export interface NetworkComponentStyle {
+  nodeFillColor: string;
+  nodeBorderColor: string;
+  nodeTextColor: string;
+  edgeColor: string;
+  labelColor: string;
+}
+
+export interface TwoColumnComponentStyle {
+  gap: number;
+  columnFillColor?: string;
+  columnBorderColor?: string;
+}
+
+export interface PresetSurfaceComponentStyle {
+  shape?: "rectangle" | "rounded-rectangle";
+  fillColor: string;
+  borderColor?: string;
+  borderWidth?: number;
+}
+
 export interface ThemeDefinition {
   name: string;
-  version: string;
+  version: "2.0";
   colors: Record<string, string>;
   typography: {
     fonts: {
@@ -67,6 +171,19 @@ export interface ThemeDefinition {
       borderColor: string;
     };
   };
+  components: {
+    text: NamedComponentStyles<TextComponentStyle>;
+    list: NamedComponentStyles<ListComponentStyle>;
+    table: NamedComponentStyles<TableComponentStyle>;
+    chart: NamedComponentStyles<ChartComponentStyle>;
+    image: NamedComponentStyles<ImageComponentStyle>;
+    statCallout: NamedComponentStyles<StatCalloutComponentStyle>;
+    iconGrid: NamedComponentStyles<IconGridComponentStyle>;
+    flowchart: NamedComponentStyles<FlowchartComponentStyle>;
+    network: NamedComponentStyles<NetworkComponentStyle>;
+    twoColumn: NamedComponentStyles<TwoColumnComponentStyle>;
+    preset: NamedComponentStyles<PresetSurfaceComponentStyle>;
+  };
   effects?: {
     cardShadow?: {
       type: "outer";
@@ -77,6 +194,8 @@ export interface ThemeDefinition {
     };
     titleUnderline?: {
       enabled: boolean;
+      color?: string;
+      width?: number;
     };
   };
 }

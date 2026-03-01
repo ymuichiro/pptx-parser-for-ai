@@ -6,6 +6,7 @@ import type {
 } from "../../types";
 import type { ComponentRenderContext, SlideAdapter } from "../base-renderer";
 import { RenderError } from "../../errors";
+import { StyleResolver } from "../../theme/style-resolver";
 import { renderChart } from "./chart";
 import { renderFlowchart } from "./flowchart";
 import { renderIconGrid } from "./icon-grid";
@@ -29,8 +30,10 @@ export async function renderContentElement(
   theme: ThemeDefinition,
   context: ComponentRenderContext
 ): Promise<void> {
+  const resolver = context.styleResolver ?? new StyleResolver(theme);
+
   if (isCustomShapeElement(element)) {
-    renderCustomShape(slide, element, bounds, theme);
+    renderCustomShape(slide, element, bounds, theme, resolver);
     return;
   }
 
@@ -42,37 +45,37 @@ export async function renderContentElement(
 
   switch (typedElement.type) {
     case "text":
-      renderText(slide, typedElement, bounds, theme);
+      renderText(slide, typedElement, bounds, theme, resolver);
       return;
     case "bullet-list":
-      renderBulletList(slide, typedElement, bounds, theme);
+      renderBulletList(slide, typedElement, bounds, theme, resolver);
       return;
     case "numbered-list":
-      renderNumberedList(slide, typedElement, bounds, theme);
+      renderNumberedList(slide, typedElement, bounds, theme, resolver);
       return;
     case "table":
-      renderTable(slide, typedElement, bounds, theme);
+      renderTable(slide, typedElement, bounds, theme, resolver);
       return;
     case "chart":
-      renderChart(slide, typedElement, bounds, theme);
+      renderChart(slide, typedElement, bounds, theme, resolver);
       return;
     case "image":
-      await renderImage(slide, typedElement, bounds, theme);
+      await renderImage(slide, typedElement, bounds, theme, resolver);
       return;
     case "network-diagram":
-      renderNetworkDiagram(slide, typedElement, bounds, theme);
+      renderNetworkDiagram(slide, typedElement, bounds, theme, resolver);
       return;
     case "flowchart":
-      renderFlowchart(slide, typedElement, bounds, theme);
+      renderFlowchart(slide, typedElement, bounds, theme, resolver);
       return;
     case "stat-callout":
-      renderStatCallout(slide, typedElement, bounds, theme);
+      renderStatCallout(slide, typedElement, bounds, theme, resolver);
       return;
     case "icon-grid":
-      renderIconGrid(slide, typedElement, bounds, theme);
+      renderIconGrid(slide, typedElement, bounds, theme, resolver);
       return;
     case "two-column":
-      await renderTwoColumn(slide, typedElement, bounds, theme, context);
+      await renderTwoColumn(slide, typedElement, bounds, theme, context, resolver);
       return;
     default: {
       const exhaustiveCheck: never = typedElement;

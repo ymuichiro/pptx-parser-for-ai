@@ -33,7 +33,7 @@ describe("Security checks", () => {
   it("fails closed for malformed dsl", () => {
     const parser = new DSLParser();
     const malformed = {
-      version: "1.0",
+      version: "2.0",
       theme: "corporate-blue",
       metadata: { title: "x" },
       slides: [{ type: "content", title: "s", content: [{ type: "text" }] }]

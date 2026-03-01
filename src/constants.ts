@@ -1,7 +1,7 @@
 export const MAX_STRING_LENGTH = 10_000;
 export const MAX_ARRAY_LENGTH = 10_000;
 export const MAX_NESTING_DEPTH = 20;
-export const DEFAULT_DSL_VERSION = "1.0";
+export const DEFAULT_DSL_VERSION = "2.0";
 export const DEFAULT_THEME_NAME = "corporate-blue";
 
 export const SLIDE_DIMENSIONS = {

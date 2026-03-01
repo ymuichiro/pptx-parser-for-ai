@@ -1,6 +1,7 @@
 import * as path from "node:path";
 import { imageSize } from "image-size";
 import type { Bounds, ImageElement, ThemeDefinition } from "../../types";
+import { StyleResolver } from "../../theme/style-resolver";
 import type { SlideAdapter } from "../base-renderer";
 import { RenderError } from "../../errors";
 
@@ -36,9 +37,7 @@ function parseDataImageSource(source: string): Buffer | undefined {
 
 function resolveImageDimensions(source: string): ImageDimensions | undefined {
   try {
-    const result = /^data:image\//i.test(source)
-      ? imageSize(parseDataImageSource(source) ?? Buffer.alloc(0))
-      : imageSize(source);
+    const result = /^data:image\//i.test(source) ? imageSize(parseDataImageSource(source) ?? Buffer.alloc(0)) : imageSize(source);
     if (result.width === undefined || result.height === undefined || result.width <= 0 || result.height <= 0) {
       return undefined;
     }
@@ -154,7 +153,8 @@ export async function renderImage(
   slide: SlideAdapter,
   element: ImageElement,
   bounds: Bounds,
-  theme: ThemeDefinition
+  theme: ThemeDefinition,
+  resolver: StyleResolver = new StyleResolver(theme)
 ): Promise<void> {
   if (/^https?:\/\//i.test(element.source)) {
     throw new RenderError("Remote image URL rendering is disabled by default");
@@ -164,8 +164,25 @@ export async function renderImage(
     throw new RenderError("Image source contains path traversal segments");
   }
 
+  const style = resolver.resolveImageStyle(element.styleRef ?? "default");
   const effectiveBounds = element.bounds ?? bounds;
   const imageOptions = resolveImageLayout(effectiveBounds, element);
+
+  if (style.frameFillColor !== undefined) {
+    slide.addShape("rect", {
+      x: effectiveBounds.x,
+      y: effectiveBounds.y,
+      w: effectiveBounds.w,
+      h: effectiveBounds.h,
+      fill: {
+        color: resolver.resolveColor(style.frameFillColor, "surface")
+      },
+      line: {
+        color: resolver.resolveColor(style.frameFillColor, "surface"),
+        width: 0
+      }
+    });
+  }
 
   if (/^data:image\//.test(element.source)) {
     imageOptions.data = element.source;
@@ -175,15 +192,48 @@ export async function renderImage(
 
   slide.addImage(imageOptions);
 
+  const borderColor = element.frame?.borderColor ?? style.borderColor;
+  const borderWidth = element.frame?.borderWidth ?? style.borderWidth;
+  if (borderColor !== undefined && (borderWidth ?? 0) > 0) {
+    const shadowEnabled = element.frame?.shadow ?? style.shadow ?? false;
+    const borderOptions: Record<string, unknown> = {
+      x: effectiveBounds.x,
+      y: effectiveBounds.y,
+      w: effectiveBounds.w,
+      h: effectiveBounds.h,
+      fill: {
+        color: resolver.resolveColor("surface", "surface"),
+        transparency: 100
+      },
+      line: {
+        color: resolver.resolveColor(borderColor, "neutral-border"),
+        width: borderWidth
+      }
+    };
+
+    if (shadowEnabled && theme.effects?.cardShadow !== undefined) {
+      borderOptions.shadow = {
+        type: "outer",
+        color: resolver.resolveColor(theme.effects.cardShadow.color, "text-dark"),
+        blur: theme.effects.cardShadow.blur,
+        offset: theme.effects.cardShadow.offset,
+        opacity: theme.effects.cardShadow.opacity
+      };
+    }
+
+    slide.addShape("rect", borderOptions);
+  }
+
   if (element.caption !== undefined) {
+    const captionStyle = resolver.resolveTextStyle(element.captionStyleRef ?? "caption");
     slide.addText(element.caption, {
       x: effectiveBounds.x,
       y: effectiveBounds.y + effectiveBounds.h - 0.2,
       w: effectiveBounds.w,
       h: 0.2,
-      fontFace: theme.typography.fonts.caption,
-      fontSize: theme.typography.sizes.caption,
-      color: theme.colors["text-dark"],
+      fontFace: style.captionFontFace ?? captionStyle.fontFace ?? theme.typography.fonts.caption,
+      fontSize: style.captionFontSize ?? captionStyle.fontSize ?? theme.typography.sizes.caption,
+      color: resolver.resolveColor(style.captionColor, "text-dark"),
       align: "center"
     });
   }

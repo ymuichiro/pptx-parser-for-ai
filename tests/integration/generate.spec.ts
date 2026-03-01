@@ -30,7 +30,7 @@ describe("PPTXRenderer integration", () => {
 
     const result = await renderer.generate(
       {
-        version: "1.0",
+        version: "2.0",
         theme: "corporate-blue",
         metadata: {
           title: "obj"

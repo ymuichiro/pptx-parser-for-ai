@@ -1,7 +1,7 @@
 import * as path from "node:path";
 import type { Bounds, IconGridElement, ThemeDefinition } from "../../types";
+import { StyleResolver } from "../../theme/style-resolver";
 import type { SlideAdapter } from "../base-renderer";
-import { resolveThemeColor } from "../../utils/color";
 
 function hasTraversal(value: string): boolean {
   return path.posix.normalize(value.replace(/\\/g, "/")).split("/").includes("..");
@@ -19,7 +19,14 @@ function isIconImage(value: string): boolean {
   return /\.(png|jpe?g|gif|bmp|webp|svg)$/i.test(value) && !hasTraversal(value);
 }
 
-export function renderIconGrid(slide: SlideAdapter, element: IconGridElement, bounds: Bounds, theme: ThemeDefinition): void {
+export function renderIconGrid(
+  slide: SlideAdapter,
+  element: IconGridElement,
+  bounds: Bounds,
+  theme: ThemeDefinition,
+  resolver: StyleResolver = new StyleResolver(theme)
+): void {
+  const style = resolver.resolveIconGridStyle(element.styleRef ?? "default");
   const columns = Math.max(1, element.columns);
   const rows = Math.ceil(element.items.length / columns);
   const cellW = bounds.w / columns;
@@ -36,8 +43,8 @@ export function renderIconGrid(slide: SlideAdapter, element: IconGridElement, bo
       y,
       w: cellW - 0.05,
       h: cellH - 0.05,
-      fill: { color: resolveThemeColor(theme, "secondary", "secondary"), transparency: 10 },
-      line: { color: resolveThemeColor(theme, "primary", "primary"), width: 1 }
+      fill: { color: resolver.resolveColor(style.cardFillColor, "surface"), transparency: 6 },
+      line: { color: resolver.resolveColor(style.cardBorderColor, "neutral-border"), width: 1 }
     });
 
     const titleY = y + 0.05;
@@ -74,7 +81,7 @@ export function renderIconGrid(slide: SlideAdapter, element: IconGridElement, bo
       fontFace: theme.typography.fonts.heading,
       fontSize: theme.typography.sizes.caption,
       bold: true,
-      color: resolveThemeColor(theme, "text-dark", "text-dark")
+      color: resolver.resolveColor(style.titleColor, "text-dark")
     });
 
     if (item.description !== undefined) {
@@ -86,7 +93,7 @@ export function renderIconGrid(slide: SlideAdapter, element: IconGridElement, bo
         h: Math.max(0.15, cellH - (descriptionY - y) - 0.07),
         fontFace: theme.typography.fonts.body,
         fontSize: theme.typography.sizes.caption,
-        color: resolveThemeColor(theme, "text-dark", "text-dark")
+        color: resolver.resolveColor(style.descriptionColor, "text-dark")
       });
     }
   });

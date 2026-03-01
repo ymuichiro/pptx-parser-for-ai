@@ -2,7 +2,7 @@ import type { LayoutType } from "./layout";
 import type { ThemeDefinition } from "./theme";
 
 export interface PresentationDSL {
-  version: string;
+  version: "2.0";
   theme: string | ThemeDefinition;
   metadata: PresentationMetadata;
   chrome?: PresentationChrome;
@@ -106,7 +106,11 @@ export interface ElementQAOptions {
   exclude?: boolean;
 }
 
-export interface TextElement {
+export interface StylableElement {
+  styleRef?: string;
+}
+
+export interface TextElement extends StylableElement {
   type: "text";
   content: string;
   slot?: string;
@@ -126,7 +130,7 @@ export interface BulletItem {
   subItems?: string[];
 }
 
-export interface BulletListElement {
+export interface BulletListElement extends StylableElement {
   type: "bullet-list";
   slot?: string;
   style?: "default" | "pros" | "cons" | "checkmark";
@@ -135,7 +139,7 @@ export interface BulletListElement {
   qa?: ElementQAOptions;
 }
 
-export interface NumberedListElement {
+export interface NumberedListElement extends StylableElement {
   type: "numbered-list";
   slot?: string;
   items: string[];
@@ -143,7 +147,7 @@ export interface NumberedListElement {
   qa?: ElementQAOptions;
 }
 
-export interface StatCalloutElement {
+export interface StatCalloutElement extends StylableElement {
   type: "stat-callout";
   slot?: string;
   value: string;
@@ -154,7 +158,7 @@ export interface StatCalloutElement {
   qa?: ElementQAOptions;
 }
 
-export interface ImageElement {
+export interface ImageElement extends StylableElement {
   type: "image";
   slot?: string;
   source: string;
@@ -162,6 +166,12 @@ export interface ImageElement {
   sizing?: "contain" | "cover" | "crop";
   position?: "center" | "left" | "right";
   bounds?: ElementPosition;
+  frame?: {
+    borderColor?: string;
+    borderWidth?: number;
+    shadow?: boolean;
+  };
+  captionStyleRef?: string;
   qa?: ElementQAOptions;
 }
 
@@ -171,7 +181,7 @@ export interface TableHighlightRule {
   color: string;
 }
 
-export interface TableElement {
+export interface TableElement extends StylableElement {
   type: "table";
   slot?: string;
   style?: "default" | "striped" | "bordered" | "minimal";
@@ -188,7 +198,7 @@ export interface ChartSeries {
   color?: string;
 }
 
-export interface ChartElement {
+export interface ChartElement extends StylableElement {
   type: "chart";
   slot?: string;
   chartType: "bar" | "line" | "pie" | "doughnut" | "scatter";
@@ -221,7 +231,7 @@ export interface NetworkEdge {
   style?: "solid" | "dashed";
 }
 
-export interface NetworkDiagramElement {
+export interface NetworkDiagramElement extends StylableElement {
   type: "network-diagram";
   slot?: string;
   layout: "hierarchical" | "force-directed" | "circular";
@@ -243,7 +253,7 @@ export interface FlowchartFlow {
   label?: string;
 }
 
-export interface FlowchartElement {
+export interface FlowchartElement extends StylableElement {
   type: "flowchart";
   slot?: string;
   direction: "horizontal" | "vertical";
@@ -259,7 +269,7 @@ export interface IconGridItem {
   description?: string;
 }
 
-export interface IconGridElement {
+export interface IconGridElement extends StylableElement {
   type: "icon-grid";
   slot?: string;
   columns: number;
@@ -268,7 +278,7 @@ export interface IconGridElement {
   qa?: ElementQAOptions;
 }
 
-export interface TwoColumnElement {
+export interface TwoColumnElement extends StylableElement {
   type: "two-column";
   slot?: string;
   left: ContentElement[];

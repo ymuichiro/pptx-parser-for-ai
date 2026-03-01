@@ -2,10 +2,18 @@ import { LayoutError } from "../errors";
 import type { Bounds, ContentElement, CustomShapeElement, ElementArea, PresetId } from "../types";
 import { DEFAULT_PRESET_SLOT, getPresetDefinition, type PresetDefinition, type PresetSlotDefinition } from "./catalog";
 
+export interface PresetSlotSurface {
+  slotName: string;
+  bounds: Bounds;
+  styleRef?: string;
+}
+
 export interface PresetLayoutResult {
   frame: Bounds;
   areas: ElementArea[];
   decorations: CustomShapeElement[];
+  slotStyleByElementIndex: Map<number, string | undefined>;
+  slotSurfaceDefinitions: PresetSlotSurface[];
 }
 
 function cloneBounds(bounds: Bounds): Bounds {
@@ -85,7 +93,7 @@ export class PresetEngine {
     });
 
     const boundsByIndex = new Map<number, Bounds>();
-    const gap = definition.defaults?.gap ?? 0.08;
+    const slotStyleByElementIndex = new Map<number, string | undefined>();
 
     slotAssignments.forEach((indices, slotName) => {
       const slot = slots.get(slotName);
@@ -93,9 +101,11 @@ export class PresetEngine {
         throw new LayoutError(`Preset '${presetId}' does not define slot '${slotName}'`);
       }
 
+      const gap = slot.stackGap ?? definition.defaults?.gap ?? 0.08;
       const splitBounds = stackBounds(slot.bounds, indices.length, gap);
       indices.forEach((elementIndex, splitIndex) => {
         boundsByIndex.set(elementIndex, splitBounds[splitIndex] ?? cloneBounds(slot.bounds));
+        slotStyleByElementIndex.set(elementIndex, slot.styleRef);
       });
     });
 
@@ -109,13 +119,23 @@ export class PresetEngine {
       bounds: boundsByIndex.get(index) ?? cloneBounds(defaultSlotBounds)
     }));
 
+    const slotSurfaceDefinitions: PresetSlotSurface[] = definition.slots
+      .filter((slot) => slot.surfaceStyleRef !== undefined)
+      .map((slot) => ({
+        slotName: slot.name,
+        bounds: cloneBounds(slot.bounds),
+        ...(slot.surfaceStyleRef !== undefined ? { styleRef: slot.surfaceStyleRef } : {})
+      }));
+
     return {
       frame: calculateFrame(definition),
       areas,
       decorations: (definition.decorations ?? []).map((shape) => ({
         ...shape,
         position: cloneBounds(shape.position)
-      }))
+      })),
+      slotStyleByElementIndex,
+      slotSurfaceDefinitions
     };
   }
 }

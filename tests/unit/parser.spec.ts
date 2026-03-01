@@ -48,7 +48,7 @@ describe("DSLParser", () => {
   it("normalizes defaults", async () => {
     const parser = new DSLParser();
     const raw: PresentationDSL = {
-      version: "1.0",
+      version: "2.0",
       theme: "corporate-blue",
       metadata: { title: "normalize" },
       slides: [
@@ -81,7 +81,7 @@ describe("DSLParser", () => {
   it("accepts chrome config and footer metadata fields", () => {
     const parser = new DSLParser();
     const raw: PresentationDSL = {
-      version: "1.0",
+      version: "2.0",
       theme: "corporate-blue",
       metadata: {
         title: "chrome",
@@ -125,7 +125,7 @@ describe("DSLParser", () => {
     const parser = new DSLParser();
     const huge = "x".repeat(10_001);
     const result = parser.validate({
-      version: "1.0",
+      version: "2.0",
       theme: "corporate-blue",
       metadata: { title: huge },
       slides: []
@@ -138,7 +138,7 @@ describe("DSLParser", () => {
   it("rejects unknown preset id", () => {
     const parser = new DSLParser();
     const result = parser.validate({
-      version: "1.0",
+      version: "2.0",
       theme: "corporate-blue",
       metadata: { title: "preset" },
       slides: [
@@ -153,5 +153,24 @@ describe("DSLParser", () => {
 
     expect(result.isValid).toBe(false);
     expect(result.errors.some((error) => error.includes("preset"))).toBe(true);
+  });
+
+  it("rejects legacy DSL version 1.0", () => {
+    const parser = new DSLParser();
+    const result = parser.validate({
+      version: "1.0",
+      theme: "corporate-blue",
+      metadata: { title: "legacy" },
+      slides: [
+        {
+          type: "content",
+          title: "x",
+          content: [{ type: "text", content: "y" }]
+        }
+      ]
+    });
+
+    expect(result.isValid).toBe(false);
+    expect(result.errors.some((error) => error.includes("version"))).toBe(true);
   });
 });

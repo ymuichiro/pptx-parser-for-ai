@@ -7,7 +7,7 @@ describe("DSLNormalizer", () => {
     const normalizer = new DSLNormalizer();
 
     const dsl: PresentationDSL = {
-      version: "1.0",
+      version: "2.0",
       theme: "corporate-blue",
       metadata: {
         title: "normalize"
@@ -116,7 +116,7 @@ describe("DSLNormalizer", () => {
   it("normalizes chrome defaults when chrome is configured", () => {
     const normalizer = new DSLNormalizer();
     const normalized = normalizer.normalize({
-      version: "1.0",
+      version: "2.0",
       theme: "corporate-blue",
       metadata: { title: "chrome" },
       chrome: {

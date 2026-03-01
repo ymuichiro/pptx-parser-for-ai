@@ -29,7 +29,7 @@ function median(values: number[]): number {
 
 function createPerformanceDSL(): PresentationDSL {
   return {
-    version: "1.0",
+    version: "2.0",
     theme: "corporate-blue",
     metadata: {
       title: "performance"

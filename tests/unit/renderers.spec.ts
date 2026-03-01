@@ -441,7 +441,7 @@ describe("SlideRenderer", () => {
     const presentation = new MockPresentation();
 
     const dsl: PresentationDSL = {
-      version: "1.0",
+      version: "2.0",
       theme: "corporate-blue",
       metadata: {
         title: "render"
@@ -504,7 +504,7 @@ describe("SlideRenderer", () => {
     };
 
     const dsl: PresentationDSL = {
-      version: "1.0",
+      version: "2.0",
       theme: "corporate-blue",
       metadata: { title: "branches" },
       slides: [
@@ -626,7 +626,7 @@ describe("SlideRenderer", () => {
     };
 
     const dsl: PresentationDSL = {
-      version: "1.0",
+      version: "2.0",
       theme: "corporate-blue",
       metadata: { title: "template" },
       slides: [
@@ -678,7 +678,7 @@ describe("SlideRenderer", () => {
     const presentation = new MockPresentation();
 
     const dsl: PresentationDSL = {
-      version: "1.0",
+      version: "2.0",
       theme: "corporate-blue",
       metadata: { title: "preset-render" },
       slides: [
@@ -776,7 +776,7 @@ describe("SlideRenderer", () => {
     };
 
     const dsl: PresentationDSL = {
-      version: "1.0",
+      version: "2.0",
       theme: "corporate-blue",
       metadata: { title: "preset-template" },
       slides: [
@@ -912,7 +912,7 @@ describe("SlideRenderer", () => {
     };
 
     const dsl: PresentationDSL = {
-      version: "1.0",
+      version: "2.0",
       theme: "corporate-blue",
       metadata: { title: "template-chrome" },
       slides: [
@@ -1023,7 +1023,7 @@ describe("SlideRenderer", () => {
     };
 
     const dsl: PresentationDSL = {
-      version: "1.0",
+      version: "2.0",
       theme: "corporate-blue",
       metadata: { title: "adaptive-footer-check" },
       slides: [
@@ -1098,7 +1098,7 @@ describe("SlideRenderer", () => {
     const presentation = new MockPresentation();
 
     const dsl: PresentationDSL = {
-      version: "1.0",
+      version: "2.0",
       theme: "corporate-blue",
       metadata: {
         title: "dsl-chrome",
@@ -1149,7 +1149,7 @@ describe("SlideRenderer", () => {
       const payload = call.payload as { shapeName?: string };
       return payload.shapeName === "line";
     });
-    expect(lineCalls.length).toBe(2);
+    expect(lineCalls.length).toBe(3);
 
     const texts = slide.calls
       .filter((call) => call.kind === "text")
@@ -1167,7 +1167,7 @@ describe("SlideRenderer", () => {
     const presentation = new MockPresentation();
 
     const dsl: PresentationDSL = {
-      version: "1.0",
+      version: "2.0",
       theme: "corporate-blue",
       metadata: { title: "invalid-template-path" },
       slides: [

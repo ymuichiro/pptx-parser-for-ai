@@ -5,7 +5,7 @@ describe("DSLValidator semantic checks", () => {
   it("detects table/chart/flowchart inconsistencies", () => {
     const validator = new DSLValidator({ allowRemoteImages: true });
     const dsl = {
-      version: "1.0",
+      version: "2.0",
       theme: "corporate-blue",
       metadata: { title: "semantic" },
       slides: [
@@ -47,7 +47,7 @@ describe("DSLValidator semantic checks", () => {
   it("validates two-column recursively", () => {
     const validator = new DSLValidator({ allowRemoteImages: true });
     const dsl = {
-      version: "1.0",
+      version: "2.0",
       theme: "corporate-blue",
       metadata: { title: "two-column" },
       slides: [
@@ -80,7 +80,7 @@ describe("DSLValidator semantic checks", () => {
   it("detects preset slot violations", () => {
     const validator = new DSLValidator({ allowRemoteImages: true });
     const dsl = {
-      version: "1.0",
+      version: "2.0",
       theme: "corporate-blue",
       metadata: { title: "preset-invalid" },
       slides: [
@@ -115,7 +115,7 @@ describe("DSLValidator semantic checks", () => {
   it("accepts valid preset slot mapping", () => {
     const validator = new DSLValidator({ allowRemoteImages: true });
     const dsl = {
-      version: "1.0",
+      version: "2.0",
       theme: "corporate-blue",
       metadata: { title: "preset-valid" },
       slides: [

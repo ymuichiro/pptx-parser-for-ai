@@ -6,6 +6,7 @@
 
 `pptx-parser-for-ai` is a secure, deterministic PowerPoint generator for Node.js and TypeScript.
 It transforms a declarative YAML/TypeScript DSL into `.pptx` files, with built-in validation, layouting, and quality checks.
+Current major format: DSL `2.0` + Theme `2.0`.
 
 ## Why this project
 

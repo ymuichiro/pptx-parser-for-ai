@@ -1,13 +1,18 @@
 name: Creative Bold
-version: "1.0"
+version: "2.0"
 colors:
   primary: "0F172A"
   secondary: "FDE047"
   accent: "F43F5E"
   text-dark: "111827"
   text-light: "FFFFFF"
+  muted-text: "6B7280"
   background-light: "FEFCE8"
   background-dark: "0F172A"
+  neutral-border: "D4D4D8"
+  surface: "FFFFFF"
+  surface-muted: "FFFCE1"
+  surface-strong: "FDE68A"
   success: "22C55E"
   warning: "F59E0B"
   error: "E11D48"
@@ -55,6 +60,111 @@ defaults:
     headerText: text-light
     rowAlternate: background-light
     borderColor: accent
+components:
+  text:
+    defaultStyleRef: body
+    styles:
+      title: { color: secondary, fontFace: Impact, fontSize: 42, bold: true, align: center, valign: mid }
+      heading: { color: primary, fontFace: Arial Black, fontSize: 28, bold: true }
+      body: { color: text-dark, fontFace: Arial, fontSize: 15 }
+      caption: { color: muted-text, fontFace: Arial, fontSize: 11 }
+      default: { color: text-dark, fontFace: Arial, fontSize: 15 }
+      card: { color: text-dark, fontFace: Arial, fontSize: 14 }
+      column: { color: text-dark, fontFace: Arial, fontSize: 13 }
+      summary: { color: primary, fontFace: Arial, fontSize: 12 }
+      kpi: { color: primary, fontFace: Arial Black, fontSize: 20, bold: true }
+      highlight: { color: primary, fontFace: Arial, fontSize: 13, bold: true }
+  list:
+    defaultStyleRef: default
+    styles:
+      default: { color: text-dark, fontFace: Arial, fontSize: 15, bulletCharacter: "◆", bulletColor: accent, indent: 0.28 }
+      pros: { color: text-dark, fontFace: Arial, fontSize: 15, bulletCharacter: "✓", bulletColor: success, indent: 0.28 }
+      cons: { color: text-dark, fontFace: Arial, fontSize: 15, bulletCharacter: "✗", bulletColor: error, indent: 0.28 }
+      checkmark: { color: text-dark, fontFace: Arial, fontSize: 15, bulletCharacter: "✓", bulletColor: accent, indent: 0.28 }
+      card: { color: text-dark, fontFace: Arial, fontSize: 13, bulletCharacter: "◆", bulletColor: accent, indent: 0.24 }
+      column: { color: text-dark, fontFace: Arial, fontSize: 12, bulletCharacter: "◆", bulletColor: primary, indent: 0.22 }
+      summary: { color: primary, fontFace: Arial, fontSize: 12, bulletCharacter: "◆", bulletColor: accent, indent: 0.2 }
+      kpi: { color: primary, fontFace: Arial, fontSize: 13, bulletCharacter: "◆", bulletColor: accent, indent: 0.2 }
+      highlight: { color: primary, fontFace: Arial, fontSize: 13, bulletCharacter: "◆", bulletColor: accent, indent: 0.2 }
+  table:
+    defaultStyleRef: default
+    styles:
+      default: { headerBackground: primary, headerText: text-light, rowAlternate: surface, borderColor: accent, textColor: text-dark, fontFace: Arial, fontSize: 12 }
+      card: { headerBackground: primary, headerText: text-light, rowAlternate: surface, borderColor: accent, textColor: text-dark, fontFace: Arial, fontSize: 11 }
+      column: { headerBackground: primary, headerText: text-light, rowAlternate: surface, borderColor: accent, textColor: text-dark, fontFace: Arial, fontSize: 11 }
+      summary: { headerBackground: surface-strong, headerText: primary, rowAlternate: surface-muted, borderColor: accent, textColor: text-dark, fontFace: Arial, fontSize: 11 }
+      kpi: { headerBackground: primary, headerText: text-light, rowAlternate: surface, borderColor: accent, textColor: text-dark, fontFace: Arial, fontSize: 11 }
+      highlight: { headerBackground: accent, headerText: text-light, rowAlternate: surface, borderColor: accent, textColor: text-dark, fontFace: Arial, fontSize: 11 }
+  chart:
+    defaultStyleRef: default
+    styles:
+      default: { axisLabelColor: muted-text, gridColor: neutral-border, dataLabelColor: text-dark, titleColor: primary, legendColor: muted-text, seriesPalette: [primary, accent, success], labelFontSize: 11, dataLabelFontSize: 11 }
+      card: { axisLabelColor: muted-text, gridColor: neutral-border, dataLabelColor: text-dark, titleColor: primary, legendColor: muted-text, seriesPalette: [primary, accent, success], labelFontSize: 10, dataLabelFontSize: 10 }
+      column: { axisLabelColor: muted-text, gridColor: neutral-border, dataLabelColor: text-dark, titleColor: primary, legendColor: muted-text, seriesPalette: [primary, accent, success], labelFontSize: 10, dataLabelFontSize: 10 }
+      summary: { axisLabelColor: primary, gridColor: neutral-border, dataLabelColor: primary, titleColor: primary, legendColor: muted-text, seriesPalette: [accent, primary, success], labelFontSize: 10, dataLabelFontSize: 10 }
+      kpi: { axisLabelColor: muted-text, gridColor: neutral-border, dataLabelColor: primary, titleColor: primary, legendColor: muted-text, seriesPalette: [accent, primary, success], labelFontSize: 11, dataLabelFontSize: 12 }
+      highlight: { axisLabelColor: primary, gridColor: neutral-border, dataLabelColor: primary, titleColor: primary, legendColor: primary, seriesPalette: [accent, primary, success], labelFontSize: 10, dataLabelFontSize: 11 }
+  image:
+    defaultStyleRef: default
+    styles:
+      default: { frameFillColor: surface, borderColor: accent, borderWidth: 0.8, captionColor: muted-text, captionFontFace: Arial, captionFontSize: 10, shadow: true }
+      card: { frameFillColor: surface, borderColor: accent, borderWidth: 1, captionColor: muted-text, captionFontFace: Arial, captionFontSize: 10, shadow: true }
+      column: { frameFillColor: surface, borderColor: accent, borderWidth: 1, captionColor: muted-text, captionFontFace: Arial, captionFontSize: 10, shadow: false }
+      summary: { frameFillColor: surface-muted, borderColor: accent, borderWidth: 0.8, captionColor: primary, captionFontFace: Arial, captionFontSize: 10, shadow: false }
+      kpi: { frameFillColor: surface, borderColor: accent, borderWidth: 1.2, captionColor: primary, captionFontFace: Arial, captionFontSize: 10, shadow: true }
+      highlight: { frameFillColor: surface, borderColor: accent, borderWidth: 1.2, captionColor: primary, captionFontFace: Arial, captionFontSize: 10, shadow: true }
+  statCallout:
+    defaultStyleRef: default
+    styles:
+      default: { fillColor: primary, borderColor: accent, valueColor: text-light, labelColor: text-light, trendColor: text-light, accentLineColor: secondary, shadow: true }
+      card: { fillColor: primary, borderColor: accent, valueColor: text-light, labelColor: text-light, trendColor: text-light, accentLineColor: secondary, shadow: true }
+      column: { fillColor: primary, borderColor: accent, valueColor: text-light, labelColor: text-light, trendColor: text-light, accentLineColor: secondary, shadow: false }
+      summary: { fillColor: surface-strong, borderColor: accent, valueColor: primary, labelColor: primary, trendColor: primary, accentLineColor: accent, shadow: false }
+      kpi: { fillColor: accent, borderColor: accent, valueColor: text-light, labelColor: text-light, trendColor: text-light, accentLineColor: secondary, shadow: true }
+      highlight: { fillColor: surface-strong, borderColor: accent, valueColor: primary, labelColor: primary, trendColor: primary, accentLineColor: accent, shadow: true }
+  iconGrid:
+    defaultStyleRef: default
+    styles:
+      default: { cardFillColor: surface, cardBorderColor: accent, titleColor: primary, descriptionColor: text-dark }
+      card: { cardFillColor: surface, cardBorderColor: accent, titleColor: primary, descriptionColor: text-dark }
+      column: { cardFillColor: surface, cardBorderColor: accent, titleColor: primary, descriptionColor: text-dark }
+      summary: { cardFillColor: surface-muted, cardBorderColor: accent, titleColor: primary, descriptionColor: primary }
+      kpi: { cardFillColor: surface, cardBorderColor: accent, titleColor: primary, descriptionColor: primary }
+      highlight: { cardFillColor: surface, cardBorderColor: accent, titleColor: primary, descriptionColor: primary }
+  flowchart:
+    defaultStyleRef: default
+    styles:
+      default: { stepFillColor: surface, stepBorderColor: accent, stepTextColor: text-dark, edgeColor: accent, labelColor: text-dark }
+      card: { stepFillColor: surface, stepBorderColor: accent, stepTextColor: text-dark, edgeColor: accent, labelColor: text-dark }
+      column: { stepFillColor: surface, stepBorderColor: accent, stepTextColor: text-dark, edgeColor: accent, labelColor: text-dark }
+      summary: { stepFillColor: surface-muted, stepBorderColor: accent, stepTextColor: primary, edgeColor: accent, labelColor: primary }
+      kpi: { stepFillColor: surface, stepBorderColor: accent, stepTextColor: primary, edgeColor: accent, labelColor: primary }
+      highlight: { stepFillColor: surface, stepBorderColor: accent, stepTextColor: primary, edgeColor: accent, labelColor: primary }
+  network:
+    defaultStyleRef: default
+    styles:
+      default: { nodeFillColor: primary, nodeBorderColor: accent, nodeTextColor: text-light, edgeColor: accent, labelColor: text-dark }
+      card: { nodeFillColor: primary, nodeBorderColor: accent, nodeTextColor: text-light, edgeColor: accent, labelColor: text-dark }
+      column: { nodeFillColor: primary, nodeBorderColor: accent, nodeTextColor: text-light, edgeColor: accent, labelColor: text-dark }
+      summary: { nodeFillColor: surface-strong, nodeBorderColor: accent, nodeTextColor: primary, edgeColor: accent, labelColor: primary }
+      kpi: { nodeFillColor: accent, nodeBorderColor: accent, nodeTextColor: text-light, edgeColor: accent, labelColor: primary }
+      highlight: { nodeFillColor: surface-strong, nodeBorderColor: accent, nodeTextColor: primary, edgeColor: accent, labelColor: primary }
+  twoColumn:
+    defaultStyleRef: default
+    styles:
+      default: { gap: 0.2, columnFillColor: surface, columnBorderColor: accent }
+      card: { gap: 0.18, columnFillColor: surface, columnBorderColor: accent }
+      column: { gap: 0.16, columnFillColor: surface, columnBorderColor: accent }
+      summary: { gap: 0.2, columnFillColor: surface-muted, columnBorderColor: accent }
+      kpi: { gap: 0.2, columnFillColor: surface, columnBorderColor: accent }
+      highlight: { gap: 0.2, columnFillColor: surface, columnBorderColor: accent }
+  preset:
+    defaultStyleRef: card
+    styles:
+      card: { shape: rounded-rectangle, fillColor: surface, borderColor: accent, borderWidth: 1.0 }
+      column: { shape: rounded-rectangle, fillColor: surface, borderColor: accent, borderWidth: 1.0 }
+      summary-strip: { shape: rounded-rectangle, fillColor: surface-muted, borderColor: accent, borderWidth: 1.0 }
+      callout-panel: { shape: rounded-rectangle, fillColor: surface-strong, borderColor: accent, borderWidth: 1.0 }
 effects:
   cardShadow:
     type: outer
@@ -63,4 +173,6 @@ effects:
     color: "000000"
     opacity: 0.15
   titleUnderline:
-    enabled: false
+    enabled: true
+    color: accent
+    width: 1.4

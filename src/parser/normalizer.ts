@@ -21,6 +21,7 @@ function cloneDSL(dsl: PresentationDSL): PresentationDSL {
 function normalizeTwoColumn(element: TwoColumnElement): TwoColumnElement {
   return {
     ...element,
+    styleRef: element.styleRef ?? "default",
     ratio: element.ratio ?? "1:1",
     left: element.left.map(normalizeContentElement),
     right: element.right.map(normalizeContentElement)
@@ -33,23 +34,33 @@ function normalizeContentElement(element: ContentElement): ContentElement {
       return {
         ...element,
         style: element.style ?? "body",
+        styleRef: element.styleRef ?? (element.style ?? "body"),
         align: element.align ?? "left"
       };
     case "bullet-list":
       return {
         ...element,
-        style: element.style ?? "default"
+        style: element.style ?? "default",
+        styleRef: element.styleRef ?? (element.style ?? "default")
+      };
+    case "numbered-list":
+      return {
+        ...element,
+        styleRef: element.styleRef ?? "default"
       };
     case "image":
       return {
         ...element,
+        styleRef: element.styleRef ?? "default",
+        captionStyleRef: element.captionStyleRef ?? "caption",
         sizing: element.sizing ?? "contain",
         position: element.position ?? "center"
       };
     case "table":
       return {
         ...element,
-        style: element.style ?? "default"
+        style: element.style ?? "default",
+        styleRef: element.styleRef ?? (element.style ?? "default")
       };
     case "chart":
       const normalizedChartOptions: NonNullable<typeof element.options> = {
@@ -64,17 +75,30 @@ function normalizeContentElement(element: ContentElement): ContentElement {
       }
       return {
         ...element,
+        styleRef: element.styleRef ?? "default",
         options: normalizedChartOptions
       };
     case "network-diagram":
       return {
         ...element,
+        styleRef: element.styleRef ?? "default",
         layout: element.layout ?? "hierarchical"
       };
     case "flowchart":
       return {
         ...element,
+        styleRef: element.styleRef ?? "default",
         direction: element.direction ?? "horizontal"
+      };
+    case "stat-callout":
+      return {
+        ...element,
+        styleRef: element.styleRef ?? "default"
+      };
+    case "icon-grid":
+      return {
+        ...element,
+        styleRef: element.styleRef ?? "default"
       };
     case "two-column":
       return normalizeTwoColumn(element);

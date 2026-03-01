@@ -78,9 +78,14 @@ import {
 - `EMPTY_OUTPUT`
 - `OUT_OF_BOUNDS`
 - `EXCESSIVE_OVERLAP`
+- `LOW_CONTRAST_TEXT`
+- `MISSING_THEME_TOKEN`
+- `STYLE_REF_NOT_FOUND`
+- `PRESET_SLOT_STYLE_MISMATCH`
 
 ## Core DSL Types
 - `PresentationDSL`
+  - `version`: `2.0` 固定
   - `metadata`: `title/author/company/date` に加え `copyright`, `footerText` を指定可能
   - `chrome?`
     - `header.divider`: ヘッダー領域と本文を分離する区切り線
@@ -102,7 +107,7 @@ import {
   - `flowchart`
   - `icon-grid`
   - `two-column`
-  - 共通で `slot?`（preset 使用時の配置先）と `qa.exclude?`（QA 判定除外）を指定可能
+  - 共通で `slot?`（preset 使用時の配置先）、`styleRef?`（theme.components の named style）、`qa.exclude?`（QA 判定除外）を指定可能
 
 `image` の描画仕様:
 - `sizing`
@@ -115,6 +120,15 @@ import {
 - `bounds`
   - `blank` slide: そのまま配置座標として使用
   - `content` slide: レイアウト計算結果より優先して上書き可能
+- `frame`
+  - `borderColor` / `borderWidth` / `shadow` を画像枠スタイルとして指定可能
+- `captionStyleRef`
+  - 画像キャプションの text style（`theme.components.text`）を指定可能
+
+`theme` の主な v2 仕様:
+- `version: "2.0"` 固定
+- 必須 semantic color token（`primary`, `surface`, `neutral-border` など）
+- `components` セクションで各 renderer の named style を定義
 
 `preset` の検証仕様:
 - 未定義 preset ID は `ValidationError`

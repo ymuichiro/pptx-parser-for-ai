@@ -10,7 +10,7 @@ import { testTheme } from "../helpers/theme";
 
 function createDSL(theme: string | ThemeDefinition): PresentationDSL {
   return {
-    version: "1.0",
+    version: "2.0",
     theme,
     metadata: {
       title: "index"
@@ -71,7 +71,7 @@ describe("PPTXRenderer index", () => {
     await expect(
       renderer.generate(
         {
-          version: "1.0",
+          version: "2.0",
           theme: "corporate-blue",
           metadata: { title: "invalid" },
           slides: []

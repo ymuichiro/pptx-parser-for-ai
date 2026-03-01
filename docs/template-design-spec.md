@@ -37,7 +37,7 @@
 | テキスト左・図右が明確 | `content.layout: two-column` |
 | 例外的な自由配置・ポスター型 | `blank`（制約付き） |
 
-## Preset Catalog (MVP)
+## Preset Catalog (v2)
 
 - `overview-2x2`: 4カード構成の概観スライド。
 - `compare-3col`: 3カラム比較 + 下段サマリ。

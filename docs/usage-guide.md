@@ -26,7 +26,7 @@ await renderer.generateFromFile("./presentation.yaml", "./output.pptx");
 import { PPTXRenderer, type PresentationDSL } from "pptx-parser-for-ai";
 
 const dsl: PresentationDSL = {
-  version: "1.0",
+  version: "2.0",
   theme: "corporate-blue",
   metadata: { title: "Sample" },
   slides: [
@@ -48,7 +48,7 @@ await renderer.generate(dsl, "./output.pptx");
 
 ```ts
 const dsl: PresentationDSL = {
-  version: "1.0",
+  version: "2.0",
   theme: "venture-teal",
   metadata: {
     title: "Sample",
@@ -141,6 +141,32 @@ slides:
         slot: card4
         value: "7 days"
         label: "Lead Time"
+
+### 3.4 `styleRef` で component style を切り替える
+
+```yaml
+slides:
+  - type: content
+    title: "Style Switch"
+    content:
+      - type: text
+        styleRef: "highlight"
+        content: "Named style from theme.components.text"
+      - type: bullet-list
+        styleRef: "summary"
+        items:
+          - "Line 1"
+          - "Line 2"
+      - type: image
+        source: "example/assets/icons/rocket-solid.png"
+        styleRef: "card"
+        caption: "Card frame"
+        captionStyleRef: "caption"
+        frame:
+          borderColor: accent
+          borderWidth: 1
+          shadow: true
+```
 ```
 
 ## 4. オプション
@@ -235,7 +261,7 @@ const renderer = new PPTXRenderer({
 });
 
 const dsl: PresentationDSL = {
-  version: "1.0",
+  version: "2.0",
   theme: "corporate-blue",
   metadata: { title: "Template Applied" },
   slides: [

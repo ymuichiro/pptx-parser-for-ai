@@ -18,7 +18,7 @@ async function main(): Promise<void> {
   });
 
   const dsl: PresentationDSL = {
-    version: "1.0",
+    version: "2.0",
     theme: "corporate-blue",
     metadata: {
       title: "Template Applied Example",

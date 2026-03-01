@@ -64,7 +64,7 @@ function randomElement(): unknown {
 
 function randomDSL(): unknown {
   return {
-    version: "1.0",
+    version: "2.0",
     theme: "corporate-blue",
     metadata: {
       title: randomString(10)

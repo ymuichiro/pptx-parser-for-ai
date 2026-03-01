@@ -1,6 +1,6 @@
 import type { Bounds, CustomShapeElement, ThemeDefinition } from "../../types";
+import { StyleResolver } from "../../theme/style-resolver";
 import type { SlideAdapter } from "../base-renderer";
-import { resolveThemeColor } from "../../utils/color";
 
 const shapeMap: Record<CustomShapeElement["shape"], string> = {
   rectangle: "rect",
@@ -14,7 +14,8 @@ export function renderCustomShape(
   slide: SlideAdapter,
   element: CustomShapeElement,
   fallbackBounds: Bounds,
-  theme: ThemeDefinition
+  theme: ThemeDefinition,
+  resolver: StyleResolver = new StyleResolver(theme)
 ): void {
   const bounds = element.position ?? fallbackBounds;
   const options: Record<string, unknown> = {
@@ -23,14 +24,24 @@ export function renderCustomShape(
     w: bounds.w,
     h: bounds.h,
     fill: {
-      color: resolveThemeColor(theme, element.fill ?? "primary", "primary")
+      color: resolver.resolveColor(element.fill ?? "primary", "primary")
     }
   };
 
   if (element.border !== undefined) {
     options.line = {
-      color: resolveThemeColor(theme, element.border.color, "text-dark"),
+      color: resolver.resolveColor(element.border.color, "neutral-border"),
       width: element.border.width
+    };
+  }
+
+  if (theme.effects?.cardShadow !== undefined) {
+    options.shadow = {
+      type: "outer",
+      color: resolver.resolveColor(theme.effects.cardShadow.color, "text-dark"),
+      blur: theme.effects.cardShadow.blur,
+      offset: theme.effects.cardShadow.offset,
+      opacity: theme.effects.cardShadow.opacity
     };
   }
 

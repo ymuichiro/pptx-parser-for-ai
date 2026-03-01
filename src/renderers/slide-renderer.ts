@@ -2,24 +2,25 @@ import * as path from "node:path";
 import { RenderError } from "../errors";
 import type {
   Bounds,
+  ContentElement,
   ContentSlide,
   CustomShapeElement,
   ElementArea,
   FooterChrome,
-  PresentationMetadata,
   PresentationChrome,
   PresentationDSL,
+  PresentationMetadata,
   Slide,
   ThemeDefinition,
   TitleSlide
 } from "../types";
 import { DEFAULT_BLANK_ELEMENT_BOUNDS, LayoutEngine, resolveElementBounds } from "../layout";
+import { SLIDE_DIMENSIONS } from "../constants";
+import { getPresetDefinition, PresetEngine, type PresetLayoutResult } from "../presets";
+import { StyleResolver } from "../theme/style-resolver";
 import type { ImportedTemplateImageObject, ImportedTemplatePackage, ImportedTemplateShapeObject } from "../template-importer/types";
 import type { ComponentRenderContext, SlideAdapter } from "./base-renderer";
 import { renderContentElement } from "./components";
-import { resolveThemeColor } from "../utils/color";
-import { SLIDE_DIMENSIONS } from "../constants";
-import { PresetEngine } from "../presets";
 
 export interface PresentationAdapter {
   addSlide(): SlideAdapter;
@@ -38,18 +39,19 @@ interface SlideRenderContext {
   footerOnDarkBackground?: boolean;
 }
 
-function applyBackground(slide: SlideAdapter, theme: ThemeDefinition, tokenOrLiteral: string): void {
+function applyBackground(slide: SlideAdapter, theme: ThemeDefinition, resolver: StyleResolver, tokenOrLiteral: string): void {
   const dimensions = SLIDE_DIMENSIONS[theme.layout.slideSize];
+  const color = resolver.resolveColor(tokenOrLiteral, "background-light");
   slide.addShape("rect", {
     x: 0,
     y: 0,
     w: dimensions.width,
     h: dimensions.height,
     fill: {
-      color: resolveThemeColor(theme, tokenOrLiteral, "background-light")
+      color
     },
     line: {
-      color: resolveThemeColor(theme, tokenOrLiteral, "background-light"),
+      color,
       width: 0
     }
   });
@@ -87,6 +89,7 @@ function mapImportedShape(shapeName: string): string {
 function applyTemplateBackground(
   slide: SlideAdapter,
   theme: ThemeDefinition,
+  resolver: StyleResolver,
   templateContext: SlideTemplateContext,
   fallbackColor: string
 ): void {
@@ -102,20 +105,25 @@ function applyTemplateBackground(
       h: dimensions.height
     });
   } else if (templateBackground.color !== undefined) {
-    applyBackground(slide, theme, templateBackground.color);
+    applyBackground(slide, theme, resolver, templateBackground.color);
   } else {
-    applyBackground(slide, theme, fallbackColor);
+    applyBackground(slide, theme, resolver, fallbackColor);
   }
 
-  applyTemplateBackgroundObjects(slide, theme, templateContext);
+  applyTemplateBackgroundObjects(slide, theme, resolver, templateContext);
 }
 
-function applyTemplateBackgroundObjects(slide: SlideAdapter, theme: ThemeDefinition, templateContext: SlideTemplateContext): void {
+function applyTemplateBackgroundObjects(
+  slide: SlideAdapter,
+  theme: ThemeDefinition,
+  resolver: StyleResolver,
+  templateContext: SlideTemplateContext
+): void {
   const templateBackground = templateContext.templatePackage.background;
 
   for (const backgroundObject of templateBackground.objects) {
     if (backgroundObject.type === "shape") {
-      renderTemplateShapeObject(slide, theme, backgroundObject);
+      renderTemplateShapeObject(slide, theme, resolver, backgroundObject);
       continue;
     }
 
@@ -123,7 +131,12 @@ function applyTemplateBackgroundObjects(slide: SlideAdapter, theme: ThemeDefinit
   }
 }
 
-function renderTemplateShapeObject(slide: SlideAdapter, theme: ThemeDefinition, shapeObject: ImportedTemplateShapeObject): void {
+function renderTemplateShapeObject(
+  slide: SlideAdapter,
+  theme: ThemeDefinition,
+  resolver: StyleResolver,
+  shapeObject: ImportedTemplateShapeObject
+): void {
   const options: Record<string, unknown> = {
     x: shapeObject.x,
     y: shapeObject.y,
@@ -133,13 +146,13 @@ function renderTemplateShapeObject(slide: SlideAdapter, theme: ThemeDefinition, 
 
   if (shapeObject.fill !== undefined) {
     options.fill = {
-      color: resolveThemeColor(theme, shapeObject.fill, "background-light")
+      color: resolver.resolveColor(shapeObject.fill, "background-light")
     };
   }
 
   if (shapeObject.lineColor !== undefined) {
     options.line = {
-      color: resolveThemeColor(theme, shapeObject.lineColor, "text-dark"),
+      color: resolver.resolveColor(shapeObject.lineColor, "text-dark"),
       width: 1
     };
   }
@@ -147,14 +160,15 @@ function renderTemplateShapeObject(slide: SlideAdapter, theme: ThemeDefinition, 
   slide.addShape(mapImportedShape(shapeObject.shape), options);
 
   if (shapeObject.text !== undefined) {
+    const style = resolver.resolveTextStyle("body");
     slide.addText(shapeObject.text, {
       x: shapeObject.x,
       y: shapeObject.y,
       w: shapeObject.w,
       h: shapeObject.h,
-      fontFace: theme.typography.fonts.body,
-      fontSize: theme.typography.sizes.body,
-      color: resolveThemeColor(theme, "text-dark", "text-dark"),
+      fontFace: style.fontFace ?? theme.typography.fonts.body,
+      fontSize: style.fontSize ?? theme.typography.sizes.body,
+      color: resolver.resolveColor(style.color, "text-dark"),
       valign: "mid",
       align: "center"
     });
@@ -245,6 +259,39 @@ function interpolateFooterText(template: string, metadata: PresentationMetadata)
     .trim();
 }
 
+function setElementStyleRef(element: ContentElement, styleRef: string | undefined): ContentElement {
+  if (styleRef === undefined || element.styleRef !== undefined) {
+    return element;
+  }
+
+  return {
+    ...element,
+    styleRef
+  };
+}
+
+function buildPresetSurfaceShapes(result: PresetLayoutResult, resolver: StyleResolver): CustomShapeElement[] {
+  return result.slotSurfaceDefinitions.map((slotSurface) => {
+    const style = resolver.resolvePresetSurfaceStyle(slotSurface.styleRef);
+    const base: CustomShapeElement = {
+      type: "custom-shape",
+      shape: style.shape ?? "rounded-rectangle",
+      position: slotSurface.bounds,
+      fill: style.fillColor,
+      qa: { exclude: true }
+    };
+
+    if (style.borderColor !== undefined) {
+      base.border = {
+        color: style.borderColor,
+        width: style.borderWidth ?? 1
+      };
+    }
+
+    return base;
+  });
+}
+
 export class SlideRenderer {
   public async renderSlides(
     pres: PresentationAdapter,
@@ -274,31 +321,37 @@ export class SlideRenderer {
     renderContext?: SlideRenderContext
   ): Promise<void> {
     const slide = pres.addSlide();
+    const resolver = new StyleResolver(theme);
     const footerOnDarkBackground = this.shouldRenderFooterOnDarkBackground(slideDefinition);
 
     if (slideDefinition.type === "title") {
-      await this.renderTitleSlide(slide, slideDefinition, theme, templateContext);
+      await this.renderTitleSlide(slide, slideDefinition, theme, resolver, templateContext);
     } else if (slideDefinition.type === "content") {
-      await this.renderContentSlide(slide, slideDefinition, theme, templateContext);
+      await this.renderContentSlide(slide, slideDefinition, theme, resolver, templateContext);
     } else if (slideDefinition.type === "section") {
-      await this.renderSectionSlide(slide, slideDefinition, theme, templateContext);
+      await this.renderSectionSlide(slide, slideDefinition, theme, resolver, templateContext);
     } else {
-      await this.renderBlankSlide(slide, slideDefinition, theme, templateContext);
+      await this.renderBlankSlide(slide, slideDefinition, theme, resolver, templateContext);
     }
 
     if (renderContext !== undefined) {
-      this.renderHeaderDivider(slide, theme, {
+      this.renderHeaderDivider(slide, theme, resolver, {
         ...renderContext,
         footerOnDarkBackground
       });
-      this.renderFooter(slide, theme, templateContext, {
+      this.renderFooter(slide, theme, resolver, templateContext, {
         ...renderContext,
         footerOnDarkBackground
       });
     }
   }
 
-  private renderHeaderDivider(slide: SlideAdapter, theme: ThemeDefinition, renderContext: SlideRenderContext): void {
+  private renderHeaderDivider(
+    slide: SlideAdapter,
+    theme: ThemeDefinition,
+    resolver: StyleResolver,
+    renderContext: SlideRenderContext
+  ): void {
     if (renderContext.footerOnDarkBackground === true) {
       return;
     }
@@ -312,7 +365,7 @@ export class SlideRenderer {
     const x = divider.x ?? 0.4;
     const y = divider.y ?? 1.22;
     const w = divider.w ?? Math.max(0.1, dimensions.width - x * 2);
-    const lineColor = resolveThemeColor(theme, divider.color ?? "DEE2E6", "text-dark");
+    const lineColor = resolver.resolveColor(divider.color ?? "neutral-border", "neutral-border");
     const lineWidth = divider.width ?? 0.8;
 
     slide.addShape("line", {
@@ -353,6 +406,7 @@ export class SlideRenderer {
     slide: SlideAdapter,
     definition: TitleSlide,
     theme: ThemeDefinition,
+    resolver: StyleResolver,
     templateContext?: SlideTemplateContext
   ): Promise<void> {
     const defaultBg = theme.defaults.titleSlide.background;
@@ -364,33 +418,36 @@ export class SlideRenderer {
         : definition.background?.color ?? defaultBg;
 
     if (templateContext !== undefined) {
-      applyBackground(slide, theme, fallbackBg);
-      applyTemplateBackgroundObjects(slide, theme, templateContext);
+      applyBackground(slide, theme, resolver, fallbackBg);
+      applyTemplateBackgroundObjects(slide, theme, resolver, templateContext);
     } else if (typeof definition.background === "string") {
-      applyBackground(slide, theme, definition.background === "dark" ? "background-dark" : "background-light");
+      applyBackground(slide, theme, resolver, definition.background === "dark" ? "background-dark" : "background-light");
     } else if (definition.background !== undefined) {
-      applyBackground(slide, theme, definition.background.color);
+      applyBackground(slide, theme, resolver, definition.background.color);
     } else {
-      applyBackground(slide, theme, defaultBg);
+      applyBackground(slide, theme, resolver, defaultBg);
     }
+
+    const titleStyle = resolver.resolveTextStyle("title");
+    const subtitleStyle = resolver.resolveTextStyle("heading");
 
     const titleColor =
       templateContext === undefined
-        ? resolveThemeColor(theme, theme.defaults.titleSlide.titleColor, "text-light")
-        : resolveThemeColor(theme, "text-light", "text-light");
+        ? resolver.resolveColor(titleStyle.color, theme.defaults.titleSlide.titleColor)
+        : resolver.resolveColor("text-light", "text-light");
     const subtitleColor =
       templateContext === undefined
-        ? resolveThemeColor(theme, theme.defaults.titleSlide.subtitleColor, "secondary")
-        : resolveThemeColor(theme, "text-light", "text-light");
+        ? resolver.resolveColor(subtitleStyle.color, theme.defaults.titleSlide.subtitleColor)
+        : resolver.resolveColor("text-light", "text-light");
 
     slide.addText(definition.content.title, {
       x: 0.7,
       y: 1.6,
       w: 8.6,
       h: 1.2,
-      fontFace: theme.typography.fonts.title,
-      fontSize: theme.typography.sizes.title,
-      bold: true,
+      fontFace: titleStyle.fontFace ?? theme.typography.fonts.title,
+      fontSize: titleStyle.fontSize ?? theme.typography.sizes.title,
+      bold: titleStyle.bold ?? true,
       color: titleColor,
       align: "center",
       valign: "mid"
@@ -402,21 +459,22 @@ export class SlideRenderer {
         y: 3.0,
         w: 8.6,
         h: 0.6,
-        fontFace: theme.typography.fonts.heading,
-        fontSize: theme.typography.sizes.subheading,
+        fontFace: subtitleStyle.fontFace ?? theme.typography.fonts.heading,
+        fontSize: subtitleStyle.fontSize ?? theme.typography.sizes.subheading,
         color: subtitleColor,
         align: "center"
       });
     }
 
     if (definition.content.date !== undefined) {
+      const captionStyle = resolver.resolveTextStyle("caption");
       slide.addText(definition.content.date, {
         x: 0.7,
         y: 3.8,
         w: 8.6,
         h: 0.3,
-        fontFace: theme.typography.fonts.caption,
-        fontSize: theme.typography.sizes.caption,
+        fontFace: captionStyle.fontFace ?? theme.typography.fonts.caption,
+        fontSize: captionStyle.fontSize ?? theme.typography.sizes.caption,
         color: subtitleColor,
         align: "center"
       });
@@ -437,54 +495,83 @@ export class SlideRenderer {
     slide: SlideAdapter,
     definition: ContentSlide,
     theme: ThemeDefinition,
+    resolver: StyleResolver,
     templateContext?: SlideTemplateContext
   ): Promise<void> {
     if (templateContext !== undefined) {
-      applyTemplateBackground(slide, theme, templateContext, theme.defaults.contentSlide.background);
+      applyTemplateBackground(slide, theme, resolver, templateContext, theme.defaults.contentSlide.background);
     } else {
-      applyBackground(slide, theme, theme.defaults.contentSlide.background);
+      applyBackground(slide, theme, resolver, theme.defaults.contentSlide.background);
     }
 
+    const titleStyle = resolver.resolveTextStyle("heading");
     const titlePlaceholder = templateContext?.templatePackage.layout.placeholders.title;
+    const titleY = titlePlaceholder?.bounds.y ?? 0.2;
+    const titleH = titlePlaceholder?.bounds.h ?? 0.5;
+
     slide.addText(definition.title, {
       x: titlePlaceholder?.bounds.x ?? 0.5,
-      y: titlePlaceholder?.bounds.y ?? 0.2,
+      y: titleY,
       w: titlePlaceholder?.bounds.w ?? 9,
-      h: titlePlaceholder?.bounds.h ?? 0.5,
-      fontFace: titlePlaceholder?.style.fontFace ?? theme.typography.fonts.heading,
-      fontSize: titlePlaceholder?.style.fontSizePt ?? theme.typography.sizes.heading,
+      h: titleH,
+      fontFace: titlePlaceholder?.style.fontFace ?? titleStyle.fontFace ?? theme.typography.fonts.heading,
+      fontSize: titlePlaceholder?.style.fontSizePt ?? titleStyle.fontSize ?? theme.typography.sizes.heading,
       bold: true,
-      color: resolveThemeColor(theme, titlePlaceholder?.style.color ?? theme.defaults.contentSlide.titleColor, "text-dark")
+      color: resolver.resolveColor(titlePlaceholder?.style.color ?? titleStyle.color, theme.defaults.contentSlide.titleColor)
     });
+
+    const presetDefinition = definition.preset !== undefined ? getPresetDefinition(definition.preset) : undefined;
+    const shouldUnderline = (theme.effects?.titleUnderline?.enabled ?? false) || (presetDefinition?.defaults?.titleUnderline ?? false);
+    if (shouldUnderline) {
+      const underlineColor = resolver.resolveColor(theme.effects?.titleUnderline?.color ?? "accent", "accent");
+      slide.addShape("line", {
+        x: titlePlaceholder?.bounds.x ?? 0.5,
+        y: titleY + titleH + 0.03,
+        w: titlePlaceholder?.bounds.w ?? 9,
+        h: 0,
+        line: {
+          color: underlineColor,
+          width: theme.effects?.titleUnderline?.width ?? 1.2
+        }
+      });
+    }
 
     const engine = new LayoutEngine(theme);
     const presetEngine = new PresetEngine();
-    const presetResult =
-      definition.preset !== undefined ? presetEngine.calculateLayout(definition.content, definition.preset) : undefined;
+    const presetResult = definition.preset !== undefined ? presetEngine.calculateLayout(definition.content, definition.preset) : undefined;
     const result = presetResult ?? engine.calculateLayout(definition.content, definition.layout ?? "auto");
     const bodyBounds = templateContext?.templatePackage.layout.placeholders.body.bounds;
     let areas = result.areas;
-    let presetDecorations: CustomShapeElement[] = presetResult?.decorations ?? [];
+
+    let presetVisualShapes: CustomShapeElement[] = [];
+    if (presetResult !== undefined) {
+      presetVisualShapes = [...buildPresetSurfaceShapes(presetResult, resolver), ...presetResult.decorations];
+      areas = presetResult.areas.map((area, index) => ({
+        element: setElementStyleRef(area.element, presetResult.slotStyleByElementIndex.get(index)),
+        bounds: area.bounds
+      }));
+    }
 
     if (bodyBounds !== undefined) {
       if (presetResult !== undefined) {
-        areas = presetResult.areas.map((area) => ({
+        areas = areas.map((area) => ({
           element: area.element,
           bounds: remapBounds(area.bounds, presetResult.frame, bodyBounds)
         }));
-        presetDecorations = presetDecorations.map((shape) => remapCustomShape(shape, presetResult.frame, bodyBounds));
+        presetVisualShapes = presetVisualShapes.map((shape) => remapCustomShape(shape, presetResult.frame, bodyBounds));
       } else {
         areas = remapAreasToPlaceholder(result.areas, bodyBounds);
       }
     }
 
     const context: ComponentRenderContext = {
+      styleResolver: resolver,
       renderElement: async (nestedSlide, nestedElement, bounds, nestedTheme) => {
         await renderContentElement(nestedSlide, nestedElement, bounds, nestedTheme, context);
       }
     };
 
-    for (const decoration of presetDecorations) {
+    for (const decoration of presetVisualShapes) {
       await renderContentElement(slide, decoration, decoration.position, theme, context);
     }
 
@@ -497,24 +584,23 @@ export class SlideRenderer {
     slide: SlideAdapter,
     definition: Extract<Slide, { type: "section" }>,
     theme: ThemeDefinition,
+    resolver: StyleResolver,
     templateContext?: SlideTemplateContext
   ): Promise<void> {
     const fallbackBg = definition.background?.color ?? "primary";
     if (templateContext !== undefined) {
-      applyBackground(slide, theme, fallbackBg);
-      applyTemplateBackgroundObjects(slide, theme, templateContext);
+      applyBackground(slide, theme, resolver, fallbackBg);
+      applyTemplateBackgroundObjects(slide, theme, resolver, templateContext);
     } else {
-      applyBackground(slide, theme, fallbackBg);
+      applyBackground(slide, theme, resolver, fallbackBg);
     }
 
     const titleColor =
       templateContext === undefined
-        ? resolveThemeColor(theme, "text-light", "text-light")
-        : resolveThemeColor(theme, theme.defaults.contentSlide.titleColor, "text-dark");
+        ? resolver.resolveColor("text-light", "text-light")
+        : resolver.resolveColor(theme.defaults.contentSlide.titleColor, "text-dark");
     const subtitleColor =
-      templateContext === undefined
-        ? resolveThemeColor(theme, "secondary", "secondary")
-        : resolveThemeColor(theme, "accent", "accent");
+      templateContext === undefined ? resolver.resolveColor("secondary", "secondary") : resolver.resolveColor("accent", "accent");
 
     slide.addText(definition.title, {
       x: 1,
@@ -546,22 +632,24 @@ export class SlideRenderer {
     slide: SlideAdapter,
     definition: Extract<Slide, { type: "blank" }>,
     theme: ThemeDefinition,
+    resolver: StyleResolver,
     templateContext?: SlideTemplateContext
   ): Promise<void> {
     const bg = definition.background;
     if (typeof bg === "string") {
-      applyBackground(slide, theme, bg === "dark" ? "background-dark" : "background-light");
+      applyBackground(slide, theme, resolver, bg === "dark" ? "background-dark" : "background-light");
     } else if (bg !== undefined) {
-      applyBackground(slide, theme, bg.color);
+      applyBackground(slide, theme, resolver, bg.color);
     } else {
-      applyBackground(slide, theme, "background-light");
+      applyBackground(slide, theme, resolver, "background-light");
     }
 
     if (templateContext !== undefined) {
-      applyTemplateBackgroundObjects(slide, theme, templateContext);
+      applyTemplateBackgroundObjects(slide, theme, resolver, templateContext);
     }
 
     const context: ComponentRenderContext = {
+      styleResolver: resolver,
       renderElement: async (nestedSlide, nestedElement, bounds, nestedTheme) => {
         await renderContentElement(nestedSlide, nestedElement, bounds, nestedTheme, context);
       }
@@ -576,12 +664,13 @@ export class SlideRenderer {
   private renderFooter(
     slide: SlideAdapter,
     theme: ThemeDefinition,
+    resolver: StyleResolver,
     templateContext: SlideTemplateContext | undefined,
     renderContext: SlideRenderContext
   ): void {
     const templateFooter = templateContext?.templatePackage.chrome?.footer;
     if (templateFooter !== undefined) {
-      this.renderTemplateFooter(slide, theme, renderContext, templateFooter);
+      this.renderTemplateFooter(slide, theme, resolver, renderContext, templateFooter);
       return;
     }
 
@@ -592,12 +681,8 @@ export class SlideRenderer {
 
     const dimensions = SLIDE_DIMENSIONS[theme.layout.slideSize];
     const defaultColorToken =
-      renderContext.footerOnDarkBackground === true
-        ? "text-light"
-        : theme.colors["muted-text"] !== undefined
-          ? "muted-text"
-          : "text-dark";
-    const textColor = resolveThemeColor(theme, footer.color ?? defaultColorToken, defaultColorToken);
+      renderContext.footerOnDarkBackground === true ? "text-light" : theme.colors["muted-text"] !== undefined ? "muted-text" : "text-dark";
+    const textColor = resolver.resolveColor(footer.color ?? defaultColorToken, defaultColorToken);
     const fontFace = footer.fontFace ?? theme.typography.fonts.caption;
     const fontSize = footer.fontSize ?? theme.typography.sizes.caption;
     const leftText = this.resolveFooterLeftText(renderContext.metadata, footer);
@@ -613,7 +698,7 @@ export class SlideRenderer {
         w: dividerW,
         h: 0,
         line: {
-          color: resolveThemeColor(theme, divider.color ?? "DEE2E6", "text-dark"),
+          color: resolver.resolveColor(divider.color ?? "neutral-border", "neutral-border"),
           width: divider.width ?? 0.8
         }
       });
@@ -649,12 +734,13 @@ export class SlideRenderer {
   private renderTemplateFooter(
     slide: SlideAdapter,
     theme: ThemeDefinition,
+    resolver: StyleResolver,
     renderContext: SlideRenderContext,
     footer: NonNullable<NonNullable<SlideTemplateContext["templatePackage"]["chrome"]>["footer"]>
   ): void {
     const dimensions = SLIDE_DIMENSIONS[theme.layout.slideSize];
     const defaultColorToken = renderContext.footerOnDarkBackground ? "text-light" : "text-dark";
-    const textColor = resolveThemeColor(theme, footer.color ?? defaultColorToken, defaultColorToken);
+    const textColor = resolver.resolveColor(footer.color ?? defaultColorToken, defaultColorToken);
     const fontFace = footer.fontFace ?? theme.typography.fonts.caption;
     const fontSize = footer.fontSizePt ?? theme.typography.sizes.caption;
     const leftTextY = 0.12;

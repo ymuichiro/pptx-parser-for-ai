@@ -1,9 +1,9 @@
 import type { Bounds, ChartElement, ThemeDefinition } from "../../types";
+import { StyleResolver } from "../../theme/style-resolver";
 import type { SlideAdapter } from "../base-renderer";
-import { resolveThemeColor } from "../../utils/color";
 
 function buildDataLabelFormatCode(valuePrefix: string, valueSuffix: string): string {
-  const escapeLiteral = (value: string): string => value.replace(/"/g, "\"\"");
+  const escapeLiteral = (value: string): string => value.replace(/"/g, '""');
   const prefix = valuePrefix.trim();
   const suffix = valueSuffix.trim();
 
@@ -17,19 +17,23 @@ function buildDataLabelFormatCode(valuePrefix: string, valueSuffix: string): str
   return formatCode;
 }
 
-export function renderChart(slide: SlideAdapter, element: ChartElement, bounds: Bounds, theme: ThemeDefinition): void {
-  const chartData = element.data.series.map((series) => ({
+export function renderChart(
+  slide: SlideAdapter,
+  element: ChartElement,
+  bounds: Bounds,
+  theme: ThemeDefinition,
+  resolver: StyleResolver = new StyleResolver(theme)
+): void {
+  const style = resolver.resolveChartStyle(element.styleRef ?? "default");
+  const chartData = element.data.series.map((series, index) => ({
     name: series.name,
     labels: element.data.labels,
-    values: series.values
+    values: series.values,
+    color: series.color ?? style.seriesPalette?.[index]
   }));
-  const chartColors = element.data.series.map((series) => resolveThemeColor(theme, series.color ?? "primary", "primary"));
-  const labelColor =
-    theme.colors["muted-text"] !== undefined
-      ? resolveThemeColor(theme, "muted-text", "text-dark")
-      : resolveThemeColor(theme, "text-dark", "text-dark");
-  const bodyFontFace = theme.typography.fonts.body;
-  const headingFontFace = theme.typography.fonts.heading;
+  const chartColors = chartData.map((series, index) =>
+    resolver.resolveColor((series.color as string | undefined) ?? style.seriesPalette?.[index] ?? "primary", "primary")
+  );
   const valuePrefix = element.options?.valuePrefix ?? "";
   const valueSuffix = element.options?.valueSuffix ?? "";
   const chartType = element.chartType === "bar" ? "bar" : element.chartType;
@@ -47,15 +51,15 @@ export function renderChart(slide: SlideAdapter, element: ChartElement, bounds: 
   if (element.chartType === "bar") {
     chartOptions.barDir = "col";
     chartOptions.barGrouping = "clustered";
-    chartOptions.barGapWidthPct = 140;
+    chartOptions.barGapWidthPct = 120;
     chartOptions.catAxisLabelPos = "nextTo";
     chartOptions.catAxisLabelRotate = 0;
-    chartOptions.catAxisLabelFontFace = bodyFontFace;
-    chartOptions.catAxisLabelFontSize = 11;
-    chartOptions.catAxisLabelColor = labelColor;
+    chartOptions.catAxisLabelFontFace = theme.typography.fonts.body;
+    chartOptions.catAxisLabelFontSize = style.labelFontSize ?? 11;
+    chartOptions.catAxisLabelColor = resolver.resolveColor(style.axisLabelColor, "text-dark");
     chartOptions.catAxisMajorTickMark = "none";
     chartOptions.catAxisMinorTickMark = "none";
-    chartOptions.catGridLine = { style: "none" };
+    chartOptions.catGridLine = { color: resolver.resolveColor(style.gridColor, "neutral-border") };
     chartOptions.valAxisHidden = true;
     chartOptions.valAxisLabelPos = "none";
     chartOptions.valAxisLineShow = false;
@@ -63,9 +67,9 @@ export function renderChart(slide: SlideAdapter, element: ChartElement, bounds: 
     chartOptions.valAxisMinorTickMark = "none";
     chartOptions.valGridLine = { style: "none" };
     chartOptions.catAxisHidden = false;
-    chartOptions.dataLabelColor = resolveThemeColor(theme, "text-dark", "text-dark");
-    chartOptions.dataLabelFontFace = headingFontFace;
-    chartOptions.dataLabelFontSize = 11;
+    chartOptions.dataLabelColor = resolver.resolveColor(style.dataLabelColor, "text-dark");
+    chartOptions.dataLabelFontFace = theme.typography.fonts.heading;
+    chartOptions.dataLabelFontSize = style.dataLabelFontSize ?? 11;
     chartOptions.dataLabelFontBold = true;
     chartOptions.dataLabelPosition = "outEnd";
     chartOptions.dataLabelFormatCode = buildDataLabelFormatCode(valuePrefix, valueSuffix);
@@ -81,7 +85,7 @@ export function renderChart(slide: SlideAdapter, element: ChartElement, bounds: 
       h: 0.3,
       fontFace: theme.typography.fonts.heading,
       fontSize: theme.typography.sizes.caption,
-      color: resolveThemeColor(theme, "text-dark", "text-dark"),
+      color: resolver.resolveColor(style.titleColor, "text-dark"),
       align: "left"
     });
   }
