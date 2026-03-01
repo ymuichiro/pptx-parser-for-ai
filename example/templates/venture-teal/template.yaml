@@ -50,28 +50,7 @@ layout:
 background:
   mode: "editable"
   color: "background-light"
-  objects:
-    - type: shape
-      shape: "rect"
-      x: 0
-      y: 0
-      w: 10
-      h: 0.22
-      fill: "accent"
-    - type: shape
-      shape: "ellipse"
-      x: -1.2
-      y: 4.42
-      w: 2.4
-      h: 2.4
-      fill: "secondary"
-    - type: shape
-      shape: "ellipse"
-      x: 8.2
-      y: -1.8
-      w: 3.6
-      h: 3.6
-      fill: "secondary"
+  objects: []
 
 chrome:
   footer:
