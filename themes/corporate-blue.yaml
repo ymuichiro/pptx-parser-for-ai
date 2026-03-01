@@ -1,21 +1,21 @@
 name: Corporate Blue
 version: "2.0"
 colors:
-  primary: "1E2761"
-  secondary: "CADCFC"
-  accent: "FF6B35"
-  text-dark: "2C2C2C"
+  primary: "1D2A44"
+  secondary: "E8ECF2"
+  accent: "1F3A70"
+  text-dark: "222222"
   text-light: "FFFFFF"
   muted-text: "6B7280"
-  background-light: "F8F9FA"
-  background-dark: "1E2761"
-  neutral-border: "DEE2E6"
+  background-light: "FFFFFF"
+  background-dark: "1B2435"
+  neutral-border: "D2D7DE"
   surface: "FFFFFF"
-  surface-muted: "F3F4F6"
-  surface-strong: "E5E7EB"
-  success: "10B981"
-  warning: "F59E0B"
-  error: "EF4444"
+  surface-muted: "F5F7FA"
+  surface-strong: "E7EBF1"
+  success: "2E7D32"
+  warning: "B7791F"
+  error: "C53030"
 typography:
   fonts:
     title: Noto Sans JP
@@ -80,7 +80,7 @@ components:
       column: { color: text-dark, fontFace: Noto Sans JP, fontSize: 13 }
       summary: { color: primary, fontFace: Noto Sans JP, fontSize: 12 }
       kpi: { color: primary, fontFace: Noto Sans JP, fontSize: 20, bold: true }
-      highlight: { color: primary, fontFace: Noto Sans JP, fontSize: 13, bold: true }
+      highlight: { color: error, fontFace: Noto Sans JP, fontSize: 13, bold: true }
   list:
     defaultStyleRef: default
     styles:
@@ -92,7 +92,7 @@ components:
       column: { color: text-dark, fontFace: Noto Sans JP, fontSize: 12, bulletCharacter: "•", bulletColor: primary, indent: 0.22 }
       summary: { color: primary, fontFace: Noto Sans JP, fontSize: 12, bulletCharacter: "•", bulletColor: accent, indent: 0.2 }
       kpi: { color: primary, fontFace: Noto Sans JP, fontSize: 13, bulletCharacter: "•", bulletColor: accent, indent: 0.2 }
-      highlight: { color: primary, fontFace: Noto Sans JP, fontSize: 13, bulletCharacter: "•", bulletColor: accent, indent: 0.2 }
+      highlight: { color: error, fontFace: Noto Sans JP, fontSize: 13, bulletCharacter: "•", bulletColor: accent, indent: 0.2 }
   table:
     defaultStyleRef: default
     styles:

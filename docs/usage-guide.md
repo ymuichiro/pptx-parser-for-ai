@@ -50,7 +50,7 @@ await renderer.generate(dsl, "./output.pptx");
 ```ts
 const dsl: PresentationDSL = {
   version: "2.0",
-  theme: "venture-teal",
+  theme: "corporate-blue",
   metadata: {
     title: "Sample",
     company: "Contoso",

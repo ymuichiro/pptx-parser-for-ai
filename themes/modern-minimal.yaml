@@ -1,21 +1,21 @@
 name: Modern Minimal
 version: "2.0"
 colors:
-  primary: "222222"
-  secondary: "DDDDDD"
-  accent: "0EA5E9"
-  text-dark: "1F2937"
+  primary: "1D2A44"
+  secondary: "E8ECF2"
+  accent: "1F3A70"
+  text-dark: "222222"
   text-light: "FFFFFF"
   muted-text: "6B7280"
   background-light: "FFFFFF"
-  background-dark: "111827"
-  neutral-border: "D1D5DB"
+  background-dark: "1B2435"
+  neutral-border: "D2D7DE"
   surface: "FFFFFF"
-  surface-muted: "F3F4F6"
-  surface-strong: "E5E7EB"
-  success: "16A34A"
-  warning: "D97706"
-  error: "DC2626"
+  surface-muted: "F5F7FA"
+  surface-strong: "E7EBF1"
+  success: "2E7D32"
+  warning: "B7791F"
+  error: "C53030"
 typography:
   fonts:
     title: Noto Sans JP
@@ -75,7 +75,7 @@ components:
       column: { color: text-dark, fontFace: Noto Sans JP, fontSize: 12 }
       summary: { color: primary, fontFace: Noto Sans JP, fontSize: 11 }
       kpi: { color: primary, fontFace: Noto Sans JP, fontSize: 18, bold: true }
-      highlight: { color: primary, fontFace: Noto Sans JP, fontSize: 12, bold: true }
+      highlight: { color: error, fontFace: Noto Sans JP, fontSize: 12, bold: true }
   list:
     defaultStyleRef: default
     styles:
@@ -87,7 +87,7 @@ components:
       column: { color: text-dark, fontFace: Noto Sans JP, fontSize: 11, bulletCharacter: "-", bulletColor: primary, indent: 0.2 }
       summary: { color: primary, fontFace: Noto Sans JP, fontSize: 11, bulletCharacter: "-", bulletColor: accent, indent: 0.2 }
       kpi: { color: primary, fontFace: Noto Sans JP, fontSize: 12, bulletCharacter: "-", bulletColor: accent, indent: 0.2 }
-      highlight: { color: primary, fontFace: Noto Sans JP, fontSize: 12, bulletCharacter: "-", bulletColor: accent, indent: 0.2 }
+      highlight: { color: error, fontFace: Noto Sans JP, fontSize: 12, bulletCharacter: "-", bulletColor: accent, indent: 0.2 }
   table:
     defaultStyleRef: default
     styles:

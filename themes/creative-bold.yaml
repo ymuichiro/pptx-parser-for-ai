@@ -1,21 +1,21 @@
 name: Creative Bold
 version: "2.0"
 colors:
-  primary: "0F172A"
-  secondary: "FDE047"
-  accent: "F43F5E"
-  text-dark: "111827"
+  primary: "1D2A44"
+  secondary: "E8ECF2"
+  accent: "1F3A70"
+  text-dark: "222222"
   text-light: "FFFFFF"
   muted-text: "6B7280"
-  background-light: "FEFCE8"
-  background-dark: "0F172A"
-  neutral-border: "D4D4D8"
+  background-light: "FFFFFF"
+  background-dark: "1B2435"
+  neutral-border: "D2D7DE"
   surface: "FFFFFF"
-  surface-muted: "FFFCE1"
-  surface-strong: "FDE68A"
-  success: "22C55E"
-  warning: "F59E0B"
-  error: "E11D48"
+  surface-muted: "F5F7FA"
+  surface-strong: "E7EBF1"
+  success: "2E7D32"
+  warning: "B7791F"
+  error: "C53030"
 typography:
   fonts:
     title: Noto Sans JP
@@ -75,7 +75,7 @@ components:
       column: { color: text-dark, fontFace: Noto Sans JP, fontSize: 13 }
       summary: { color: primary, fontFace: Noto Sans JP, fontSize: 12 }
       kpi: { color: primary, fontFace: Noto Sans JP, fontSize: 20, bold: true }
-      highlight: { color: primary, fontFace: Noto Sans JP, fontSize: 13, bold: true }
+      highlight: { color: error, fontFace: Noto Sans JP, fontSize: 13, bold: true }
   list:
     defaultStyleRef: default
     styles:
@@ -87,7 +87,7 @@ components:
       column: { color: text-dark, fontFace: Noto Sans JP, fontSize: 12, bulletCharacter: "◆", bulletColor: primary, indent: 0.22 }
       summary: { color: primary, fontFace: Noto Sans JP, fontSize: 12, bulletCharacter: "◆", bulletColor: accent, indent: 0.2 }
       kpi: { color: primary, fontFace: Noto Sans JP, fontSize: 13, bulletCharacter: "◆", bulletColor: accent, indent: 0.2 }
-      highlight: { color: primary, fontFace: Noto Sans JP, fontSize: 13, bulletCharacter: "◆", bulletColor: accent, indent: 0.2 }
+      highlight: { color: error, fontFace: Noto Sans JP, fontSize: 13, bulletCharacter: "◆", bulletColor: accent, indent: 0.2 }
   table:
     defaultStyleRef: default
     styles:

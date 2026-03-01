@@ -1,21 +1,21 @@
 name: Venture Teal
 version: "2.0"
 colors:
-  primary: "1A1A2E"
-  secondary: "E6FAF3"
-  accent: "16C79A"
-  text-dark: "1A1A2E"
+  primary: "1D2A44"
+  secondary: "E8ECF2"
+  accent: "1F3A70"
+  text-dark: "222222"
   text-light: "FFFFFF"
-  muted-text: "888888"
-  background-light: "F8F9FA"
-  background-dark: "1A1A2E"
-  neutral-border: "DEE2E6"
+  muted-text: "6B7280"
+  background-light: "FFFFFF"
+  background-dark: "1B2435"
+  neutral-border: "D2D7DE"
   surface: "FFFFFF"
-  surface-muted: "F1F5F9"
-  surface-strong: "E2E8F0"
-  success: "16C79A"
-  warning: "F5A623"
-  error: "D64550"
+  surface-muted: "F5F7FA"
+  surface-strong: "E7EBF1"
+  success: "2E7D32"
+  warning: "B7791F"
+  error: "C53030"
 typography:
   fonts:
     title: Noto Sans JP
@@ -75,7 +75,7 @@ components:
       column: { color: text-dark, fontFace: Noto Sans JP, fontSize: 13 }
       summary: { color: primary, fontFace: Noto Sans JP, fontSize: 12 }
       kpi: { color: primary, fontFace: Noto Sans JP, fontSize: 20, bold: true }
-      highlight: { color: primary, fontFace: Noto Sans JP, fontSize: 13, bold: true }
+      highlight: { color: error, fontFace: Noto Sans JP, fontSize: 13, bold: true }
   list:
     defaultStyleRef: default
     styles:
@@ -87,7 +87,7 @@ components:
       column: { color: text-dark, fontFace: Noto Sans JP, fontSize: 12, bulletCharacter: "•", bulletColor: primary, indent: 0.22 }
       summary: { color: primary, fontFace: Noto Sans JP, fontSize: 12, bulletCharacter: "•", bulletColor: accent, indent: 0.2 }
       kpi: { color: primary, fontFace: Noto Sans JP, fontSize: 13, bulletCharacter: "•", bulletColor: accent, indent: 0.2 }
-      highlight: { color: primary, fontFace: Noto Sans JP, fontSize: 13, bulletCharacter: "•", bulletColor: accent, indent: 0.2 }
+      highlight: { color: error, fontFace: Noto Sans JP, fontSize: 13, bulletCharacter: "•", bulletColor: accent, indent: 0.2 }
   table:
     defaultStyleRef: default
     styles:

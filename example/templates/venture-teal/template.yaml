@@ -7,15 +7,15 @@ template:
 
 theme:
   palette:
-    primary: "1A1A2E"
-    secondary: "E6FAF3"
-    accent: "16C79A"
-    text-dark: "1A1A2E"
+    primary: "1D2A44"
+    secondary: "E8ECF2"
+    accent: "1F3A70"
+    text-dark: "222222"
     text-light: "FFFFFF"
-    background-light: "F8F9FA"
-    background-dark: "1A1A2E"
-    muted-text: "888888"
-    neutral-border: "DEE2E6"
+    background-light: "FFFFFF"
+    background-dark: "1B2435"
+    muted-text: "6B7280"
+    neutral-border: "D2D7DE"
   fonts:
     title: "Noto Sans JP"
     heading: "Noto Sans JP"

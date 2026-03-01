@@ -7,6 +7,6 @@ describe("ThemeManager", () => {
     const theme = await manager.loadTheme("corporate-blue");
 
     const primary = manager.resolveColor(theme, "primary", "primary");
-    expect(primary).toBe("1E2761");
+    expect(primary).toBe("1D2A44");
   });
 });
