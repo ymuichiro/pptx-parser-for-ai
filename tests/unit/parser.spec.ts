@@ -134,4 +134,24 @@ describe("DSLParser", () => {
     expect(result.isValid).toBe(false);
     expect(result.errors.some((error) => error.includes("String length"))).toBe(true);
   });
+
+  it("rejects unknown preset id", () => {
+    const parser = new DSLParser();
+    const result = parser.validate({
+      version: "1.0",
+      theme: "corporate-blue",
+      metadata: { title: "preset" },
+      slides: [
+        {
+          type: "content",
+          title: "x",
+          preset: "unknown-preset",
+          content: [{ type: "text", content: "y" }]
+        }
+      ]
+    });
+
+    expect(result.isValid).toBe(false);
+    expect(result.errors.some((error) => error.includes("preset"))).toBe(true);
+  });
 });

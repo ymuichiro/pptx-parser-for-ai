@@ -12,6 +12,9 @@ This directory provides production-style sample decks and scripts.
 - `template-import`: import a `.pptx/.potx` file as a reusable template package
 - `templates/venture-teal/template.yaml`: shared template for common decorations and placeholder bounds
 
+Preset-aware authoring:
+- `content.preset` (`overview-2x2` / `compare-3col` / `kpi-with-callout`) と `slot` を使うと、`blank` の絶対座標を減らせます。
+
 ## Run all examples
 
 ```bash

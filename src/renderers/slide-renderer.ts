@@ -3,6 +3,7 @@ import { RenderError } from "../errors";
 import type {
   Bounds,
   ContentSlide,
+  CustomShapeElement,
   ElementArea,
   FooterChrome,
   PresentationMetadata,
@@ -12,12 +13,13 @@ import type {
   ThemeDefinition,
   TitleSlide
 } from "../types";
-import { LayoutEngine } from "../layout";
+import { DEFAULT_BLANK_ELEMENT_BOUNDS, LayoutEngine, resolveElementBounds } from "../layout";
 import type { ImportedTemplateImageObject, ImportedTemplatePackage, ImportedTemplateShapeObject } from "../template-importer/types";
 import type { ComponentRenderContext, SlideAdapter } from "./base-renderer";
 import { renderContentElement } from "./components";
 import { resolveThemeColor } from "../utils/color";
 import { SLIDE_DIMENSIONS } from "../constants";
+import { PresetEngine } from "../presets";
 
 export interface PresentationAdapter {
   addSlide(): SlideAdapter;
@@ -218,6 +220,13 @@ function remapAreasToPlaceholder(areas: ElementArea[], targetPlaceholderBounds: 
     element: area.element,
     bounds: remapBounds(area.bounds, sourceFrame, targetPlaceholderBounds)
   }));
+}
+
+function remapCustomShape(shape: CustomShapeElement, sourceFrame: Bounds, targetFrame: Bounds): CustomShapeElement {
+  return {
+    ...shape,
+    position: remapBounds(shape.position, sourceFrame, targetFrame)
+  };
 }
 
 function interpolateFooterText(template: string, metadata: PresentationMetadata): string {
@@ -449,15 +458,35 @@ export class SlideRenderer {
     });
 
     const engine = new LayoutEngine(theme);
-    const result = engine.calculateLayout(definition.content, definition.layout ?? "auto");
+    const presetEngine = new PresetEngine();
+    const presetResult =
+      definition.preset !== undefined ? presetEngine.calculateLayout(definition.content, definition.preset) : undefined;
+    const result = presetResult ?? engine.calculateLayout(definition.content, definition.layout ?? "auto");
     const bodyBounds = templateContext?.templatePackage.layout.placeholders.body.bounds;
-    const areas = bodyBounds !== undefined ? remapAreasToPlaceholder(result.areas, bodyBounds) : result.areas;
+    let areas = result.areas;
+    let presetDecorations: CustomShapeElement[] = presetResult?.decorations ?? [];
+
+    if (bodyBounds !== undefined) {
+      if (presetResult !== undefined) {
+        areas = presetResult.areas.map((area) => ({
+          element: area.element,
+          bounds: remapBounds(area.bounds, presetResult.frame, bodyBounds)
+        }));
+        presetDecorations = presetDecorations.map((shape) => remapCustomShape(shape, presetResult.frame, bodyBounds));
+      } else {
+        areas = remapAreasToPlaceholder(result.areas, bodyBounds);
+      }
+    }
 
     const context: ComponentRenderContext = {
       renderElement: async (nestedSlide, nestedElement, bounds, nestedTheme) => {
         await renderContentElement(nestedSlide, nestedElement, bounds, nestedTheme, context);
       }
     };
+
+    for (const decoration of presetDecorations) {
+      await renderContentElement(slide, decoration, decoration.position, theme, context);
+    }
 
     for (const area of areas) {
       await renderContentElement(slide, area.element, area.bounds, theme, context);
@@ -539,18 +568,7 @@ export class SlideRenderer {
     };
 
     for (const element of definition.elements) {
-      const defaultBounds = {
-        x: 0.8,
-        y: 0.8,
-        w: 8.4,
-        h: 4.0
-      };
-      const positionedBounds =
-        element.type === "custom-shape"
-          ? element.position
-          : ("position" in element && typeof element.position === "object" ? element.position : undefined) ??
-            ("bounds" in element && typeof element.bounds === "object" ? element.bounds : undefined);
-      const bounds = positionedBounds ?? defaultBounds;
+      const bounds = resolveElementBounds(element, DEFAULT_BLANK_ELEMENT_BOUNDS);
       await renderContentElement(slide, element, bounds, theme, context);
     }
   }

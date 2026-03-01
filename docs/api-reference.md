@@ -73,6 +73,12 @@ import {
 - `qaResult?: { hasIssues: boolean; issues: QAIssue[] }`
 - `metadata: { slideCount: number; generatedAt: Date }`
 
+`QAIssue.code` 例:
+- `OUTPUT_NOT_FOUND`
+- `EMPTY_OUTPUT`
+- `OUT_OF_BOUNDS`
+- `EXCESSIVE_OVERLAP`
+
 ## Core DSL Types
 - `PresentationDSL`
   - `metadata`: `title/author/company/date` に加え `copyright`, `footerText` を指定可能
@@ -80,6 +86,10 @@ import {
     - `header.divider`: ヘッダー領域と本文を分離する区切り線
     - `footer`: 左テキスト + ページ番号 + 任意の区切り線
 - `Slide` (`title` / `content` / `section` / `blank`)
+- `content` slide
+  - `layout?`: `auto|single-column|two-column|three-column`
+  - `preset?`: `overview-2x2|compare-3col|kpi-with-callout`
+  - `preset` 指定時は `layout` より優先
 - `ContentElement`
   - `text`
   - `bullet-list`
@@ -92,6 +102,23 @@ import {
   - `flowchart`
   - `icon-grid`
   - `two-column`
+  - 共通で `slot?`（preset 使用時の配置先）と `qa.exclude?`（QA 判定除外）を指定可能
+
+`image` の描画仕様:
+- `sizing`
+  - `contain`: アスペクト比を維持して全体表示（余白あり）
+  - `cover`: 指定領域を埋めるようにトリミング
+  - `crop`: 明示トリミング（現行は `cover` と同じく領域埋め + トリミング）
+- `position` (`left` / `center` / `right`)
+  - `contain` 時の水平配置に使用
+  - `cover` / `crop` 時の水平トリミングアンカーに使用
+- `bounds`
+  - `blank` slide: そのまま配置座標として使用
+  - `content` slide: レイアウト計算結果より優先して上書き可能
+
+`preset` の検証仕様:
+- 未定義 preset ID は `ValidationError`
+- 未定義 slot / 重複 slot / slot と要素 type の不一致は `ValidationError`
 
 詳細型定義:
 - `src/types/dsl.ts`

@@ -272,6 +272,7 @@ export class PPTXRenderer {
 export * from "./errors";
 export * from "./layout";
 export * from "./parser";
+export * from "./presets";
 export * from "./qa";
 export * from "./renderers";
 export * from "./template-importer";

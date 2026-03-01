@@ -5,6 +5,7 @@ import { ValidationError } from "../errors";
 import { presentationDSLSchema } from "./schema";
 import { enforceStructuralLimits } from "../utils/deep-limit";
 import type { ContentElement, PresentationDSL, Slide } from "../types";
+import { DEFAULT_PRESET_SLOT, getPresetDefinition } from "../presets";
 
 export interface ValidationResult {
   isValid: boolean;
@@ -98,6 +99,47 @@ function validateImage(element: ContentElement, errors: string[], location: stri
   }
 }
 
+function validatePreset(slide: Extract<Slide, { type: "content" }>, errors: string[], slideIndex: number): void {
+  if (slide.preset === undefined) {
+    return;
+  }
+
+  const preset = getPresetDefinition(slide.preset);
+  if (preset === undefined) {
+    errors.push(`slides[${slideIndex}].preset references unknown preset '${slide.preset}'`);
+    return;
+  }
+
+  const slotMap = new Map(preset.slots.map((slot) => [slot.name, slot]));
+  const usedSlots = new Map<string, number>();
+
+  slide.content.forEach((element, elementIndex) => {
+    const resolvedSlot = element.slot ?? DEFAULT_PRESET_SLOT;
+    const slotDefinition = slotMap.get(resolvedSlot);
+    if (slotDefinition === undefined) {
+      errors.push(`slides[${slideIndex}].content[${elementIndex}].slot references undefined slot '${resolvedSlot}'`);
+      return;
+    }
+
+    if (resolvedSlot !== DEFAULT_PRESET_SLOT) {
+      const prior = usedSlots.get(resolvedSlot);
+      if (prior !== undefined) {
+        errors.push(
+          `slides[${slideIndex}].content[${elementIndex}].slot duplicates slot '${resolvedSlot}' already used by content[${prior}]`
+        );
+      } else {
+        usedSlots.set(resolvedSlot, elementIndex);
+      }
+    }
+
+    if (slotDefinition.allowedElementTypes !== undefined && !slotDefinition.allowedElementTypes.includes(element.type)) {
+      errors.push(
+        `slides[${slideIndex}].content[${elementIndex}] type '${element.type}' is not allowed in slot '${resolvedSlot}'`
+      );
+    }
+  });
+}
+
 function traverseElements(
   elements: ContentElement[],
   errors: string[],
@@ -123,6 +165,7 @@ function validateSlides(slides: Slide[], allowRemoteImages: boolean): string[] {
   const errors: string[] = [];
   slides.forEach((slide, slideIndex) => {
     if (slide.type === "content") {
+      validatePreset(slide, errors, slideIndex);
       traverseElements(slide.content, errors, `slides[${slideIndex}].content`, allowRemoteImages);
     }
 
