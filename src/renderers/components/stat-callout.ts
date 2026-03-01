@@ -10,28 +10,40 @@ export function renderStatCallout(
   resolver: StyleResolver = new StyleResolver(theme)
 ): void {
   const style = resolver.resolveStatCalloutStyle(element.styleRef ?? "default");
-  const fillColor = resolver.resolveColor(element.color ?? style.fillColor, "primary");
+  const fillToken = element.color ?? style.fillColor;
+  const cardShadow = theme.effects?.cardShadow;
+  const hasFill = fillToken !== undefined;
+  const hasBorder = style.borderColor !== undefined;
+  const hasShadow = (style.shadow ?? false) && cardShadow !== undefined;
 
-  const shapeOptions: Record<string, unknown> = {
-    x: bounds.x,
-    y: bounds.y,
-    w: bounds.w,
-    h: bounds.h,
-    fill: { color: fillColor, transparency: 8 },
-    line: { color: resolver.resolveColor(style.borderColor, "neutral-border"), width: 1 }
-  };
-
-  if ((style.shadow ?? false) && theme.effects?.cardShadow !== undefined) {
-    shapeOptions.shadow = {
-      type: "outer",
-      color: resolver.resolveColor(theme.effects.cardShadow.color, "text-dark"),
-      blur: theme.effects.cardShadow.blur,
-      offset: theme.effects.cardShadow.offset,
-      opacity: theme.effects.cardShadow.opacity
+  if (hasFill || hasBorder || hasShadow) {
+    const shapeOptions: Record<string, unknown> = {
+      x: bounds.x,
+      y: bounds.y,
+      w: bounds.w,
+      h: bounds.h
     };
-  }
 
-  slide.addShape("roundRect", shapeOptions);
+    if (hasFill) {
+      shapeOptions.fill = { color: resolver.resolveColor(fillToken, "primary"), transparency: 8 };
+    }
+
+    if (hasBorder) {
+      shapeOptions.line = { color: resolver.resolveColor(style.borderColor, "neutral-border"), width: 1 };
+    }
+
+    if (hasShadow) {
+      shapeOptions.shadow = {
+        type: "outer",
+        color: resolver.resolveColor(cardShadow.color, "text-dark"),
+        blur: cardShadow.blur,
+        offset: cardShadow.offset,
+        opacity: cardShadow.opacity
+      };
+    }
+
+    slide.addShape("roundRect", shapeOptions);
+  }
 
   if (style.accentLineColor !== undefined) {
     slide.addShape("line", {

@@ -92,8 +92,8 @@ const imageStyleSchema = z
 
 const statCalloutStyleSchema = z
   .object({
-    fillColor: tokenSchema,
-    borderColor: tokenSchema,
+    fillColor: tokenSchema.optional(),
+    borderColor: tokenSchema.optional(),
     valueColor: tokenSchema,
     labelColor: tokenSchema,
     trendColor: tokenSchema.optional(),

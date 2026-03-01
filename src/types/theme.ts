@@ -94,8 +94,8 @@ export interface ImageComponentStyle {
 }
 
 export interface StatCalloutComponentStyle {
-  fillColor: string;
-  borderColor: string;
+  fillColor?: string;
+  borderColor?: string;
   valueColor: string;
   labelColor: string;
   trendColor?: string;

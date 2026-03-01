@@ -150,7 +150,8 @@ export const testTheme: ThemeDefinition = {
         column: { fillColor: "primary", borderColor: "neutral-border", valueColor: "text-light", labelColor: "text-light", trendColor: "text-light", accentLineColor: "accent", shadow: false },
         summary: { fillColor: "surface-strong", borderColor: "neutral-border", valueColor: "primary", labelColor: "primary", trendColor: "primary", accentLineColor: "accent", shadow: false },
         kpi: { fillColor: "accent", borderColor: "accent", valueColor: "text-light", labelColor: "text-light", trendColor: "text-light", accentLineColor: "text-light", shadow: true },
-        highlight: { fillColor: "surface-strong", borderColor: "accent", valueColor: "primary", labelColor: "primary", trendColor: "primary", accentLineColor: "accent", shadow: true }
+        highlight: { fillColor: "surface-strong", borderColor: "accent", valueColor: "primary", labelColor: "primary", trendColor: "primary", accentLineColor: "accent", shadow: true },
+        callout: { valueColor: "primary", labelColor: "primary", trendColor: "primary", shadow: false }
       }
     },
     iconGrid: {

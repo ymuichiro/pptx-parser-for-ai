@@ -24,7 +24,7 @@ slides:
               values: [62, 74, 83]
       - type: stat-callout
         slot: right
-        styleRef: highlight
+        styleRef: callout
         value: "A+"
         label: "Health"
       - type: text

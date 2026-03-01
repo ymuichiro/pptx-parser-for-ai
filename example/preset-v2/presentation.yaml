@@ -81,7 +81,7 @@ slides:
           - "Callout side panel"
       - type: stat-callout
         slot: callout
-        styleRef: highlight
+        styleRef: callout
         value: "98%"
         label: "SLA"
       - type: image

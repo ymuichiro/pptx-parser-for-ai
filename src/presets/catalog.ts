@@ -109,7 +109,7 @@ const kpiWithCalloutSlots: PresetSlotDefinition[] = [
     name: "callout",
     bounds: { x: 6.44, y: 1.24, w: 3.16, h: 1.88 },
     allowedElementTypes: ["stat-callout", "text", "icon-grid"],
-    styleRef: "highlight",
+    styleRef: "callout",
     surfaceStyleRef: "callout-panel"
   },
   {
