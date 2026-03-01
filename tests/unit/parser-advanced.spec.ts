@@ -76,4 +76,64 @@ describe("DSLValidator semantic checks", () => {
     const result = validator.validate(dsl);
     expect(result.isValid).toBe(true);
   });
+
+  it("detects preset slot violations", () => {
+    const validator = new DSLValidator({ allowRemoteImages: true });
+    const dsl = {
+      version: "1.0",
+      theme: "corporate-blue",
+      metadata: { title: "preset-invalid" },
+      slides: [
+        {
+          type: "content",
+          preset: "overview-2x2",
+          title: "Preset",
+          content: [
+            { type: "text", content: "a", slot: "card1" },
+            {
+              type: "chart",
+              chartType: "bar",
+              slot: "card1",
+              data: {
+                labels: ["Q1"],
+                series: [{ name: "S", values: [1] }]
+              }
+            },
+            { type: "text", content: "x", slot: "missing-slot" }
+          ]
+        }
+      ]
+    };
+
+    const result = validator.validate(dsl);
+    expect(result.isValid).toBe(false);
+    expect(result.errors.some((error) => error.includes("duplicates slot"))).toBe(true);
+    expect(result.errors.some((error) => error.includes("not allowed in slot"))).toBe(true);
+    expect(result.errors.some((error) => error.includes("undefined slot"))).toBe(true);
+  });
+
+  it("accepts valid preset slot mapping", () => {
+    const validator = new DSLValidator({ allowRemoteImages: true });
+    const dsl = {
+      version: "1.0",
+      theme: "corporate-blue",
+      metadata: { title: "preset-valid" },
+      slides: [
+        {
+          type: "content",
+          preset: "compare-3col",
+          title: "Preset",
+          content: [
+            { type: "text", content: "L", slot: "left" },
+            { type: "bullet-list", items: ["C"], slot: "center" },
+            { type: "numbered-list", items: ["R1"], slot: "right" },
+            { type: "text", content: "Summary" }
+          ]
+        }
+      ]
+    };
+
+    const result = validator.validate(dsl);
+    expect(result.isValid).toBe(true);
+  });
 });

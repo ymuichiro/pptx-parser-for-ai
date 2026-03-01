@@ -54,6 +54,7 @@ export interface ElementPosition {
 }
 
 export type Slide = TitleSlide | ContentSlide | SectionSlide | BlankSlide;
+export type PresetId = "overview-2x2" | "compare-3col" | "kpi-with-callout";
 
 export type SlideBackground =
   | "dark"
@@ -77,6 +78,7 @@ export interface TitleSlide {
 export interface ContentSlide {
   type: "content";
   layout?: LayoutType;
+  preset?: PresetId;
   title: string;
   content: ContentElement[];
 }
@@ -100,9 +102,14 @@ export interface BlankSlide {
 export type TextStyle = "title" | "heading" | "body" | "caption";
 export type Alignment = "left" | "center" | "right";
 
+export interface ElementQAOptions {
+  exclude?: boolean;
+}
+
 export interface TextElement {
   type: "text";
   content: string;
+  slot?: string;
   style?: TextStyle;
   align?: Alignment;
   position?: ElementPosition;
@@ -111,6 +118,7 @@ export interface TextElement {
   fontSize?: number;
   bold?: boolean;
   valign?: "top" | "mid" | "bottom";
+  qa?: ElementQAOptions;
 }
 
 export interface BulletItem {
@@ -120,33 +128,41 @@ export interface BulletItem {
 
 export interface BulletListElement {
   type: "bullet-list";
+  slot?: string;
   style?: "default" | "pros" | "cons" | "checkmark";
   items: Array<string | BulletItem>;
   position?: ElementPosition;
+  qa?: ElementQAOptions;
 }
 
 export interface NumberedListElement {
   type: "numbered-list";
+  slot?: string;
   items: string[];
   position?: ElementPosition;
+  qa?: ElementQAOptions;
 }
 
 export interface StatCalloutElement {
   type: "stat-callout";
+  slot?: string;
   value: string;
   label: string;
   trend?: string;
   color?: string;
   position?: ElementPosition;
+  qa?: ElementQAOptions;
 }
 
 export interface ImageElement {
   type: "image";
+  slot?: string;
   source: string;
   caption?: string;
   sizing?: "contain" | "cover" | "crop";
   position?: "center" | "left" | "right";
   bounds?: ElementPosition;
+  qa?: ElementQAOptions;
 }
 
 export interface TableHighlightRule {
@@ -157,11 +173,13 @@ export interface TableHighlightRule {
 
 export interface TableElement {
   type: "table";
+  slot?: string;
   style?: "default" | "striped" | "bordered" | "minimal";
   headers: string[];
   rows: Array<Array<string | number>>;
   highlight?: TableHighlightRule[];
   position?: ElementPosition;
+  qa?: ElementQAOptions;
 }
 
 export interface ChartSeries {
@@ -172,6 +190,7 @@ export interface ChartSeries {
 
 export interface ChartElement {
   type: "chart";
+  slot?: string;
   chartType: "bar" | "line" | "pie" | "doughnut" | "scatter";
   title?: string;
   position?: ElementPosition;
@@ -185,6 +204,7 @@ export interface ChartElement {
     valuePrefix?: string;
     valueSuffix?: string;
   };
+  qa?: ElementQAOptions;
 }
 
 export interface NetworkNode {
@@ -203,10 +223,12 @@ export interface NetworkEdge {
 
 export interface NetworkDiagramElement {
   type: "network-diagram";
+  slot?: string;
   layout: "hierarchical" | "force-directed" | "circular";
   nodes: NetworkNode[];
   edges: NetworkEdge[];
   position?: ElementPosition;
+  qa?: ElementQAOptions;
 }
 
 export interface FlowchartStep {
@@ -223,10 +245,12 @@ export interface FlowchartFlow {
 
 export interface FlowchartElement {
   type: "flowchart";
+  slot?: string;
   direction: "horizontal" | "vertical";
   steps: FlowchartStep[];
   flows: FlowchartFlow[];
   position?: ElementPosition;
+  qa?: ElementQAOptions;
 }
 
 export interface IconGridItem {
@@ -237,17 +261,21 @@ export interface IconGridItem {
 
 export interface IconGridElement {
   type: "icon-grid";
+  slot?: string;
   columns: number;
   items: IconGridItem[];
   position?: ElementPosition;
+  qa?: ElementQAOptions;
 }
 
 export interface TwoColumnElement {
   type: "two-column";
+  slot?: string;
   left: ContentElement[];
   right: ContentElement[];
   ratio?: "1:1" | "2:1" | "1:2";
   position?: ElementPosition;
+  qa?: ElementQAOptions;
 }
 
 export interface CustomShapeElement {
@@ -264,6 +292,7 @@ export interface CustomShapeElement {
     color: string;
     width: number;
   };
+  qa?: ElementQAOptions;
 }
 
 export type ContentElement =

@@ -78,6 +78,71 @@ const dsl: PresentationDSL = {
 };
 ```
 
+## 3.2 画像要素の `sizing` / `position` / `bounds`
+
+```yaml
+slides:
+  - type: content
+    title: "Image sample"
+    content:
+      - type: image
+        source: "example/assets/hero.png"
+        sizing: "cover"   # contain | cover | crop
+        position: "right" # left | center | right
+        bounds:           # 任意: layout 計算結果を上書き
+          x: 1.0
+          y: 1.4
+          w: 8.0
+          h: 3.6
+```
+
+- `contain`: アスペクト比を維持して全体表示（余白あり）
+- `cover`: 指定領域を埋めるようにトリミング
+- `crop`: 明示トリミング（現行は `cover` と同等の挙動）
+- `position`: `contain` では配置、`cover/crop` では水平トリミングのアンカーとして機能
+- `bounds`: `blank` では絶対配置、`content` ではレイアウト結果の上書きに使用可能
+
+## 3.3 推奨フロー（Must / Should / May）
+
+- Must: スキーマ検証と preset/slot 制約を満たす
+- Should: 定型スライドは `content + preset` を優先
+- May: 例外的に `blank` で自由配置
+
+### レイアウト選定の目安
+
+| 状況 | 推奨 |
+| --- | --- |
+| KPI/比較など定型スライド | `preset` |
+| 一般的な本文スライド | `layout: auto` |
+| 左右分割が明確 | `layout: two-column` |
+| 特殊な自由配置 | `blank` |
+
+### preset 利用例
+
+```yaml
+slides:
+  - type: content
+    title: "Business Overview"
+    preset: "overview-2x2"
+    content:
+      - type: stat-callout
+        slot: card1
+        value: "98%"
+        label: "NPS"
+      - type: stat-callout
+        slot: card2
+        value: "2.3x"
+        label: "YoY"
+      - type: stat-callout
+        slot: card3
+        value: "12"
+        label: "Markets"
+      - type: stat-callout
+        slot: card4
+        value: "7 days"
+        label: "Lead Time"
+```
+
 ## 4. オプション
 
 ```ts
@@ -97,6 +162,11 @@ const renderer = new PPTXRenderer({
 - `qaConfig.maxIterations`: 自動修正の最大反復回数
 - `allowRemoteImages`: リモート画像 URL を許可（既定は `false`）
 - `themeDir`: テーマ解決の基準ディレクトリ
+
+QA 検証の主な対象:
+- `content/blank` 要素の `OUT_OF_BOUNDS`
+- `blank` 上の非装飾要素同士の過度な重なり（`EXCESSIVE_OVERLAP`）
+- `custom-shape` は既定で decorative 扱い（overlap 判定除外）
 
 ## 5. 実サンプル実行
 

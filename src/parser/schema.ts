@@ -5,6 +5,12 @@ import { themeDefinitionSchema } from "../theme/schema";
 
 const boundedString = z.string().min(1).max(MAX_STRING_LENGTH);
 const optionalBoundedString = z.string().min(1).max(MAX_STRING_LENGTH).optional();
+const elementQASchema = z
+  .object({
+    exclude: z.boolean().optional()
+  })
+  .strict();
+const presetIdSchema = z.union([z.literal("overview-2x2"), z.literal("compare-3col"), z.literal("kpi-with-callout")]);
 const elementPositionSchema = z
   .object({
     x: z.number(),
@@ -65,6 +71,7 @@ const textElementSchema = z
   .object({
     type: z.literal("text"),
     content: boundedString,
+    slot: optionalBoundedString,
     style: z.union([z.literal("title"), z.literal("heading"), z.literal("body"), z.literal("caption")]).optional(),
     align: z.union([z.literal("left"), z.literal("center"), z.literal("right")]).optional(),
     position: elementPositionSchema.optional(),
@@ -72,7 +79,8 @@ const textElementSchema = z
     fontFace: optionalBoundedString,
     fontSize: z.number().positive().optional(),
     bold: z.boolean().optional(),
-    valign: z.union([z.literal("top"), z.literal("mid"), z.literal("bottom")]).optional()
+    valign: z.union([z.literal("top"), z.literal("mid"), z.literal("bottom")]).optional(),
+    qa: elementQASchema.optional()
   })
   .strict();
 
@@ -86,45 +94,54 @@ const bulletItemSchema = z
 const bulletListElementSchema = z
   .object({
     type: z.literal("bullet-list"),
+    slot: optionalBoundedString,
     style: z.union([z.literal("default"), z.literal("pros"), z.literal("cons"), z.literal("checkmark")]).optional(),
     items: z.array(z.union([boundedString, bulletItemSchema])).max(MAX_ARRAY_LENGTH),
-    position: elementPositionSchema.optional()
+    position: elementPositionSchema.optional(),
+    qa: elementQASchema.optional()
   })
   .strict();
 
 const numberedListElementSchema = z
   .object({
     type: z.literal("numbered-list"),
+    slot: optionalBoundedString,
     items: z.array(boundedString).max(MAX_ARRAY_LENGTH),
-    position: elementPositionSchema.optional()
+    position: elementPositionSchema.optional(),
+    qa: elementQASchema.optional()
   })
   .strict();
 
 const statCalloutElementSchema = z
   .object({
     type: z.literal("stat-callout"),
+    slot: optionalBoundedString,
     value: boundedString,
     label: boundedString,
     trend: optionalBoundedString,
     color: optionalBoundedString,
-    position: elementPositionSchema.optional()
+    position: elementPositionSchema.optional(),
+    qa: elementQASchema.optional()
   })
   .strict();
 
 const imageElementSchema = z
   .object({
     type: z.literal("image"),
+    slot: optionalBoundedString,
     source: boundedString,
     caption: optionalBoundedString,
     sizing: z.union([z.literal("contain"), z.literal("cover"), z.literal("crop")]).optional(),
     position: z.union([z.literal("center"), z.literal("left"), z.literal("right")]).optional(),
-    bounds: elementPositionSchema.optional()
+    bounds: elementPositionSchema.optional(),
+    qa: elementQASchema.optional()
   })
   .strict();
 
 const tableElementSchema = z
   .object({
     type: z.literal("table"),
+    slot: optionalBoundedString,
     style: z.union([z.literal("default"), z.literal("striped"), z.literal("bordered"), z.literal("minimal")]).optional(),
     headers: z.array(boundedString).min(1).max(MAX_ARRAY_LENGTH),
     rows: z.array(z.array(z.union([boundedString, z.number()])).max(MAX_ARRAY_LENGTH)).max(MAX_ARRAY_LENGTH),
@@ -140,13 +157,15 @@ const tableElementSchema = z
           .strict()
       )
       .max(MAX_ARRAY_LENGTH)
-      .optional()
+      .optional(),
+    qa: elementQASchema.optional()
   })
   .strict();
 
 const chartElementSchema = z
   .object({
     type: z.literal("chart"),
+    slot: optionalBoundedString,
     chartType: z.union([
       z.literal("bar"),
       z.literal("line"),
@@ -181,13 +200,15 @@ const chartElementSchema = z
         valueSuffix: optionalBoundedString
       })
       .strict()
-      .optional()
+      .optional(),
+    qa: elementQASchema.optional()
   })
   .strict();
 
 const networkDiagramElementSchema = z
   .object({
     type: z.literal("network-diagram"),
+    slot: optionalBoundedString,
     layout: z.union([z.literal("hierarchical"), z.literal("force-directed"), z.literal("circular")]),
     position: elementPositionSchema.optional(),
     nodes: z
@@ -214,13 +235,15 @@ const networkDiagramElementSchema = z
           })
           .strict()
       )
-      .max(MAX_ARRAY_LENGTH)
+      .max(MAX_ARRAY_LENGTH),
+    qa: elementQASchema.optional()
   })
   .strict();
 
 const flowchartElementSchema = z
   .object({
     type: z.literal("flowchart"),
+    slot: optionalBoundedString,
     direction: z.union([z.literal("horizontal"), z.literal("vertical")]),
     position: elementPositionSchema.optional(),
     steps: z
@@ -245,13 +268,15 @@ const flowchartElementSchema = z
           })
           .strict()
       )
-      .max(MAX_ARRAY_LENGTH)
+      .max(MAX_ARRAY_LENGTH),
+    qa: elementQASchema.optional()
   })
   .strict();
 
 const iconGridElementSchema = z
   .object({
     type: z.literal("icon-grid"),
+    slot: optionalBoundedString,
     columns: z.number().int().positive().max(12),
     position: elementPositionSchema.optional(),
     items: z
@@ -265,7 +290,8 @@ const iconGridElementSchema = z
           .strict()
       )
       .min(1)
-      .max(MAX_ARRAY_LENGTH)
+      .max(MAX_ARRAY_LENGTH),
+    qa: elementQASchema.optional()
   })
   .strict();
 
@@ -275,10 +301,12 @@ const twoColumnElementSchema: z.ZodTypeAny = z.lazy(() =>
   z
     .object({
       type: z.literal("two-column"),
+      slot: optionalBoundedString,
       left: z.array(contentElementSchema).max(MAX_ARRAY_LENGTH),
       right: z.array(contentElementSchema).max(MAX_ARRAY_LENGTH),
       ratio: z.union([z.literal("1:1"), z.literal("2:1"), z.literal("1:2")]).optional(),
-      position: elementPositionSchema.optional()
+      position: elementPositionSchema.optional(),
+      qa: elementQASchema.optional()
     })
     .strict()
 );
@@ -311,7 +339,8 @@ const customShapeElementSchema = z
         width: z.number().positive()
       })
       .strict()
-      .optional()
+      .optional(),
+    qa: elementQASchema.optional()
   })
   .strict();
 
@@ -345,6 +374,7 @@ const contentSlideSchema = z
   .object({
     type: z.literal("content"),
     layout: z.union([z.literal("auto"), z.literal("single-column"), z.literal("two-column"), z.literal("three-column")]).optional(),
+    preset: presetIdSchema.optional(),
     title: boundedString,
     content: z.array(contentElementSchema).max(MAX_ARRAY_LENGTH)
   })

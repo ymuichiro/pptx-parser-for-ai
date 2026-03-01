@@ -93,6 +93,13 @@ describe("DSLNormalizer", () => {
     }
     expect(twoColumn.ratio).toBe("1:1");
 
+    const image = contentSlide.content.find((element) => element.type === "image");
+    if (image?.type !== "image") {
+      throw new Error("expected image");
+    }
+    expect(image.sizing).toBe("contain");
+    expect(image.position).toBe("center");
+
     const sectionSlide = normalized.slides[2];
     if (sectionSlide?.type !== "section") {
       throw new Error("expected section slide");

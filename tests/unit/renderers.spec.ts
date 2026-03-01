@@ -21,12 +21,32 @@ import { testTheme } from "../helpers/theme";
 import { MockPresentation, MockSlide } from "../helpers/mock-slide";
 
 const bounds: Bounds = { x: 0.5, y: 1, w: 4, h: 2 };
+const tallSvgData = `data:image/svg+xml;base64,${Buffer.from(
+  '<svg xmlns="http://www.w3.org/2000/svg" width="100" height="200"></svg>'
+).toString("base64")}`;
+const wideSvgData = `data:image/svg+xml;base64,${Buffer.from(
+  '<svg xmlns="http://www.w3.org/2000/svg" width="300" height="100"></svg>'
+).toString("base64")}`;
 
 const context = {
   renderElement: async (slide: SlideAdapter, element: unknown, nextBounds: Bounds) => {
     await renderContentElement(slide, element, nextBounds, testTheme, context);
   }
 };
+
+function readImageOptions(slide: MockSlide, index: number): Record<string, unknown> {
+  const call = slide.calls.filter((entry) => entry.kind === "image")[index];
+  if (call?.kind !== "image") {
+    throw new Error(`expected image call at index ${index}`);
+  }
+
+  const payload = call.payload as { options?: Record<string, unknown> };
+  if (payload.options === undefined) {
+    throw new Error(`expected image options at index ${index}`);
+  }
+
+  return payload.options;
+}
 
 describe("component renderers", () => {
   it("renders text and list components", () => {
@@ -112,6 +132,140 @@ describe("component renderers", () => {
         testTheme
       )
     ).rejects.toThrowError(/disabled/i);
+  });
+
+  it("respects contain sizing with left/center/right anchors", async () => {
+    const slide = new MockSlide();
+
+    await renderImage(
+      slide,
+      {
+        type: "image",
+        source: tallSvgData,
+        sizing: "contain",
+        position: "left"
+      },
+      bounds,
+      testTheme
+    );
+
+    await renderImage(
+      slide,
+      {
+        type: "image",
+        source: tallSvgData,
+        sizing: "contain",
+        position: "center"
+      },
+      bounds,
+      testTheme
+    );
+
+    await renderImage(
+      slide,
+      {
+        type: "image",
+        source: tallSvgData,
+        sizing: "contain",
+        position: "right"
+      },
+      bounds,
+      testTheme
+    );
+
+    const left = readImageOptions(slide, 0);
+    const center = readImageOptions(slide, 1);
+    const right = readImageOptions(slide, 2);
+
+    expect(left.x).toBeCloseTo(0.5, 5);
+    expect(center.x).toBeCloseTo(2.0, 5);
+    expect(right.x).toBeCloseTo(3.5, 5);
+    expect(left.y).toBeCloseTo(1.0, 5);
+    expect(left.w).toBeCloseTo(1.0, 5);
+    expect(left.h).toBeCloseTo(2.0, 5);
+    expect(left.sizing).toBeUndefined();
+  });
+
+  it("uses anchor-aware crop sizing for cover and crop modes", async () => {
+    const slide = new MockSlide();
+
+    await renderImage(
+      slide,
+      {
+        type: "image",
+        source: wideSvgData,
+        sizing: "cover",
+        position: "left"
+      },
+      bounds,
+      testTheme
+    );
+
+    await renderImage(
+      slide,
+      {
+        type: "image",
+        source: wideSvgData,
+        sizing: "cover",
+        position: "right"
+      },
+      bounds,
+      testTheme
+    );
+
+    await renderImage(
+      slide,
+      {
+        type: "image",
+        source: wideSvgData,
+        sizing: "crop",
+        position: "center"
+      },
+      bounds,
+      testTheme
+    );
+
+    const leftCover = readImageOptions(slide, 0);
+    const rightCover = readImageOptions(slide, 1);
+    const centerCrop = readImageOptions(slide, 2);
+    const leftSizing = leftCover.sizing as { type: string; x: number; y: number; w: number; h: number };
+    const rightSizing = rightCover.sizing as { type: string; x: number; y: number; w: number; h: number };
+    const centerSizing = centerCrop.sizing as { type: string; x: number; y: number; w: number; h: number };
+
+    expect(leftCover.x).toBe(bounds.x);
+    expect(leftCover.y).toBe(bounds.y);
+    expect(leftCover.w).toBe(bounds.w);
+    expect(leftCover.h).toBe(bounds.h);
+    expect(leftSizing.type).toBe("crop");
+    expect(rightSizing.type).toBe("crop");
+    expect(centerSizing.type).toBe("crop");
+    expect(leftSizing.x).toBeCloseTo(0, 5);
+    expect(centerSizing.x).toBeCloseTo(50, 5);
+    expect(rightSizing.x).toBeCloseTo(100, 5);
+    expect(leftSizing.w).toBeCloseTo(200, 5);
+    expect(leftSizing.h).toBeCloseTo(100, 5);
+    expect(leftSizing.y).toBeCloseTo(0, 5);
+  });
+
+  it("prioritizes image bounds over layout bounds", async () => {
+    const slide = new MockSlide();
+    await renderImage(
+      slide,
+      {
+        type: "image",
+        source: wideSvgData,
+        sizing: "cover",
+        bounds: { x: 2.2, y: 1.8, w: 3.3, h: 1.1 }
+      },
+      bounds,
+      testTheme
+    );
+
+    const options = readImageOptions(slide, 0);
+    expect(options.x).toBeCloseTo(2.2, 5);
+    expect(options.y).toBeCloseTo(1.8, 5);
+    expect(options.w).toBeCloseTo(3.3, 5);
+    expect(options.h).toBeCloseTo(1.1, 5);
   });
 
   it("renders shape/stat/icon/network/flowchart", () => {
@@ -517,6 +671,150 @@ describe("SlideRenderer", () => {
     expect((bodyOptions?.y as number) >= 1.4).toBe(true);
     expect((bodyOptions?.w as number) <= 8.01).toBe(true);
     expect((bodyOptions?.h as number) <= 3.51).toBe(true);
+  });
+
+  it("renders preset content slots and decorations", async () => {
+    const renderer = new SlideRenderer();
+    const presentation = new MockPresentation();
+
+    const dsl: PresentationDSL = {
+      version: "1.0",
+      theme: "corporate-blue",
+      metadata: { title: "preset-render" },
+      slides: [
+        {
+          type: "content",
+          preset: "compare-3col",
+          title: "Preset slide",
+          content: [
+            { type: "text", content: "Left", slot: "left" },
+            { type: "text", content: "Center", slot: "center" },
+            { type: "text", content: "Right", slot: "right" },
+            { type: "text", content: "Summary" }
+          ]
+        }
+      ]
+    };
+
+    await renderer.renderSlides(presentation, dsl, testTheme);
+    const slide = presentation.slides[0];
+    if (slide === undefined) {
+      throw new Error("expected slide");
+    }
+
+    const shapeCalls = slide.calls.filter((call) => call.kind === "shape");
+    expect(shapeCalls.length).toBeGreaterThanOrEqual(3);
+
+    const textEntries = slide.calls
+      .filter((call) => call.kind === "text")
+      .map((call) => call.payload as { text: string; options?: Record<string, unknown> });
+    const left = textEntries.find((entry) => entry.text === "Left");
+    const center = textEntries.find((entry) => entry.text === "Center");
+    const right = textEntries.find((entry) => entry.text === "Right");
+    const summary = textEntries.find((entry) => entry.text === "Summary");
+
+    expect((left?.options?.x as number) < (center?.options?.x as number)).toBe(true);
+    expect((center?.options?.x as number) < (right?.options?.x as number)).toBe(true);
+    expect((summary?.options?.y as number) >= 4.25).toBe(true);
+  });
+
+  it("remaps preset bounds into template body placeholder", async () => {
+    const renderer = new SlideRenderer();
+    const presentation = new MockPresentation();
+    const templateContext: SlideTemplateContext = {
+      assetBaseDir: process.cwd(),
+      templatePackage: {
+        template: {
+          id: "preset-template",
+          source: {
+            file: "sample.potx",
+            sha256: "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+            importedAt: "2026-03-01T00:00:00.000Z"
+          }
+        },
+        theme: {
+          palette: {
+            primary: "0B5FFF",
+            secondary: "00A99D",
+            accent: "FF6A00",
+            "text-dark": "1A1A1A",
+            "text-light": "FFFFFF",
+            "background-light": "FAFAFA",
+            "background-dark": "121212"
+          },
+          fonts: {
+            title: "Noto Sans",
+            heading: "Noto Sans",
+            body: "Noto Sans JP",
+            caption: "Noto Sans JP"
+          },
+          slideSize: "16:9"
+        },
+        layout: {
+          kind: "title-body",
+          placeholders: {
+            title: {
+              bounds: { x: 1.1, y: 0.25, w: 7.8, h: 0.7 },
+              style: { fontFace: "Noto Sans", fontSizePt: 28, color: "primary" }
+            },
+            body: {
+              bounds: { x: 1.0, y: 1.4, w: 8.0, h: 3.5 },
+              style: { fontFace: "Noto Sans JP", fontSizePt: 18, color: "text-dark" }
+            }
+          }
+        },
+        background: {
+          mode: "editable",
+          color: "background-light",
+          objects: []
+        },
+        manifest: {
+          warnings: [],
+          unsupported: []
+        }
+      }
+    };
+
+    const dsl: PresentationDSL = {
+      version: "1.0",
+      theme: "corporate-blue",
+      metadata: { title: "preset-template" },
+      slides: [
+        {
+          type: "content",
+          preset: "compare-3col",
+          title: "Preset + Template",
+          content: [
+            { type: "text", content: "Left", slot: "left" },
+            { type: "text", content: "Center", slot: "center" },
+            { type: "text", content: "Right", slot: "right" }
+          ]
+        }
+      ]
+    };
+
+    await renderer.renderSlides(presentation, dsl, testTheme, templateContext);
+    const slide = presentation.slides[0];
+    if (slide === undefined) {
+      throw new Error("expected slide");
+    }
+
+    const textCalls = slide.calls
+      .filter((call) => call.kind === "text")
+      .map((call) => call.payload as { text: string; options?: Record<string, unknown> })
+      .filter((entry) => ["Left", "Center", "Right"].includes(entry.text));
+
+    expect(textCalls.length).toBe(3);
+    textCalls.forEach((entry) => {
+      const x = entry.options?.x as number;
+      const y = entry.options?.y as number;
+      const w = entry.options?.w as number;
+      const h = entry.options?.h as number;
+      expect(x).toBeGreaterThanOrEqual(1.0);
+      expect(y).toBeGreaterThanOrEqual(1.4);
+      expect(x + w).toBeLessThanOrEqual(9.01);
+      expect(y + h).toBeLessThanOrEqual(4.91);
+    });
   });
 
   it("applies template objects to title/section and renders footer chrome", async () => {
