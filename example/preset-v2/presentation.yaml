@@ -5,16 +5,6 @@ metadata:
   author: "Codex"
   company: "Northwind Mobility"
   date: "2026-03-01"
-chrome:
-  header:
-    divider:
-      enabled: true
-      y: 1.18
-      color: neutral-border
-  footer:
-    enabled: true
-    leftText: "{company} | {date}"
-    showSlideNumber: true
 slides:
   - type: content
     title: "Overview 2x2"

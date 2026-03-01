@@ -5,6 +5,41 @@ export interface NamedComponentStyles<T> {
   styles: Record<string, T>;
 }
 
+export interface ThemeFrame {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+}
+
+export interface ThemeDividerChrome {
+  enabled?: boolean;
+  x?: number;
+  y?: number;
+  w?: number;
+  color?: string;
+  width?: number;
+}
+
+export interface ThemeHeaderChrome {
+  divider?: ThemeDividerChrome;
+}
+
+export interface ThemeFooterChrome {
+  enabled?: boolean;
+  leftText?: string;
+  showSlideNumber?: boolean;
+  color?: string;
+  fontFace?: string;
+  fontSize?: number;
+  divider?: ThemeDividerChrome;
+}
+
+export interface ThemeChromeDefaults {
+  header?: ThemeHeaderChrome;
+  footer?: ThemeFooterChrome;
+}
+
 export interface TextComponentStyle {
   fontFace?: string;
   fontSize?: number;
@@ -102,6 +137,7 @@ export interface PresetSurfaceComponentStyle {
   fillColor: string;
   borderColor?: string;
   borderWidth?: number;
+  rectRadius?: number;
 }
 
 export interface ThemeDefinition {
@@ -158,6 +194,8 @@ export interface ThemeDefinition {
     contentSlide: {
       background: string;
       titleColor: string;
+      titleFrame: ThemeFrame;
+      bodyFrame: ThemeFrame;
     };
     bulletStyle: {
       character: string;
@@ -184,6 +222,7 @@ export interface ThemeDefinition {
     twoColumn: NamedComponentStyles<TwoColumnComponentStyle>;
     preset: NamedComponentStyles<PresetSurfaceComponentStyle>;
   };
+  chromeDefaults?: ThemeChromeDefaults;
   effects?: {
     cardShadow?: {
       type: "outer";

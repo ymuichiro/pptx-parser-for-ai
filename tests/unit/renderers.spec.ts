@@ -283,6 +283,19 @@ describe("component renderers", () => {
       testTheme
     );
 
+    renderCustomShape(
+      slide,
+      {
+        type: "custom-shape",
+        shape: "rounded-rectangle",
+        position: { x: 3.2, y: 1, w: 2, h: 1 },
+        rectRadius: 0.12,
+        fill: "surface"
+      },
+      bounds,
+      testTheme
+    );
+
     renderStatCallout(
       slide,
       {
@@ -340,6 +353,19 @@ describe("component renderers", () => {
     );
 
     expect(slide.count("shape")).toBeGreaterThan(5);
+    const roundedShapeCall = slide.calls.find((call) => {
+      if (call.kind !== "shape") {
+        return false;
+      }
+
+      const payload = call.payload as { shapeName?: string; options?: Record<string, unknown> };
+      return payload.shapeName === "roundRect" && payload.options?.x === 3.2;
+    });
+    if (roundedShapeCall?.kind !== "shape") {
+      throw new Error("expected rounded-rectangle shape call");
+    }
+    const roundedPayload = roundedShapeCall.payload as { options?: Record<string, unknown> };
+    expect(roundedPayload.options?.rectRadius).toBe(0.12);
   });
 
   it("renders icon-grid image icons for local/data sources only", () => {
@@ -662,7 +688,10 @@ describe("SlideRenderer", () => {
     expect(titleOptions?.fontFace).toBe("Noto Sans");
     expect(titleOptions?.fontSize).toBe(30);
 
-    const bodyCall = textCalls[textCalls.length - 1];
+    const bodyCall = textCalls.find((entry) => {
+      const payload = entry.payload as { text: string };
+      return payload.text === "Body text";
+    });
     if (bodyCall?.kind !== "text") {
       throw new Error("expected body text call");
     }
@@ -704,6 +733,18 @@ describe("SlideRenderer", () => {
 
     const shapeCalls = slide.calls.filter((call) => call.kind === "shape");
     expect(shapeCalls.length).toBeGreaterThanOrEqual(3);
+    const presetSurface = shapeCalls.find((call) => {
+      if (call.kind !== "shape") {
+        return false;
+      }
+      const payload = call.payload as { shapeName?: string };
+      return payload.shapeName === "roundRect";
+    });
+    if (presetSurface?.kind !== "shape") {
+      throw new Error("expected preset surface shape call");
+    }
+    const presetSurfaceOptions = (presetSurface.payload as { options?: Record<string, unknown> }).options;
+    expect(presetSurfaceOptions?.rectRadius).toBe(0.08);
 
     const textEntries = slide.calls
       .filter((call) => call.kind === "text")
@@ -815,6 +856,234 @@ describe("SlideRenderer", () => {
       expect(x + w).toBeLessThanOrEqual(9.01);
       expect(y + h).toBeLessThanOrEqual(4.91);
     });
+  });
+
+  it("uses unified content title/body frames for preset and non-preset slides", async () => {
+    const renderer = new SlideRenderer();
+    const presentation = new MockPresentation();
+    const theme = {
+      ...testTheme,
+      effects: {
+        ...(testTheme.effects ?? {}),
+        titleUnderline: {
+          enabled: false
+        }
+      },
+      chromeDefaults: {
+        header: {
+          divider: {
+            enabled: false
+          }
+        },
+        footer: {
+          enabled: false
+        }
+      }
+    };
+
+    const dsl: PresentationDSL = {
+      version: "2.0",
+      theme: "corporate-blue",
+      metadata: { title: "frames" },
+      slides: [
+        {
+          type: "content",
+          title: "Standard",
+          content: [{ type: "text", content: "NonPreset Body" }]
+        },
+        {
+          type: "content",
+          title: "Preset",
+          preset: "compare-3col",
+          content: [{ type: "text", slot: "left", content: "Preset Body" }]
+        }
+      ]
+    };
+
+    await renderer.renderSlides(presentation, dsl, theme);
+
+    const firstSlide = presentation.slides[0];
+    const secondSlide = presentation.slides[1];
+    if (firstSlide === undefined || secondSlide === undefined) {
+      throw new Error("expected slides");
+    }
+
+    const firstTitle = firstSlide.calls.find((call) => {
+      if (call.kind !== "text") {
+        return false;
+      }
+      return (call.payload as { text: string }).text === "Standard";
+    });
+    const firstBody = firstSlide.calls.find((call) => {
+      if (call.kind !== "text") {
+        return false;
+      }
+      return (call.payload as { text: string }).text === "NonPreset Body";
+    });
+    const secondBody = secondSlide.calls.find((call) => {
+      if (call.kind !== "text") {
+        return false;
+      }
+      return (call.payload as { text: string }).text === "Preset Body";
+    });
+
+    if (firstTitle?.kind !== "text" || firstBody?.kind !== "text" || secondBody?.kind !== "text") {
+      throw new Error("expected text calls");
+    }
+
+    const firstTitleOptions = (firstTitle.payload as { options?: Record<string, unknown> }).options;
+    const firstBodyOptions = (firstBody.payload as { options?: Record<string, unknown> }).options;
+    const secondBodyOptions = (secondBody.payload as { options?: Record<string, unknown> }).options;
+
+    expect(firstTitleOptions?.x).toBeCloseTo(0.4, 4);
+    expect(firstTitleOptions?.y).toBeCloseTo(0.24, 4);
+    expect(firstTitleOptions?.w).toBeCloseTo(9.2, 4);
+    expect(firstTitleOptions?.h).toBeCloseTo(0.56, 4);
+    expect(firstBodyOptions?.y).toBeCloseTo(1.24, 4);
+    expect(secondBodyOptions?.y).toBeCloseTo(1.24, 4);
+  });
+
+  it("applies chrome priority as DSL > template > theme defaults", async () => {
+    const renderer = new SlideRenderer();
+    const templateContext: SlideTemplateContext = {
+      assetBaseDir: process.cwd(),
+      templatePackage: {
+        template: {
+          id: "chrome-priority",
+          source: {
+            file: "sample.potx",
+            sha256: "abababababababababababababababababababababababababababababababab",
+            importedAt: "2026-03-01T00:00:00.000Z"
+          }
+        },
+        theme: {
+          palette: {
+            primary: "0B5FFF",
+            secondary: "00A99D",
+            accent: "FF6A00",
+            "text-dark": "1A1A1A",
+            "text-light": "FFFFFF",
+            "background-light": "FAFAFA",
+            "background-dark": "121212"
+          },
+          fonts: {
+            title: "Noto Sans JP",
+            heading: "Noto Sans JP",
+            body: "Noto Sans JP",
+            caption: "Noto Sans JP"
+          },
+          slideSize: "16:9"
+        },
+        layout: {
+          kind: "title-body",
+          placeholders: {
+            title: {
+              bounds: { x: 0.4, y: 0.24, w: 9.2, h: 0.56 },
+              style: { fontFace: "Noto Sans JP", fontSizePt: 20, color: "text-dark" }
+            },
+            body: {
+              bounds: { x: 0.4, y: 1.24, w: 9.2, h: 4.0 },
+              style: { fontFace: "Noto Sans JP", fontSizePt: 14, color: "text-dark" }
+            }
+          }
+        },
+        background: {
+          mode: "editable",
+          color: "background-light",
+          objects: []
+        },
+        chrome: {
+          footer: {
+            leftText: "Template Footer",
+            showSlideNumber: false,
+            color: "text-dark",
+            fontFace: "Noto Sans JP",
+            fontSizePt: 10
+          }
+        },
+        manifest: {
+          warnings: [],
+          unsupported: []
+        }
+      }
+    };
+
+    const themedFooter = {
+      ...testTheme,
+      effects: {
+        ...(testTheme.effects ?? {}),
+        titleUnderline: {
+          enabled: false
+        }
+      },
+      chromeDefaults: {
+        header: {
+          divider: {
+            enabled: false
+          }
+        },
+        footer: {
+          enabled: true,
+          leftText: "Theme Footer",
+          showSlideNumber: false,
+          color: "muted-text",
+          fontFace: "Noto Sans JP",
+          fontSize: 10
+        }
+      }
+    };
+
+    const dslThemeOnly: PresentationDSL = {
+      version: "2.0",
+      theme: "corporate-blue",
+      metadata: { title: "theme-only" },
+      slides: [{ type: "content", title: "A", content: [{ type: "text", content: "Body" }] }]
+    };
+    const presentationThemeOnly = new MockPresentation();
+    await renderer.renderSlides(presentationThemeOnly, dslThemeOnly, themedFooter);
+    const themeOnlyTexts = presentationThemeOnly.slides[0]?.calls
+      .filter((call) => call.kind === "text")
+      .map((call) => (call.payload as { text: string }).text) ?? [];
+    expect(themeOnlyTexts).toContain("Theme Footer");
+
+    const dslTemplateOnly: PresentationDSL = {
+      version: "2.0",
+      theme: "corporate-blue",
+      metadata: { title: "template-only" },
+      slides: [{ type: "content", title: "B", content: [{ type: "text", content: "Body" }] }]
+    };
+    const presentationTemplateOnly = new MockPresentation();
+    await renderer.renderSlides(presentationTemplateOnly, dslTemplateOnly, themedFooter, templateContext);
+    const templateOnlyTexts = presentationTemplateOnly.slides[0]?.calls
+      .filter((call) => call.kind === "text")
+      .map((call) => (call.payload as { text: string }).text) ?? [];
+    expect(templateOnlyTexts).toContain("Template Footer");
+    expect(templateOnlyTexts).not.toContain("Theme Footer");
+
+    const dslWithChrome: PresentationDSL = {
+      version: "2.0",
+      theme: "corporate-blue",
+      metadata: { title: "dsl-priority" },
+      chrome: {
+        footer: {
+          enabled: true,
+          leftText: "DSL Footer",
+          showSlideNumber: false,
+          color: "text-dark",
+          fontFace: "Noto Sans JP",
+          fontSize: 10
+        }
+      },
+      slides: [{ type: "content", title: "C", content: [{ type: "text", content: "Body" }] }]
+    };
+    const presentationDslPriority = new MockPresentation();
+    await renderer.renderSlides(presentationDslPriority, dslWithChrome, themedFooter, templateContext);
+    const dslPriorityTexts = presentationDslPriority.slides[0]?.calls
+      .filter((call) => call.kind === "text")
+      .map((call) => (call.payload as { text: string }).text) ?? [];
+    expect(dslPriorityTexts).toContain("DSL Footer");
+    expect(dslPriorityTexts).not.toContain("Template Footer");
+    expect(dslPriorityTexts).not.toContain("Theme Footer");
   });
 
   it("applies template objects to title/section and renders footer chrome", async () => {
@@ -1085,12 +1354,12 @@ describe("SlideRenderer", () => {
     const titlePageNumberOptions = (titlePageNumberCall.payload as { options?: Record<string, unknown> }).options;
     const contentPageNumberOptions = (contentPageNumberCall.payload as { options?: Record<string, unknown> }).options;
 
-    expect((titleFooterOptions?.y as number) < 1).toBe(true);
-    expect((contentFooterOptions?.y as number) < 1).toBe(true);
+    expect((titleFooterOptions?.y as number) > 5).toBe(true);
+    expect((contentFooterOptions?.y as number) > 5).toBe(true);
     expect((titlePageNumberOptions?.y as number) > 5).toBe(true);
-    expect((contentPageNumberOptions?.y as number) < 1).toBe(true);
+    expect((contentPageNumberOptions?.y as number) > 5).toBe(true);
     expect(titleFooterOptions?.color).toBe("FFFFFF");
-    expect(contentFooterOptions?.color).toBe("2C2C2C");
+    expect(contentFooterOptions?.color).toBe("6B7280");
   });
 
   it("renders DSL chrome header divider and footer with metadata placeholders", async () => {

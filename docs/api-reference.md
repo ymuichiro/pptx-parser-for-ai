@@ -42,6 +42,7 @@ import {
 - DSL オブジェクトから `.pptx` を生成
 - `templatePackage` / `templatePackagePath` を設定した場合、以下を反映:
   - palette/fonts/slideSize をテーマへマージ
+  - component style（`theme.components.*`）は theme 側定義を維持
   - content slide の title/body placeholder を配置に反映
   - 背景色/背景画像/装飾オブジェクトを反映
 
@@ -108,6 +109,8 @@ import {
   - `icon-grid`
   - `two-column`
   - 共通で `slot?`（preset 使用時の配置先）、`styleRef?`（theme.components の named style）、`qa.exclude?`（QA 判定除外）を指定可能
+- `custom-shape`
+  - `shape: rounded-rectangle` の場合は `rectRadius?: number` を指定可能（`pptxgenjs` の `rectRadius` に伝搬）
 
 `image` の描画仕様:
 - `sizing`
@@ -129,6 +132,8 @@ import {
 - `version: "2.0"` 固定
 - 必須 semantic color token（`primary`, `surface`, `neutral-border` など）
 - `components` セクションで各 renderer の named style を定義
+- `defaults.contentSlide.titleFrame/bodyFrame` で content slide のタイトル/本文領域を定義
+- `chromeDefaults` で header/footer の既定値を定義（優先順位: `DSL chrome` > `template chrome` > `theme.chromeDefaults`）
 
 `preset` の検証仕様:
 - 未定義 preset ID は `ValidationError`

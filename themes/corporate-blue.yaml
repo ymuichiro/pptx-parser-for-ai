@@ -18,10 +18,10 @@ colors:
   error: "EF4444"
 typography:
   fonts:
-    title: Arial Black
-    heading: Arial
-    body: Arial
-    caption: Arial
+    title: Noto Sans JP
+    heading: Noto Sans JP
+    body: Noto Sans JP
+    caption: Noto Sans JP
   sizes:
     title: 40
     heading: 24
@@ -56,6 +56,8 @@ defaults:
   contentSlide:
     background: background-light
     titleColor: text-dark
+    titleFrame: { x: 0.40, y: 0.24, w: 9.20, h: 0.56 }
+    bodyFrame: { x: 0.40, y: 1.24, w: 9.20, h: 4.00 }
   bulletStyle:
     character: "•"
     color: accent
@@ -69,37 +71,37 @@ components:
   text:
     defaultStyleRef: body
     styles:
-      title: { color: text-light, fontFace: Arial Black, fontSize: 40, bold: true, align: center, valign: mid }
-      heading: { color: text-dark, fontFace: Arial, fontSize: 24, bold: true }
-      body: { color: text-dark, fontFace: Arial, fontSize: 14 }
-      caption: { color: muted-text, fontFace: Arial, fontSize: 11 }
-      default: { color: text-dark, fontFace: Arial, fontSize: 14 }
-      card: { color: text-dark, fontFace: Arial, fontSize: 14 }
-      column: { color: text-dark, fontFace: Arial, fontSize: 13 }
-      summary: { color: primary, fontFace: Arial, fontSize: 12 }
-      kpi: { color: primary, fontFace: Arial Black, fontSize: 20, bold: true }
-      highlight: { color: primary, fontFace: Arial, fontSize: 13, bold: true }
+      title: { color: text-light, fontFace: Noto Sans JP, fontSize: 40, bold: true, align: center, valign: mid }
+      heading: { color: text-dark, fontFace: Noto Sans JP, fontSize: 24, bold: true }
+      body: { color: text-dark, fontFace: Noto Sans JP, fontSize: 14 }
+      caption: { color: muted-text, fontFace: Noto Sans JP, fontSize: 11 }
+      default: { color: text-dark, fontFace: Noto Sans JP, fontSize: 14 }
+      card: { color: text-dark, fontFace: Noto Sans JP, fontSize: 14 }
+      column: { color: text-dark, fontFace: Noto Sans JP, fontSize: 13 }
+      summary: { color: primary, fontFace: Noto Sans JP, fontSize: 12 }
+      kpi: { color: primary, fontFace: Noto Sans JP, fontSize: 20, bold: true }
+      highlight: { color: primary, fontFace: Noto Sans JP, fontSize: 13, bold: true }
   list:
     defaultStyleRef: default
     styles:
-      default: { color: text-dark, fontFace: Arial, fontSize: 14, bulletCharacter: "•", bulletColor: accent, indent: 0.3 }
-      pros: { color: text-dark, fontFace: Arial, fontSize: 14, bulletCharacter: "✓", bulletColor: success, indent: 0.3 }
-      cons: { color: text-dark, fontFace: Arial, fontSize: 14, bulletCharacter: "✗", bulletColor: error, indent: 0.3 }
-      checkmark: { color: text-dark, fontFace: Arial, fontSize: 14, bulletCharacter: "✓", bulletColor: accent, indent: 0.3 }
-      card: { color: text-dark, fontFace: Arial, fontSize: 13, bulletCharacter: "•", bulletColor: accent, indent: 0.25 }
-      column: { color: text-dark, fontFace: Arial, fontSize: 12, bulletCharacter: "•", bulletColor: primary, indent: 0.22 }
-      summary: { color: primary, fontFace: Arial, fontSize: 12, bulletCharacter: "•", bulletColor: accent, indent: 0.2 }
-      kpi: { color: primary, fontFace: Arial, fontSize: 13, bulletCharacter: "•", bulletColor: accent, indent: 0.2 }
-      highlight: { color: primary, fontFace: Arial, fontSize: 13, bulletCharacter: "•", bulletColor: accent, indent: 0.2 }
+      default: { color: text-dark, fontFace: Noto Sans JP, fontSize: 14, bulletCharacter: "•", bulletColor: accent, indent: 0.3 }
+      pros: { color: text-dark, fontFace: Noto Sans JP, fontSize: 14, bulletCharacter: "✓", bulletColor: success, indent: 0.3 }
+      cons: { color: text-dark, fontFace: Noto Sans JP, fontSize: 14, bulletCharacter: "✗", bulletColor: error, indent: 0.3 }
+      checkmark: { color: text-dark, fontFace: Noto Sans JP, fontSize: 14, bulletCharacter: "✓", bulletColor: accent, indent: 0.3 }
+      card: { color: text-dark, fontFace: Noto Sans JP, fontSize: 13, bulletCharacter: "•", bulletColor: accent, indent: 0.25 }
+      column: { color: text-dark, fontFace: Noto Sans JP, fontSize: 12, bulletCharacter: "•", bulletColor: primary, indent: 0.22 }
+      summary: { color: primary, fontFace: Noto Sans JP, fontSize: 12, bulletCharacter: "•", bulletColor: accent, indent: 0.2 }
+      kpi: { color: primary, fontFace: Noto Sans JP, fontSize: 13, bulletCharacter: "•", bulletColor: accent, indent: 0.2 }
+      highlight: { color: primary, fontFace: Noto Sans JP, fontSize: 13, bulletCharacter: "•", bulletColor: accent, indent: 0.2 }
   table:
     defaultStyleRef: default
     styles:
-      default: { headerBackground: primary, headerText: text-light, rowAlternate: surface, borderColor: neutral-border, textColor: text-dark, fontFace: Arial, fontSize: 12 }
-      card: { headerBackground: primary, headerText: text-light, rowAlternate: surface, borderColor: neutral-border, textColor: text-dark, fontFace: Arial, fontSize: 11 }
-      column: { headerBackground: primary, headerText: text-light, rowAlternate: surface, borderColor: neutral-border, textColor: text-dark, fontFace: Arial, fontSize: 11 }
-      summary: { headerBackground: surface-strong, headerText: text-dark, rowAlternate: surface-muted, borderColor: neutral-border, textColor: text-dark, fontFace: Arial, fontSize: 11 }
-      kpi: { headerBackground: primary, headerText: text-light, rowAlternate: surface, borderColor: accent, textColor: text-dark, fontFace: Arial, fontSize: 11 }
-      highlight: { headerBackground: accent, headerText: text-light, rowAlternate: surface, borderColor: accent, textColor: text-dark, fontFace: Arial, fontSize: 11 }
+      default: { headerBackground: primary, headerText: text-light, rowAlternate: surface, borderColor: neutral-border, textColor: text-dark, fontFace: Noto Sans JP, fontSize: 12 }
+      card: { headerBackground: primary, headerText: text-light, rowAlternate: surface, borderColor: neutral-border, textColor: text-dark, fontFace: Noto Sans JP, fontSize: 11 }
+      column: { headerBackground: primary, headerText: text-light, rowAlternate: surface, borderColor: neutral-border, textColor: text-dark, fontFace: Noto Sans JP, fontSize: 11 }
+      summary: { headerBackground: surface-strong, headerText: text-dark, rowAlternate: surface-muted, borderColor: neutral-border, textColor: text-dark, fontFace: Noto Sans JP, fontSize: 11 }
+      kpi: { headerBackground: primary, headerText: text-light, rowAlternate: surface, borderColor: accent, textColor: text-dark, fontFace: Noto Sans JP, fontSize: 11 }
+      highlight: { headerBackground: accent, headerText: text-light, rowAlternate: surface, borderColor: accent, textColor: text-dark, fontFace: Noto Sans JP, fontSize: 11 }
   chart:
     defaultStyleRef: default
     styles:
@@ -112,12 +114,12 @@ components:
   image:
     defaultStyleRef: default
     styles:
-      default: { frameFillColor: surface, borderColor: neutral-border, borderWidth: 0.8, captionColor: muted-text, captionFontFace: Arial, captionFontSize: 10, shadow: false }
-      card: { frameFillColor: surface, borderColor: neutral-border, borderWidth: 1, captionColor: muted-text, captionFontFace: Arial, captionFontSize: 10, shadow: true }
-      column: { frameFillColor: surface, borderColor: neutral-border, borderWidth: 1, captionColor: muted-text, captionFontFace: Arial, captionFontSize: 10, shadow: false }
-      summary: { frameFillColor: surface-muted, borderColor: neutral-border, borderWidth: 0.8, captionColor: primary, captionFontFace: Arial, captionFontSize: 10, shadow: false }
-      kpi: { frameFillColor: surface, borderColor: accent, borderWidth: 1.2, captionColor: primary, captionFontFace: Arial, captionFontSize: 10, shadow: true }
-      highlight: { frameFillColor: surface, borderColor: accent, borderWidth: 1.2, captionColor: primary, captionFontFace: Arial, captionFontSize: 10, shadow: true }
+      default: { frameFillColor: surface, borderColor: neutral-border, borderWidth: 0.8, captionColor: muted-text, captionFontFace: Noto Sans JP, captionFontSize: 10, shadow: false }
+      card: { frameFillColor: surface, borderColor: neutral-border, borderWidth: 1, captionColor: muted-text, captionFontFace: Noto Sans JP, captionFontSize: 10, shadow: true }
+      column: { frameFillColor: surface, borderColor: neutral-border, borderWidth: 1, captionColor: muted-text, captionFontFace: Noto Sans JP, captionFontSize: 10, shadow: false }
+      summary: { frameFillColor: surface-muted, borderColor: neutral-border, borderWidth: 0.8, captionColor: primary, captionFontFace: Noto Sans JP, captionFontSize: 10, shadow: false }
+      kpi: { frameFillColor: surface, borderColor: accent, borderWidth: 1.2, captionColor: primary, captionFontFace: Noto Sans JP, captionFontSize: 10, shadow: true }
+      highlight: { frameFillColor: surface, borderColor: accent, borderWidth: 1.2, captionColor: primary, captionFontFace: Noto Sans JP, captionFontSize: 10, shadow: true }
   statCallout:
     defaultStyleRef: default
     styles:
@@ -166,10 +168,33 @@ components:
   preset:
     defaultStyleRef: card
     styles:
-      card: { shape: rounded-rectangle, fillColor: surface, borderColor: neutral-border, borderWidth: 0.8 }
-      column: { shape: rounded-rectangle, fillColor: surface, borderColor: neutral-border, borderWidth: 0.8 }
-      summary-strip: { shape: rounded-rectangle, fillColor: surface-muted, borderColor: neutral-border, borderWidth: 0.8 }
-      callout-panel: { shape: rounded-rectangle, fillColor: surface-strong, borderColor: neutral-border, borderWidth: 0.8 }
+      card: { shape: rounded-rectangle, fillColor: surface, borderColor: neutral-border, borderWidth: 0.8, rectRadius: 0.08 }
+      column: { shape: rounded-rectangle, fillColor: surface, borderColor: neutral-border, borderWidth: 0.8, rectRadius: 0.08 }
+      summary-strip: { shape: rounded-rectangle, fillColor: surface-muted, borderColor: neutral-border, borderWidth: 0.8, rectRadius: 0.08 }
+      callout-panel: { shape: rounded-rectangle, fillColor: surface-strong, borderColor: neutral-border, borderWidth: 0.8, rectRadius: 0.08 }
+chromeDefaults:
+  header:
+    divider:
+      enabled: true
+      x: 0.40
+      y: 1.18
+      w: 9.20
+      color: neutral-border
+      width: 0.8
+  footer:
+    enabled: true
+    showSlideNumber: true
+    color: muted-text
+    fontFace: Noto Sans JP
+    fontSize: 10
+    divider:
+      enabled: true
+      x: 0.40
+      y: 5.42
+      w: 9.20
+      color: neutral-border
+      width: 0.8
+
 effects:
   cardShadow:
     type: outer

@@ -17,10 +17,10 @@ theme:
     muted-text: "888888"
     neutral-border: "DEE2E6"
   fonts:
-    title: "Trebuchet MS"
-    heading: "Trebuchet MS"
-    body: "Calibri"
-    caption: "Calibri"
+    title: "Noto Sans JP"
+    heading: "Noto Sans JP"
+    body: "Noto Sans JP"
+    caption: "Noto Sans JP"
   slideSize: "16:9"
 
 layout:
@@ -28,22 +28,22 @@ layout:
   placeholders:
     title:
       bounds:
-        x: 0.8
-        y: 0.3
-        w: 8.4
-        h: 0.8
+        x: 0.4
+        y: 0.24
+        w: 9.2
+        h: 0.56
       style:
-        fontFace: "Georgia"
-        fontSizePt: 40
+        fontFace: "Noto Sans JP"
+        fontSizePt: 20
         color: "text-dark"
     body:
       bounds:
-        x: 0.5
-        y: 1.2
-        w: 9.0
-        h: 5.0
+        x: 0.4
+        y: 1.24
+        w: 9.2
+        h: 4.0
       style:
-        fontFace: "Calibri"
+        fontFace: "Noto Sans JP"
         fontSizePt: 14
         color: "text-dark"
 
@@ -77,8 +77,8 @@ chrome:
   footer:
     leftText: "AI Mobility Strategy"
     showSlideNumber: true
-    fontFace: "Calibri"
-    fontSizePt: 9
+    fontFace: "Noto Sans JP"
+    fontSizePt: 10
 
 manifest:
   warnings: []

@@ -144,7 +144,46 @@ const presetStyleSchema = z
     shape: z.union([z.literal("rectangle"), z.literal("rounded-rectangle")]).optional(),
     fillColor: tokenSchema,
     borderColor: tokenSchema.optional(),
-    borderWidth: z.number().nonnegative().optional()
+    borderWidth: z.number().nonnegative().optional(),
+    rectRadius: z.number().min(0).max(1).optional()
+  })
+  .strict();
+
+const frameSchema = z
+  .object({
+    x: z.number(),
+    y: z.number(),
+    w: z.number().positive(),
+    h: z.number().positive()
+  })
+  .strict();
+
+const dividerChromeSchema = z
+  .object({
+    enabled: z.boolean().optional(),
+    x: z.number().nonnegative().optional(),
+    y: z.number().nonnegative().optional(),
+    w: z.number().positive().optional(),
+    color: tokenSchema.optional(),
+    width: z.number().positive().optional()
+  })
+  .strict();
+
+const headerChromeSchema = z
+  .object({
+    divider: dividerChromeSchema.optional()
+  })
+  .strict();
+
+const footerChromeSchema = z
+  .object({
+    enabled: z.boolean().optional(),
+    leftText: tokenSchema.optional(),
+    showSlideNumber: z.boolean().optional(),
+    color: tokenSchema.optional(),
+    fontFace: tokenSchema.optional(),
+    fontSize: z.number().positive().optional(),
+    divider: dividerChromeSchema.optional()
   })
   .strict();
 
@@ -253,7 +292,9 @@ export const themeDefinitionSchema = z
         contentSlide: z
           .object({
             background: tokenSchema,
-            titleColor: tokenSchema
+            titleColor: tokenSchema,
+            titleFrame: frameSchema,
+            bodyFrame: frameSchema
           })
           .strict(),
         bulletStyle: z
@@ -288,6 +329,13 @@ export const themeDefinitionSchema = z
         preset: namedStylesSchema(presetStyleSchema)
       })
       .strict(),
+    chromeDefaults: z
+      .object({
+        header: headerChromeSchema.optional(),
+        footer: footerChromeSchema.optional()
+      })
+      .strict()
+      .optional(),
     effects: z
       .object({
         cardShadow: z

@@ -173,4 +173,28 @@ describe("DSLParser", () => {
     expect(result.isValid).toBe(false);
     expect(result.errors.some((error) => error.includes("version"))).toBe(true);
   });
+
+  it("accepts custom-shape rectRadius for rounded rectangles", () => {
+    const parser = new DSLParser();
+    const result = parser.validate({
+      version: "2.0",
+      theme: "corporate-blue",
+      metadata: { title: "shape-radius" },
+      slides: [
+        {
+          type: "blank",
+          elements: [
+            {
+              type: "custom-shape",
+              shape: "rounded-rectangle",
+              position: { x: 1, y: 1, w: 2, h: 1 },
+              rectRadius: 0.08
+            }
+          ]
+        }
+      ]
+    });
+
+    expect(result.isValid).toBe(true);
+  });
 });

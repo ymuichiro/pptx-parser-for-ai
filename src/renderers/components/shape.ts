@@ -45,6 +45,10 @@ export function renderCustomShape(
     };
   }
 
+  if (element.shape === "rounded-rectangle") {
+    options.rectRadius = element.rectRadius ?? 0.08;
+  }
+
   slide.addShape(shapeMap[element.shape], {
     ...options
   });

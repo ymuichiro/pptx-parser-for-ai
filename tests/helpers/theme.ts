@@ -22,10 +22,10 @@ export const testTheme: ThemeDefinition = {
   },
   typography: {
     fonts: {
-      title: "Arial",
-      heading: "Arial",
-      body: "Arial",
-      caption: "Arial"
+      title: "Noto Sans JP",
+      heading: "Noto Sans JP",
+      body: "Noto Sans JP",
+      caption: "Noto Sans JP"
     },
     sizes: {
       title: 40,
@@ -63,7 +63,9 @@ export const testTheme: ThemeDefinition = {
     },
     contentSlide: {
       background: "background-light",
-      titleColor: "text-dark"
+      titleColor: "text-dark",
+      titleFrame: { x: 0.4, y: 0.24, w: 9.2, h: 0.56 },
+      bodyFrame: { x: 0.4, y: 1.24, w: 9.2, h: 4.0 }
     },
     bulletStyle: {
       character: "•",
@@ -198,10 +200,37 @@ export const testTheme: ThemeDefinition = {
     preset: {
       defaultStyleRef: "card",
       styles: {
-        card: { shape: "rounded-rectangle", fillColor: "surface", borderColor: "neutral-border", borderWidth: 0.8 },
-        column: { shape: "rounded-rectangle", fillColor: "surface", borderColor: "neutral-border", borderWidth: 0.8 },
-        "summary-strip": { shape: "rounded-rectangle", fillColor: "surface-muted", borderColor: "neutral-border", borderWidth: 0.8 },
-        "callout-panel": { shape: "rounded-rectangle", fillColor: "surface-strong", borderColor: "neutral-border", borderWidth: 0.8 }
+        card: { shape: "rounded-rectangle", fillColor: "surface", borderColor: "neutral-border", borderWidth: 0.8, rectRadius: 0.08 },
+        column: { shape: "rounded-rectangle", fillColor: "surface", borderColor: "neutral-border", borderWidth: 0.8, rectRadius: 0.08 },
+        "summary-strip": { shape: "rounded-rectangle", fillColor: "surface-muted", borderColor: "neutral-border", borderWidth: 0.8, rectRadius: 0.08 },
+        "callout-panel": { shape: "rounded-rectangle", fillColor: "surface-strong", borderColor: "neutral-border", borderWidth: 0.8, rectRadius: 0.08 }
+      }
+    }
+  },
+  chromeDefaults: {
+    header: {
+      divider: {
+        enabled: true,
+        x: 0.4,
+        y: 1.18,
+        w: 9.2,
+        color: "neutral-border",
+        width: 0.8
+      }
+    },
+    footer: {
+      enabled: true,
+      showSlideNumber: true,
+      color: "muted-text",
+      fontFace: "Noto Sans JP",
+      fontSize: 10,
+      divider: {
+        enabled: true,
+        x: 0.4,
+        y: 5.42,
+        w: 9.2,
+        color: "neutral-border",
+        width: 0.8
       }
     }
   },

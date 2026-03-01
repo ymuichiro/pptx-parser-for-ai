@@ -302,6 +302,7 @@ export interface CustomShapeElement {
     color: string;
     width: number;
   };
+  rectRadius?: number;
   qa?: ElementQAOptions;
 }
 

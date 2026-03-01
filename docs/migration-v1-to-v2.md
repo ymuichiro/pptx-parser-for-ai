@@ -58,6 +58,7 @@ version: "2.0"
 | (none) | `styleRef?: string` on all content elements |
 | `image` (basic) | `image.frame?: { borderColor, borderWidth, shadow }` |
 | `image` (basic caption) | `image.captionStyleRef?: string` |
+| `custom-shape` (basic) | `custom-shape.rectRadius?: number` (`rounded-rectangle` 用) |
 
 ## Theme field migration
 
@@ -67,11 +68,16 @@ version: "2.0"
 | `colors` (minimal) | `colors` with required semantic tokens |
 | `defaults` only | `defaults` + `components` named styles |
 | optional effects (unused) | `effects` are consumed by renderers |
+| (none) | `defaults.contentSlide.titleFrame/bodyFrame` |
+| (none) | `chromeDefaults` (`header/footer` の既定) |
+| `preset` style (shape/fill/border) | `preset` style + `rectRadius` |
 
 ## Behavior changes
 
 - `styleRef` is resolved by component type via theme named styles.
 - Presets apply visual slot surfaces and slot style refs.
+- Content slide title/body frame are controlled by `theme.defaults.contentSlide.*Frame`.
+- Chrome resolution is deterministic: `DSL` > `template` > `theme.chromeDefaults`.
 - QA now validates visual quality (`LOW_CONTRAST_TEXT`, `MISSING_THEME_TOKEN`, `STYLE_REF_NOT_FOUND`, `PRESET_SLOT_STYLE_MISMATCH`).
 
 ## Validation checklist

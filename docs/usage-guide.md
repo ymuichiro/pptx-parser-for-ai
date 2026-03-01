@@ -45,6 +45,7 @@ await renderer.generate(dsl, "./output.pptx");
 ## 3.1 ヘッダー線・フッター（DSL chrome）
 
 テンプレートインポートを使わない場合でも、`chrome` で全スライド共通のヘッダー区切り線とフッターを指定できます。
+描画優先順位は `DSL chrome` -> `template chrome` -> `theme.chromeDefaults` -> 描画なし です。
 
 ```ts
 const dsl: PresentationDSL = {
@@ -76,6 +77,24 @@ const dsl: PresentationDSL = {
   },
   slides: [/* ... */]
 };
+```
+
+`theme.chromeDefaults` と content frame 既定例:
+
+```yaml
+defaults:
+  contentSlide:
+    titleFrame: { x: 0.40, y: 0.24, w: 9.20, h: 0.56 }
+    bodyFrame: { x: 0.40, y: 1.24, w: 9.20, h: 4.00 }
+chromeDefaults:
+  header:
+    divider: { enabled: true, x: 0.40, y: 1.18, w: 9.20, color: neutral-border, width: 0.8 }
+  footer:
+    enabled: true
+    showSlideNumber: true
+    fontFace: Noto Sans JP
+    fontSize: 10
+    divider: { enabled: true, x: 0.40, y: 5.42, w: 9.20, color: neutral-border, width: 0.8 }
 ```
 
 ## 3.2 画像要素の `sizing` / `position` / `bounds`

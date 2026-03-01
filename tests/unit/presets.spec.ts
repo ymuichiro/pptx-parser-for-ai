@@ -13,8 +13,8 @@ describe("PresetEngine", () => {
 
     const result = engine.calculateLayout(elements, "compare-3col");
     expect(result.areas).toHaveLength(3);
-    expect(result.areas[0]?.bounds.x).toBeCloseTo(0.8, 2);
-    expect(result.areas[1]?.bounds.y).toBeGreaterThanOrEqual(4.25);
+    expect(result.areas[0]?.bounds.x).toBeCloseTo(0.4, 2);
+    expect(result.areas[1]?.bounds.y).toBeGreaterThanOrEqual(4.36);
     expect(result.areas[2]?.bounds.y).toBeGreaterThan(result.areas[1]?.bounds.y ?? 0);
   });
 

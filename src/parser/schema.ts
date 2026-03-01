@@ -360,6 +360,7 @@ const customShapeElementSchema = z
       })
       .strict()
       .optional(),
+    rectRadius: z.number().min(0).max(1).optional(),
     qa: elementQASchema.optional()
   })
   .strict();
