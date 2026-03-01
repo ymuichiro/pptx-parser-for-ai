@@ -817,6 +817,16 @@ export class SlideRenderer {
     const fontSize = footer.fontSize ?? theme.typography.sizes.caption;
     const leftText = this.resolveFooterLeftText(renderContext.metadata, footer);
     const divider = footer.divider;
+    const showSlideNumber = (footer.showSlideNumber ?? true) === true;
+    const footerLeftX = 0.4;
+    const footerRightPadding = 0.2;
+    const footerTextY = dimensions.height - 0.185;
+    const footerTextH = 0.16;
+    const pageNumberW = 0.32;
+    const pageNumberX = dimensions.width - footerRightPadding - pageNumberW;
+    const leftTextW = showSlideNumber
+      ? Math.max(0.1, pageNumberX - footerLeftX - 0.12)
+      : Math.max(0.1, dimensions.width - footerLeftX - footerRightPadding);
 
     if (divider?.enabled === true) {
       const dividerX = divider.x ?? 0.4;
@@ -836,22 +846,22 @@ export class SlideRenderer {
 
     if (leftText !== undefined && leftText.length > 0) {
       slide.addText(leftText, {
-        x: 0.4,
-        y: dimensions.height - 0.14,
-        w: dimensions.width - 1.0,
-        h: 0.12,
+        x: footerLeftX,
+        y: footerTextY,
+        w: leftTextW,
+        h: footerTextH,
         fontFace,
         fontSize,
         color: textColor
       });
     }
 
-    if ((footer.showSlideNumber ?? true) === true) {
+    if (showSlideNumber) {
       slide.addText(String(renderContext.slideIndex + 1), {
-        x: dimensions.width - 0.3,
-        y: dimensions.height - 0.14,
-        w: 0.24,
-        h: 0.12,
+        x: pageNumberX,
+        y: footerTextY,
+        w: pageNumberW,
+        h: footerTextH,
         fontFace,
         fontSize,
         bold: true,
