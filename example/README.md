@@ -7,6 +7,7 @@ This directory provides production-style sample decks and scripts.
 - `basic`: business review deck with bullets, stat-callout, and table
 - `network`: architecture deck with network-diagram and flowchart
 - `template-gallery`: premium strategy deck
+- `preset-v2`: v2 preset visual-rule showcase (theme-only and template-mapped outputs)
 - `security-brief`: security operations weekly report template
 - `product-launch`: launch blueprint with icon-driven GTM narrative
 - `template-import`: import a `.pptx/.potx` file as a reusable template package
@@ -27,6 +28,7 @@ npm run example:test
 npx tsx example/basic/generate.ts
 npx tsx example/network/generate.ts
 npx tsx example/template-gallery/generate.ts
+npx tsx example/preset-v2/generate.ts
 npx tsx example/security-brief/generate.ts
 npx tsx example/product-launch/generate.ts
 ```

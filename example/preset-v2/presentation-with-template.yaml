@@ -1,0 +1,32 @@
+version: "2.0"
+theme: "venture-teal"
+metadata:
+  title: "Preset v2 + Template"
+  company: "Northwind Mobility"
+  date: "2026-03-01"
+slides:
+  - type: content
+    title: "Template Mapped Preset"
+    preset: "compare-3col"
+    content:
+      - type: text
+        slot: left
+        styleRef: column
+        content: "Left Block"
+      - type: chart
+        slot: center
+        styleRef: column
+        chartType: bar
+        data:
+          labels: ["A", "B", "C"]
+          series:
+            - name: "Score"
+              values: [62, 74, 83]
+      - type: stat-callout
+        slot: right
+        styleRef: highlight
+        value: "A+"
+        label: "Health"
+      - type: text
+        styleRef: summary
+        content: "Preset frame is remapped into template body placeholder while preserving style resolution."

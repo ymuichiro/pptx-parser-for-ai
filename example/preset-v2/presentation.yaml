@@ -1,0 +1,107 @@
+version: "2.0"
+theme: "venture-teal"
+metadata:
+  title: "Preset v2 Visual Showcase"
+  author: "Codex"
+  company: "Northwind Mobility"
+  date: "2026-03-01"
+chrome:
+  header:
+    divider:
+      enabled: true
+      y: 1.18
+      color: neutral-border
+  footer:
+    enabled: true
+    leftText: "{company} | {date}"
+    showSlideNumber: true
+slides:
+  - type: content
+    title: "Overview 2x2"
+    preset: "overview-2x2"
+    content:
+      - type: stat-callout
+        slot: card1
+        styleRef: card
+        value: "+28%"
+        label: "YoY Growth"
+      - type: bullet-list
+        slot: card2
+        styleRef: card
+        items:
+          - "Template-less high-fidelity preset"
+          - "Theme-driven visual consistency"
+          - "QA visual guards"
+      - type: stat-callout
+        slot: card3
+        styleRef: card
+        value: "68"
+        label: "Q4 Revenue"
+      - type: text
+        slot: card4
+        styleRef: card
+        content: "Slot surfaces and slot styles are resolved from theme.components + preset metadata."
+
+  - type: content
+    title: "Compare 3 Columns"
+    preset: "compare-3col"
+    content:
+      - type: text
+        slot: left
+        styleRef: column
+        content: "Current"
+      - type: bullet-list
+        slot: center
+        styleRef: column
+        items:
+          - "MVP style"
+          - "Limited surface"
+          - "Hardcoded look"
+      - type: bullet-list
+        slot: right
+        styleRef: column
+        style: checkmark
+        items:
+          - "Component styles"
+          - "Semantic tokens"
+          - "QA visual checks"
+      - type: text
+        styleRef: summary
+        content: "Summary: v2 unifies renderer outputs with theme/preset declarative visual rules."
+
+  - type: content
+    title: "KPI With Callout"
+    preset: "kpi-with-callout"
+    content:
+      - type: chart
+        slot: kpi
+        styleRef: kpi
+        chartType: bar
+        data:
+          labels: ["Jan", "Feb", "Mar", "Apr"]
+          series:
+            - name: "ARR"
+              values: [10, 14, 19, 25]
+      - type: bullet-list
+        slot: narrative
+        styleRef: summary
+        items:
+          - "Primary KPI region"
+          - "Narrative strip"
+          - "Callout side panel"
+      - type: stat-callout
+        slot: callout
+        styleRef: highlight
+        value: "98%"
+        label: "SLA"
+      - type: image
+        slot: trend
+        styleRef: highlight
+        source: "example/assets/icons/rocket-solid.png"
+        sizing: contain
+        frame:
+          borderColor: accent
+          borderWidth: 1.2
+          shadow: true
+        caption: "Trend Acceleration"
+        captionStyleRef: caption
