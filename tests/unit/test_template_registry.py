@@ -8,7 +8,7 @@ from typing import Any
 
 import pytest
 
-from pptx_yaml_engine.server.template_registry import TemplateRegistry
+from pptx_yaml_engine.server.template_registry import DEFAULT_TEMPLATE_NAME, TemplateRegistry
 from pptx_yaml_engine.utils.fingerprint import template_fingerprint
 
 
@@ -93,6 +93,44 @@ def test_load_normalises_name_to_lowercase(tmp_path: Path, template_bytes: bytes
 
     assert registry.get("corporate") is not None
     assert registry.get("Corporate") is not None
+    assert registry.get(" Corporate ") is not None
+
+
+def test_get_default_returns_default_template(tmp_path: Path, template_bytes: bytes) -> None:
+    manifest = _make_manifest(template_bytes)
+    _write_template(tmp_path, DEFAULT_TEMPLATE_NAME, template_bytes, manifest)
+
+    registry = TemplateRegistry(str(tmp_path))
+    registry.load()
+
+    entry = registry.get_default()
+    assert entry is not None
+    assert entry.name == DEFAULT_TEMPLATE_NAME
+
+
+def test_resolve_blank_or_missing_name_uses_default(tmp_path: Path, template_bytes: bytes) -> None:
+    manifest = _make_manifest(template_bytes)
+    _write_template(tmp_path, DEFAULT_TEMPLATE_NAME, template_bytes, manifest)
+
+    registry = TemplateRegistry(str(tmp_path))
+    registry.load()
+
+    assert registry.resolve(None) == registry.get_default()
+    assert registry.resolve("") == registry.get_default()
+    assert registry.resolve("   ") == registry.get_default()
+
+
+def test_resolve_explicit_name_prefers_named_template(tmp_path: Path, template_bytes: bytes) -> None:
+    manifest = _make_manifest(template_bytes)
+    _write_template(tmp_path, DEFAULT_TEMPLATE_NAME, template_bytes, manifest)
+    _write_template(tmp_path, "named", template_bytes, manifest)
+
+    registry = TemplateRegistry(str(tmp_path))
+    registry.load()
+
+    entry = registry.resolve("named")
+    assert entry is not None
+    assert entry.name == "named"
 
 
 def test_list_returns_all_templates(tmp_path: Path, template_bytes: bytes) -> None:

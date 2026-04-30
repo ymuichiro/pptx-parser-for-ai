@@ -22,6 +22,12 @@ are skipped with a warning — they do not cause the server to fail.
   `acme.pptx` ↔ `acme.manifest.json`
 - Names are normalised to lowercase; `Acme.pptx` and `acme.pptx` are treated as
   the same template (only the first one found is loaded).
+- The stem `default` is reserved for fallback selection. If `default.pptx` or
+  `default.potx` is present with `default.manifest.json`, the server uses it
+  when `render_presentation` is called without a usable `template_name`.
+- Do not keep both `default.pptx` and `default.potx` in the same directory;
+  they normalize to the same template name and one will be skipped as a
+  duplicate.
 
 ## Selecting a template at render time
 
@@ -32,13 +38,16 @@ are skipped with a warning — they do not cause the server to fail.
   "params": {
     "name": "render_presentation",
     "arguments": {
-      "template_name": "corporate",
-      "deck": { ... },
-      "file_name": "output.pptx"
+        "deck": { ... },
+        "file_name": "output.pptx"
+      }
     }
   }
-}
 ```
 
 Use `list_templates` to see which templates are available and which semantic
 layouts each one supports.
+
+To force a specific template, pass its stem as `template_name`, for example
+`"corporate"`. If `template_name` is omitted, `null`, empty, or whitespace-only,
+the server falls back to the template named `default`.

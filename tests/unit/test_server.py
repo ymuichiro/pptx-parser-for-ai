@@ -8,7 +8,11 @@ from starlette.testclient import TestClient
 
 from pptx_yaml_engine.server.app import create_app
 from pptx_yaml_engine.server.config import ServerConfig
-from pptx_yaml_engine.utils.fingerprint import template_fingerprint
+
+_VALID_DECK = {
+    "version": 1,
+    "slides": [{"layout": "cover_title", "title": "Cover", "subtitle": "Subtitle"}],
+}
 
 _MCP_INIT = {
     "jsonrpc": "2.0",
@@ -84,7 +88,7 @@ _MCP_RENDER = {
         "name": "render_presentation",
         "arguments": {
             "template_name": "missing_template",
-            "deck": {"version": 1, "slides": []},
+            "deck": _VALID_DECK,
         },
     },
 }
@@ -100,6 +104,28 @@ def _mcp_post(client: TestClient, payload: dict) -> dict:
     return resp.json()
 
 
+def _tool_text(body: dict) -> str:
+    content = body.get("result", {}).get("content", [])
+    assert content, f"Expected non-empty content: {body}"
+    return content[0]["text"]
+
+
+def _tool_json(body: dict) -> dict:
+    return json.loads(_tool_text(body))
+
+
+def _render_call(arguments: dict) -> dict:
+    return {
+        "jsonrpc": "2.0",
+        "id": 10,
+        "method": "tools/call",
+        "params": {
+            "name": "render_presentation",
+            "arguments": arguments,
+        },
+    }
+
+
 def test_list_templates_returns_empty_when_no_templates(tmp_path: Path) -> None:
     """list_templates returns an empty list when no templates are configured."""
     app = create_app(_make_config(tmp_path))
@@ -108,10 +134,7 @@ def test_list_templates_returns_empty_when_no_templates(tmp_path: Path) -> None:
         client.post("/mcp/", json=_MCP_INIT, headers={"Accept": "application/json", "Content-Type": "application/json"})
         body = _mcp_post(client, _MCP_CALL)
 
-    # FastMCP wraps tool results in a content list
-    content = body.get("result", {}).get("content", [])
-    assert content, f"Expected non-empty content in response: {body}"
-    result = json.loads(content[0]["text"])
+    result = _tool_json(body)
     assert result["count"] == 0
     assert result["templates"] == []
 
@@ -123,10 +146,7 @@ def test_render_presentation_no_templates_configured(tmp_path: Path) -> None:
         client.post("/mcp/", json=_MCP_INIT, headers={"Accept": "application/json", "Content-Type": "application/json"})
         body = _mcp_post(client, _MCP_RENDER)
 
-    # FastMCP returns tool errors in the content array with isError=True
-    content = body.get("result", {}).get("content", [])
-    assert content, f"Expected error content: {body}"
-    error_text = content[0]["text"]
+    error_text = _tool_text(body)
     assert "NO_TEMPLATES_CONFIGURED" in error_text or "TEMPLATE_NOT_FOUND" in error_text
 
 
@@ -142,8 +162,96 @@ def test_list_templates_returns_registered_template(tmp_path: Path, template_byt
         client.post("/mcp/", json=_MCP_INIT, headers={"Accept": "application/json", "Content-Type": "application/json"})
         body = _mcp_post(client, _MCP_CALL)
 
-    content = body.get("result", {}).get("content", [])
-    assert content, f"Expected non-empty content: {body}"
-    result = json.loads(content[0]["text"])
+    result = _tool_json(body)
     assert result["count"] == 1
     assert result["templates"][0]["name"] == "mytemplate"
+
+
+def test_render_presentation_uses_default_template_when_name_omitted(
+    tmp_path: Path, template_bytes: bytes, template_manifest: dict
+) -> None:
+    tpl_dir = tmp_path / "templates"
+    tpl_dir.mkdir()
+    (tpl_dir / "default.pptx").write_bytes(template_bytes)
+    (tpl_dir / "default.manifest.json").write_text(json.dumps(template_manifest), encoding="utf-8")
+
+    app = create_app(_make_config(tmp_path, template_dir=str(tpl_dir)))
+    with TestClient(app) as client:
+        client.post("/mcp/", json=_MCP_INIT, headers={"Accept": "application/json", "Content-Type": "application/json"})
+        body = _mcp_post(client, _render_call({"deck": _VALID_DECK}))
+
+    result = _tool_json(body)
+    assert result["success"] is True
+    assert result["slideCount"] == 1
+
+
+@pytest.mark.parametrize("template_name", [None, "", "   "])
+def test_render_presentation_blank_or_null_template_name_uses_default(
+    tmp_path: Path, template_bytes: bytes, template_manifest: dict, template_name: str | None
+) -> None:
+    tpl_dir = tmp_path / "templates"
+    tpl_dir.mkdir()
+    (tpl_dir / "default.pptx").write_bytes(template_bytes)
+    (tpl_dir / "default.manifest.json").write_text(json.dumps(template_manifest), encoding="utf-8")
+
+    app = create_app(_make_config(tmp_path, template_dir=str(tpl_dir)))
+    with TestClient(app) as client:
+        client.post("/mcp/", json=_MCP_INIT, headers={"Accept": "application/json", "Content-Type": "application/json"})
+        body = _mcp_post(client, _render_call({"deck": _VALID_DECK, "template_name": template_name}))
+
+    result = _tool_json(body)
+    assert result["success"] is True
+    assert result["slideCount"] == 1
+
+
+def test_render_presentation_explicit_named_template_still_works(
+    tmp_path: Path, template_bytes: bytes, template_manifest: dict
+) -> None:
+    tpl_dir = tmp_path / "templates"
+    tpl_dir.mkdir()
+    (tpl_dir / "named.pptx").write_bytes(template_bytes)
+    (tpl_dir / "named.manifest.json").write_text(json.dumps(template_manifest), encoding="utf-8")
+
+    app = create_app(_make_config(tmp_path, template_dir=str(tpl_dir)))
+    with TestClient(app) as client:
+        client.post("/mcp/", json=_MCP_INIT, headers={"Accept": "application/json", "Content-Type": "application/json"})
+        body = _mcp_post(client, _render_call({"deck": _VALID_DECK, "template_name": "named"}))
+
+    result = _tool_json(body)
+    assert result["success"] is True
+    assert result["slideCount"] == 1
+
+
+@pytest.mark.parametrize("arguments", [{"deck": _VALID_DECK}, {"deck": _VALID_DECK, "template_name": None}, {"deck": _VALID_DECK, "template_name": ""}])
+def test_render_presentation_missing_default_template_returns_clear_error(
+    tmp_path: Path, template_bytes: bytes, template_manifest: dict, arguments: dict
+) -> None:
+    tpl_dir = tmp_path / "templates"
+    tpl_dir.mkdir()
+    (tpl_dir / "named.pptx").write_bytes(template_bytes)
+    (tpl_dir / "named.manifest.json").write_text(json.dumps(template_manifest), encoding="utf-8")
+
+    app = create_app(_make_config(tmp_path, template_dir=str(tpl_dir)))
+    with TestClient(app) as client:
+        client.post("/mcp/", json=_MCP_INIT, headers={"Accept": "application/json", "Content-Type": "application/json"})
+        body = _mcp_post(client, _render_call(arguments))
+
+    error_text = _tool_text(body)
+    assert "DEFAULT_TEMPLATE_NOT_FOUND" in error_text
+
+
+def test_render_presentation_missing_named_template_still_returns_template_not_found(
+    tmp_path: Path, template_bytes: bytes, template_manifest: dict
+) -> None:
+    tpl_dir = tmp_path / "templates"
+    tpl_dir.mkdir()
+    (tpl_dir / "default.pptx").write_bytes(template_bytes)
+    (tpl_dir / "default.manifest.json").write_text(json.dumps(template_manifest), encoding="utf-8")
+
+    app = create_app(_make_config(tmp_path, template_dir=str(tpl_dir)))
+    with TestClient(app) as client:
+        client.post("/mcp/", json=_MCP_INIT, headers={"Accept": "application/json", "Content-Type": "application/json"})
+        body = _mcp_post(client, _render_call({"deck": _VALID_DECK, "template_name": "missing_template"}))
+
+    error_text = _tool_text(body)
+    assert "TEMPLATE_NOT_FOUND" in error_text

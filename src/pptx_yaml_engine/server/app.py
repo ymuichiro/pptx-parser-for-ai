@@ -36,7 +36,7 @@ from pptx_yaml_engine.output.service import render_pptx as render_pptx_impl
 from pptx_yaml_engine.output.validation import validate_deck as validate_deck_impl
 from pptx_yaml_engine.server.artifacts import ArtifactStore
 from pptx_yaml_engine.server.config import ServerConfig, load_config
-from pptx_yaml_engine.server.template_registry import TemplateRegistry
+from pptx_yaml_engine.server.template_registry import DEFAULT_TEMPLATE_NAME, TemplateRegistry
 from pptx_yaml_engine.utils.b64 import decode_b64
 
 logger = logging.getLogger(__name__)
@@ -193,20 +193,23 @@ def create_mcp(config: ServerConfig, artifact_store: ArtifactStore, template_reg
 
     @mcp.tool()
     def render_presentation(
-        template_name: str,
         deck: dict[str, Any],
+        template_name: str | None = None,
         file_name: str | None = None,
     ) -> dict[str, Any]:
         """Render a PowerPoint file using a server-managed template.
 
         Call list_templates() first to discover available template names and
-        which semantic layouts each one supports.  Build the deck using only
+        which semantic layouts each one supports. Build the deck using only
         layouts that appear in the chosen template's supported_layouts list.
+        If ``template_name`` is omitted, ``null``, empty, or whitespace-only,
+        the server falls back to the template named ``default``.
 
         On success returns a temporary ``download_url`` (valid for ~15 minutes)
         together with slide_count and expiry metadata.
         """
-        entry = template_registry.get(template_name)
+        normalized_name = template_registry.normalize_name(template_name)
+        entry = template_registry.resolve(template_name)
         if entry is None:
             available = [e["name"] for e in template_registry.list()]
             if not available:
@@ -216,13 +219,23 @@ def create_mcp(config: ServerConfig, artifact_store: ArtifactStore, template_reg
                         "No templates are available on this server. "
                         "The operator must place .pptx files and companion .manifest.json "
                         "files in the template directory.",
+                        )
+                    )
+            if normalized_name in {None, DEFAULT_TEMPLATE_NAME}:
+                raise _tool_error(
+                    DomainError(
+                        "DEFAULT_TEMPLATE_NOT_FOUND",
+                        "No default template is available on this server. "
+                        "Add default.pptx or default.potx with a companion "
+                        "default.manifest.json file to the template directory.",
+                        {"requested": template_name, "default": DEFAULT_TEMPLATE_NAME, "available": available},
                     )
                 )
             raise _tool_error(
                 DomainError(
                     "TEMPLATE_NOT_FOUND",
-                    f"Template '{template_name}' not found.",
-                    {"requested": template_name, "available": available},
+                    f"Template '{normalized_name}' not found.",
+                    {"requested": template_name, "normalized": normalized_name, "available": available},
                 )
             )
         try:

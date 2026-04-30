@@ -28,6 +28,7 @@ from pptx_yaml_engine.utils.fingerprint import template_fingerprint
 logger = logging.getLogger(__name__)
 
 _TEMPLATE_SUFFIXES = {".pptx", ".potx"}
+DEFAULT_TEMPLATE_NAME = "default"
 
 
 @dataclass(frozen=True, slots=True)
@@ -53,6 +54,19 @@ class TemplateRegistry:
         self._dir = Path(template_dir)
         self._entries: dict[str, TemplateEntry] = {}
 
+    @staticmethod
+    def normalize_name(name: str | None) -> str | None:
+        """Normalize a caller-supplied template name.
+
+        ``None``, empty strings, and whitespace-only strings normalize to
+        ``None`` so callers can distinguish "no explicit template requested"
+        from an actual template lookup key.
+        """
+        if name is None:
+            return None
+        normalized = name.strip().lower()
+        return normalized or None
+
     # ------------------------------------------------------------------
     # Public API
     # ------------------------------------------------------------------
@@ -74,7 +88,8 @@ class TemplateRegistry:
         candidates = sorted(p for p in self._dir.iterdir() if p.suffix in _TEMPLATE_SUFFIXES)
 
         for pptx_path in candidates:
-            norm_name = pptx_path.stem.lower()
+            norm_name = self.normalize_name(pptx_path.stem)
+            assert norm_name is not None  # stems from filenames are never blank
 
             if norm_name in seen_names:
                 msg = f"Duplicate template name '{norm_name}' (from {pptx_path.name}), skipping."
@@ -140,9 +155,23 @@ class TemplateRegistry:
             for entry in self._entries.values()
         ]
 
-    def get(self, name: str) -> TemplateEntry | None:
+    def get(self, name: str | None) -> TemplateEntry | None:
         """Return the entry for *name* (case-insensitive), or ``None``."""
-        return self._entries.get(name.lower())
+        normalized = self.normalize_name(name)
+        if normalized is None:
+            return None
+        return self._entries.get(normalized)
+
+    def get_default(self) -> TemplateEntry | None:
+        """Return the configured default template entry, if present."""
+        return self._entries.get(DEFAULT_TEMPLATE_NAME)
+
+    def resolve(self, name: str | None) -> TemplateEntry | None:
+        """Resolve a template name, falling back to ``default`` when omitted."""
+        normalized = self.normalize_name(name)
+        if normalized is None:
+            return self.get_default()
+        return self._entries.get(normalized)
 
     def __len__(self) -> int:
         return len(self._entries)

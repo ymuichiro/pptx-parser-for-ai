@@ -4,6 +4,11 @@ Template-driven PowerPoint generation MCP server.
 
 This project maps semantic deck JSON into placeholders from a pre-authored `.pptx` template. The template owns visual design; the deck owns content; the manifest connects semantic slots to PowerPoint placeholder `idx` values.
 
+Server-managed templates are loaded from the templates directory at startup. If
+`default.pptx` or `default.potx` is present with a matching
+`default.manifest.json`, `render_presentation` uses it automatically when the
+caller omits `template_name` or passes `null` / blank input.
+
 ## Run
 
 ```bash
@@ -29,6 +34,8 @@ Health and generated artifacts are available at `/health` and `/artifacts/{token
 - `validate_manifest`
 - `validate_deck`
 - `render_presentation`
+
+Use `list_templates` to inspect the templates currently loaded on the server.
 
 Deck image fields accept only `icon` objects:
 
