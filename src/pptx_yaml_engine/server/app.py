@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import contextlib
 import json
+import logging
 from collections.abc import AsyncIterator, Awaitable, Callable
 from typing import Any
 
@@ -35,7 +36,10 @@ from pptx_yaml_engine.output.service import render_pptx as render_pptx_impl
 from pptx_yaml_engine.output.validation import validate_deck as validate_deck_impl
 from pptx_yaml_engine.server.artifacts import ArtifactStore
 from pptx_yaml_engine.server.config import ServerConfig, load_config
+from pptx_yaml_engine.server.template_registry import TemplateRegistry
 from pptx_yaml_engine.utils.b64 import decode_b64
+
+logger = logging.getLogger(__name__)
 
 
 class ContentLengthLimitMiddleware:
@@ -86,7 +90,7 @@ def _base_url(config: ServerConfig) -> str:
     return f"http://127.0.0.1:{config.port}"
 
 
-def create_mcp(config: ServerConfig, artifact_store: ArtifactStore) -> FastMCP:
+def create_mcp(config: ServerConfig, artifact_store: ArtifactStore, template_registry: TemplateRegistry) -> FastMCP:
     transport_hosts = sorted(
         {
             host
@@ -177,13 +181,81 @@ def create_mcp(config: ServerConfig, artifact_store: ArtifactStore) -> FastMCP:
             raise _tool_error(exc) from exc
 
     @mcp.tool()
+    def list_templates() -> dict[str, Any]:
+        """List templates available on this server for use with render_presentation.
+
+        Each entry shows the template name, a human-readable description, and the
+        set of semantic layout keys (e.g. ``cover_title``, ``list_basic``) that
+        the template supports.  Pass the ``name`` value to render_presentation.
+        """
+        templates = template_registry.list()
+        return {"templates": templates, "count": len(templates)}
+
+    @mcp.tool()
     def render_presentation(
+        template_name: str,
+        deck: dict[str, Any],
+        file_name: str | None = None,
+    ) -> dict[str, Any]:
+        """Render a PowerPoint file using a server-managed template.
+
+        Call list_templates() first to discover available template names and
+        which semantic layouts each one supports.  Build the deck using only
+        layouts that appear in the chosen template's supported_layouts list.
+
+        On success returns a temporary ``download_url`` (valid for ~15 minutes)
+        together with slide_count and expiry metadata.
+        """
+        entry = template_registry.get(template_name)
+        if entry is None:
+            available = [e["name"] for e in template_registry.list()]
+            if not available:
+                raise _tool_error(
+                    DomainError(
+                        "NO_TEMPLATES_CONFIGURED",
+                        "No templates are available on this server. "
+                        "The operator must place .pptx files and companion .manifest.json "
+                        "files in the template directory.",
+                    )
+                )
+            raise _tool_error(
+                DomainError(
+                    "TEMPLATE_NOT_FOUND",
+                    f"Template '{template_name}' not found.",
+                    {"requested": template_name, "available": available},
+                )
+            )
+        try:
+            pptx_bytes = render_pptx_impl(entry.template_bytes, entry.manifest, deck)
+            artifact = artifact_store.publish(
+                pptx_bytes,
+                file_name or deck.get("meta", {}).get("title", "presentation.pptx"),
+                _base_url(config),
+            )
+            return {
+                "success": True,
+                **artifact,
+                "slideCount": len(deck.get("slides", [])),
+            }
+        except DomainError as exc:
+            raise _tool_error(exc) from exc
+
+    @mcp.tool()
+    def render_presentation_custom(
         template_b64: str,
         manifest: dict[str, Any],
         deck: dict[str, Any],
         file_name: str | None = None,
     ) -> dict[str, Any]:
-        """Render a PowerPoint file and return a temporary download URL."""
+        """Render a PowerPoint using a caller-supplied template and manifest.
+
+        This is the advanced / operator tool.  For regular use, prefer
+        render_presentation() with a server-managed template instead.
+
+        ``template_b64`` must be the base-64-encoded bytes of a ``.pptx`` or
+        ``.potx`` file.  ``manifest`` must be a finalized manifest whose
+        ``template_fingerprint`` matches the supplied template bytes.
+        """
         try:
             pptx_bytes = render_pptx_impl(decode_b64(template_b64), manifest, deck)
             artifact = artifact_store.publish(
@@ -233,11 +305,17 @@ def create_app(config: ServerConfig | None = None) -> Starlette:
         ttl_seconds=resolved.artifact_ttl_seconds,
         max_output_bytes=resolved.max_output_bytes,
     )
-    mcp = create_mcp(resolved, artifact_store)
+    template_registry = TemplateRegistry(resolved.template_dir)
+    mcp = create_mcp(resolved, artifact_store, template_registry)
 
     @contextlib.asynccontextmanager
     async def lifespan(_app: Starlette) -> AsyncIterator[None]:
         artifact_store.init()
+        warnings = template_registry.load()
+        for warning in warnings:
+            logger.warning("Template registry: %s", warning)
+        if not warnings:
+            logger.info("Template registry loaded %d template(s).", len(template_registry))
         async with mcp.session_manager.run():
             yield
         artifact_store.stop()

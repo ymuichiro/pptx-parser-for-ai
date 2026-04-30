@@ -8,10 +8,9 @@
 
 ## Validation
 
-- [ ] `npm run lint`
-- [ ] `npm run typecheck`
-- [ ] `npm run test`
-- [ ] `npm run build`
+- [ ] `uv run ruff check`
+- [ ] `uv run mypy src`
+- [ ] `uv run pytest`
 
 ## Security impact
 

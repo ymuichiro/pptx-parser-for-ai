@@ -1,6 +1,0 @@
-{
-  "parseMs": 1200,
-  "layoutMs": 600,
-  "generateMs": 8000,
-  "peakHeapMb": 256
-}

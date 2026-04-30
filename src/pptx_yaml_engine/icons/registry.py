@@ -1,0 +1,225 @@
+from __future__ import annotations
+
+import io
+import re
+from collections.abc import Iterable
+from contextlib import closing
+from importlib.resources import files
+from typing import Any, cast
+from zipfile import ZipFile
+
+from PIL import Image, ImageDraw
+
+from pptx_yaml_engine.errors import DomainError
+
+COLOR_RE = re.compile(r"^#[0-9A-Fa-f]{6}$")
+DEFAULT_COLOR = "#111827"
+DEFAULT_VARIANT = "outline"
+MAX_ICON_PX = 512
+
+
+def _svg(label: str, paths: str) -> str:
+    return (
+        '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" '
+        'fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" '
+        f'stroke-linejoin="round"><title>{label}</title>{paths}</svg>'
+    )
+
+
+COMMON_SVGS: dict[str, str] = {
+    "archive-box": _svg("archive-box", '<path d="M4 7h16"/><path d="M5 7l1 13h12l1-13"/><path d="M3 3h18v4H3z"/><path d="M9 11h6"/>'),
+    "calendar": _svg("calendar", '<path d="M7 3v4"/><path d="M17 3v4"/><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18"/>'),
+    "chart-bar": _svg("chart-bar", '<path d="M4 19h16"/><path d="M7 16V9"/><path d="M12 16V5"/><path d="M17 16v-4"/>'),
+    "check-circle": _svg("check-circle", '<circle cx="12" cy="12" r="9"/><path d="M8 12l2.5 2.5L16 9"/>'),
+    "cloud-arrow-up": _svg("cloud-arrow-up", '<path d="M12 13V5"/><path d="M8.5 8.5L12 5l3.5 3.5"/><path d="M7 18a5 5 0 0 1 .8-9.9A6 6 0 0 1 19 10.5a4 4 0 0 1-1 7.5H7z"/>'),
+    "cog-6-tooth": _svg("cog-6-tooth", '<circle cx="12" cy="12" r="3"/><path d="M12 2v3"/><path d="M12 19v3"/><path d="M4.9 4.9l2.1 2.1"/><path d="M17 17l2.1 2.1"/><path d="M2 12h3"/><path d="M19 12h3"/><path d="M4.9 19.1L7 17"/><path d="M17 7l2.1-2.1"/>'),
+    "document-text": _svg("document-text", '<path d="M6 3h8l4 4v14H6z"/><path d="M14 3v5h5"/><path d="M9 12h6"/><path d="M9 16h6"/>'),
+    "exclamation-triangle": _svg("exclamation-triangle", '<path d="M12 3l10 18H2z"/><path d="M12 9v5"/><path d="M12 18h.01"/>'),
+    "inbox-arrow-down": _svg("inbox-arrow-down", '<path d="M12 3v9"/><path d="M8 8l4 4 4-4"/><path d="M4 14l2-8h12l2 8v5H4z"/><path d="M4 14h5l1.5 2h3L15 14h5"/>'),
+    "paper-airplane": _svg("paper-airplane", '<path d="M22 2L11 13"/><path d="M22 2l-7 20-4-9-9-4z"/>'),
+    "photo": _svg("photo", '<rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="8" cy="10" r="1.5"/><path d="M21 16l-5-5-4 4-2-2-5 5"/>'),
+    "presentation-chart-line": _svg("presentation-chart-line", '<path d="M3 4h18"/><path d="M5 4v12h14V4"/><path d="M8 20l4-4 4 4"/><path d="M8 13l3-3 2 2 3-5"/>'),
+    "sparkles": _svg("sparkles", '<path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z"/><path d="M19 16l.8 2.2L22 19l-2.2.8L19 22l-.8-2.2L16 19l2.2-.8z"/>'),
+    "table-cells": _svg("table-cells", '<rect x="3" y="5" width="18" height="14" rx="1"/><path d="M3 10h18"/><path d="M9 5v14"/><path d="M15 5v14"/>'),
+    "wrench-screwdriver": _svg("wrench-screwdriver", '<path d="M14 6l4-4 4 4-4 4z"/><path d="M4 20l8-8"/><path d="M2 13a5 5 0 0 0 7-7L6 9 4 7l3-3a5 5 0 0 0-5 9z"/>'),
+}
+
+LUCIDE_ALIASES: dict[str, str] = {
+    "archive": "archive-box",
+    "calendar": "calendar",
+    "chart-bar": "chart-bar",
+    "check-circle": "check-circle",
+    "cloud-upload": "cloud-arrow-up",
+    "cog": "cog-6-tooth",
+    "file-text": "document-text",
+    "image": "photo",
+    "inbox": "inbox-arrow-down",
+    "send": "paper-airplane",
+    "sparkles": "sparkles",
+    "table": "table-cells",
+    "triangle-alert": "exclamation-triangle",
+    "wrench": "wrench-screwdriver",
+}
+
+SUPPORTED_PACKS = ("heroicons", "lucide")
+SUPPORTED_VARIANTS: dict[str, tuple[str, ...]] = {
+    "heroicons": ("outline", "solid", "mini", "micro"),
+    "lucide": ("outline",),
+}
+
+
+def _names_for_pack(pack: str) -> Iterable[str]:
+    if pack == "heroicons":
+        names = _zip_icon_names("heroicons", "heroicons.zip", "outline/")
+        return names or COMMON_SVGS.keys()
+    if pack == "lucide":
+        names = _zip_icon_names("lucide", "lucide.zip", "")
+        return names or LUCIDE_ALIASES.keys()
+    return ()
+
+
+def _zip_icon_names(package: str, zip_file_name: str, prefix: str) -> list[str]:
+    try:
+        zip_data = (files(package) / zip_file_name).open("rb")
+        with closing(zip_data), ZipFile(zip_data, "r") as zip_file:
+            names = []
+            for entry in zip_file.namelist():
+                if not entry.endswith(".svg") or not entry.startswith(prefix):
+                    continue
+                name = entry[len(prefix) : -4]
+                if "/" not in name:
+                    names.append(name)
+            return sorted(names)
+    except Exception:
+        return []
+
+
+def list_icons(pack: str | None = None, variant: str | None = None, query: str | None = None) -> dict[str, Any]:
+    packs = [pack] if pack else list(SUPPORTED_PACKS)
+    result: dict[str, list[str]] = {}
+    needle = query.lower() if query else None
+
+    for pack_name in packs:
+        if pack_name not in SUPPORTED_PACKS:
+            raise DomainError("ICON_PACK_UNSUPPORTED", f"icon pack '{pack_name}' is not supported", {"pack": pack_name})
+        if variant is not None and variant not in SUPPORTED_VARIANTS[pack_name]:
+            raise DomainError("ICON_VARIANT_INVALID", f"variant '{variant}' is not valid for pack '{pack_name}'", {"pack": pack_name, "variant": variant})
+        names = sorted(_names_for_pack(pack_name))
+        if needle:
+            names = [name for name in names if needle in name]
+        result[pack_name] = names
+
+    return {"packs": result, "defaultPack": "heroicons", "defaultVariant": DEFAULT_VARIANT}
+
+
+def _normalize_icon_ref(icon_ref: dict[str, Any]) -> tuple[str, str, str, str, str | None, float]:
+    if not isinstance(icon_ref, dict):
+        raise DomainError("ICON_REF_INVALID", "icon must be an object", {"received": type(icon_ref).__name__})
+    pack = icon_ref.get("pack")
+    name = icon_ref.get("name")
+    if not isinstance(pack, str) or not pack:
+        raise DomainError("ICON_REF_INVALID", "icon.pack is required", {"field": "pack"})
+    if not isinstance(name, str) or not name:
+        raise DomainError("ICON_REF_INVALID", "icon.name is required", {"field": "name"})
+    if pack not in SUPPORTED_PACKS:
+        raise DomainError("ICON_PACK_UNSUPPORTED", f"icon pack '{pack}' is not supported", {"pack": pack})
+    variant = icon_ref.get("variant") or DEFAULT_VARIANT
+    if not isinstance(variant, str) or variant not in SUPPORTED_VARIANTS[pack]:
+        raise DomainError("ICON_VARIANT_INVALID", f"variant '{variant}' is not valid for pack '{pack}'", {"pack": pack, "variant": variant})
+    color = icon_ref.get("color") or DEFAULT_COLOR
+    if not isinstance(color, str) or not COLOR_RE.match(color):
+        raise DomainError("ICON_COLOR_INVALID", "icon.color must be #RRGGBB", {"color": color})
+    background = icon_ref.get("background_color")
+    if background is not None and (not isinstance(background, str) or not COLOR_RE.match(background)):
+        raise DomainError("ICON_COLOR_INVALID", "icon.background_color must be #RRGGBB", {"background_color": background})
+    padding = icon_ref.get("padding_ratio", 0.12)
+    if not isinstance(padding, int | float) or padding < 0 or padding > 0.45:
+        raise DomainError("ICON_REF_INVALID", "icon.padding_ratio must be between 0 and 0.45", {"padding_ratio": padding})
+    return pack, name, variant, color, background, float(padding)
+
+
+def _svg_for_icon(pack: str, name: str, color: str) -> str:
+    if pack == "heroicons":
+        return _heroicon_svg(name, color)
+    if pack == "lucide":
+        return _lucide_svg(name, color)
+    source_name = LUCIDE_ALIASES.get(name, name) if pack == "lucide" else name
+    svg = COMMON_SVGS.get(source_name)
+    if svg is None:
+        raise DomainError("ICON_NAME_NOT_FOUND", f"icon '{name}' not found in pack '{pack}'", {"pack": pack, "name": name})
+    return svg.replace("currentColor", color)
+
+
+def _with_xmlns(svg: str) -> str:
+    if "xmlns=" in svg:
+        return svg
+    return svg.replace("<svg ", '<svg xmlns="http://www.w3.org/2000/svg" ', 1)
+
+
+def _heroicon_svg(name: str, color: str, variant: str = DEFAULT_VARIANT) -> str:
+    try:
+        import heroicons
+
+        attrs: dict[str, object] = {"fill": "none", "stroke": color}
+        if variant in {"solid", "mini", "micro"}:
+            attrs = {"fill": color, "stroke": "none"}
+        return _with_xmlns(heroicons._render_icon(variant, name, None, attrs))  # type: ignore[attr-defined,no-any-return]
+    except Exception:
+        svg = COMMON_SVGS.get(name)
+        if svg is None:
+            raise DomainError(
+                "ICON_NAME_NOT_FOUND",
+                f"icon '{name}' not found in pack 'heroicons'",
+                {"pack": "heroicons", "name": name},
+            ) from None
+        return svg.replace("currentColor", color)
+
+
+def _lucide_svg(name: str, color: str) -> str:
+    try:
+        import lucide
+
+        return _with_xmlns(
+            lucide._render_icon(name, None, color=color, stroke=color)  # type: ignore[attr-defined,no-any-return]
+        )
+    except Exception:
+        source_name = LUCIDE_ALIASES.get(name, name)
+        svg = COMMON_SVGS.get(source_name)
+        if svg is None:
+            raise DomainError(
+                "ICON_NAME_NOT_FOUND",
+                f"icon '{name}' not found in pack 'lucide'",
+                {"pack": "lucide", "name": name},
+            ) from None
+        return svg.replace("currentColor", color)
+
+
+def _fallback_png(size: int, color: str, background: str | None, padding_ratio: float) -> bytes:
+    image = Image.new("RGBA", (size, size), background or (255, 255, 255, 0))
+    draw = ImageDraw.Draw(image)
+    pad = int(size * padding_ratio)
+    stroke = max(2, size // 18)
+    draw.rounded_rectangle((pad, pad, size - pad, size - pad), radius=max(4, size // 8), outline=color, width=stroke)
+    draw.line((pad * 1.6, size * 0.58, size * 0.45, size * 0.72, size * 0.74, size * 0.33), fill=color, width=stroke)
+    output = io.BytesIO()
+    image.save(output, format="PNG")
+    return output.getvalue()
+
+
+def resolve_icon(icon_ref: dict[str, Any], target_px: int = MAX_ICON_PX) -> bytes:
+    pack, name, variant, color, background, padding = _normalize_icon_ref(icon_ref)
+    size = max(16, min(MAX_ICON_PX, int(target_px)))
+    svg = _heroicon_svg(name, color, variant) if pack == "heroicons" else _svg_for_icon(pack, name, color)
+    try:
+        import cairosvg
+
+        return cast(
+            bytes,
+            cairosvg.svg2png(
+                bytestring=svg.encode("utf-8"),
+                output_width=size,
+                output_height=size,
+            ),
+        )
+    except Exception:
+        return _fallback_png(size, color, background, padding)

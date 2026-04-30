@@ -1,0 +1,56 @@
+[project]
+name = "pptx-parser-for-ai"
+version = "0.1.0"
+description = "Template-driven PowerPoint generation MCP server"
+readme = "README.md"
+requires-python = ">=3.12"
+license = { text = "MIT" }
+dependencies = [
+  "cairosvg>=2.8.2",
+  "heroicons>=2.14.0",
+  "lucide>=1.1.3",
+  "mcp>=1.22.0",
+  "pillow>=12.0.0",
+  "pydantic>=2.12.0",
+  "python-pptx>=1.0.2",
+  "pyyaml>=6.0.3",
+  "starlette>=0.50.0",
+  "uvicorn[standard]>=0.38.0",
+]
+
+[project.scripts]
+pptx-template-mcp = "pptx_yaml_engine.server.app:main"
+
+[dependency-groups]
+dev = [
+  "httpx>=0.28.1",
+  "mypy>=1.19.0",
+  "pytest>=9.0.0",
+  "pytest-asyncio>=1.3.0",
+  "ruff>=0.14.0",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/pptx_yaml_engine"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM"]
+ignore = ["E501"]
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+warn_unused_ignores = false
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]

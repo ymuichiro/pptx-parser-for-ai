@@ -1,0 +1,131 @@
+name: pptx-parser-for-ai
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: mcp-app-server/Dockerfile
+    environment:
+      ALLOWED_HOSTS: ${ALLOWED_HOSTS:-127.0.0.1,localhost,app.internal}
+      ARTIFACT_ROOT_DIR: ${ARTIFACT_ROOT_DIR:-/tmp/pptx-mcp-artifacts}
+      ARTIFACT_TTL_SECONDS: ${ARTIFACT_TTL_SECONDS:-900}
+      LISTEN: 0.0.0.0
+      MAX_OUTPUT_BYTES: ${MAX_OUTPUT_BYTES:-26214400}
+      MAX_REQUEST_BYTES: ${MAX_REQUEST_BYTES:-2097152}
+      PORT: "3001"
+      PUBLIC_BASE_URL: ${PUBLIC_BASE_URL:-}
+      TEMPLATE_DIR: ${TEMPLATE_DIR:-/templates}
+    volumes:
+      - ${HOST_TEMPLATE_DIR:-./templates}:/templates:ro
+    expose:
+      - "3001"
+    restart: unless-stopped
+    init: true
+    read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=128m
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    pids_limit: 256
+    mem_limit: 512m
+    cpus: 1.0
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - 'import socket; s=socket.create_connection(("127.0.0.1", 3001), 3); s.close()'
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    networks:
+      - app_net
+
+  localproxy:
+    image: alpine/socat:1.8.0.3
+    depends_on:
+      app:
+        condition: service_healthy
+    command:
+      - TCP-LISTEN:3001,fork,reuseaddr
+      - TCP:app:3001
+    ports:
+      - "127.0.0.1:${APP_PORT:-13001}:3001"
+    restart: unless-stopped
+    read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=16m
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    pids_limit: 128
+    mem_limit: 64m
+    cpus: 0.25
+    networks:
+      - app_net
+      - ingress_net
+
+  cloudflared:
+    image: cloudflare/cloudflared:2026.3.0@sha256:6b599ca3e974349ead3286d178da61d291961182ec3fe9c505e1dd02c8ac31b0
+    profiles:
+      - tunnel
+    depends_on:
+      app:
+        condition: service_healthy
+    command:
+      - tunnel
+      - --no-autoupdate
+      - run
+      - --token
+      - ${CLOUDFLARE_TUNNEL_TOKEN:-}
+    restart: unless-stopped
+    read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=64m
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    mem_limit: 128m
+    cpus: 0.5
+    networks:
+      - app_net
+      - egress_net
+
+  quicktunnel:
+    image: cloudflare/cloudflared:2026.3.0@sha256:6b599ca3e974349ead3286d178da61d291961182ec3fe9c505e1dd02c8ac31b0
+    profiles:
+      - quicktunnel
+    depends_on:
+      app:
+        condition: service_healthy
+    command:
+      - tunnel
+      - --no-autoupdate
+      - --url
+      - http://app:3001
+      - --http-host-header
+      - ${QUICK_TUNNEL_HOST_HEADER:-app.internal}
+    restart: unless-stopped
+    read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=64m
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    mem_limit: 128m
+    cpus: 0.5
+    networks:
+      - app_net
+      - egress_net
+
+networks:
+  app_net:
+    internal: true
+  ingress_net:
+  egress_net:

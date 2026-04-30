@@ -1,64 +1,39 @@
 # pptx-parser-for-ai
 
-[![CI](https://github.com/ymuichiro/pptx-parser-for-ai/actions/workflows/ci.yml/badge.svg)](https://github.com/ymuichiro/pptx-parser-for-ai/actions/workflows/ci.yml)
-[![Security](https://github.com/ymuichiro/pptx-parser-for-ai/actions/workflows/security.yml/badge.svg)](https://github.com/ymuichiro/pptx-parser-for-ai/actions/workflows/security.yml)
-[![Docs](https://github.com/ymuichiro/pptx-parser-for-ai/actions/workflows/pages.yml/badge.svg)](https://github.com/ymuichiro/pptx-parser-for-ai/actions/workflows/pages.yml)
+Template-driven PowerPoint generation MCP server.
 
-`pptx-parser-for-ai` is a secure, deterministic PowerPoint generator for Node.js and TypeScript.
-It transforms a declarative YAML/TypeScript DSL into `.pptx` files, with built-in validation, layouting, and quality checks.
+This project maps semantic deck JSON into placeholders from a pre-authored `.pptx` template. The template owns visual design; the deck owns content; the manifest connects semantic slots to PowerPoint placeholder `idx` values.
 
-## Why this project
-
-- Deterministic generation for CI/CD and enterprise workflows
-- Strict schema validation (fail closed)
-- Security-first defaults (remote images disabled by default)
-- Reusable themes and template import support (`.pptx` / `.potx`)
-
-## Install
+## Run
 
 ```bash
-npm install pptx-parser-for-ai
+uv sync --all-groups
+uv run pptx-template-mcp
 ```
 
-## Quick start
+The Streamable HTTP MCP endpoint is mounted at:
 
-```ts
-import { PPTXRenderer } from "pptx-parser-for-ai";
-
-const renderer = new PPTXRenderer({ enableQA: true });
-await renderer.generateFromFile("./presentation.yaml", "./output.pptx");
+```text
+http://127.0.0.1:3001/mcp
 ```
 
-## Documentation
+Health and generated artifacts are available at `/health` and `/artifacts/{token}`.
 
-- Website: https://ymuichiro.github.io/pptx-parser-for-ai/
-- Usage guide: `docs/usage-guide.md`
-- API reference: `docs/api-reference.md`
-- Examples: `example/README.md`
-- Security policy: `SECURITY.md`
+## Tools
 
-## Development
+- `list_supported_layouts`
+- `list_icons`
+- `inspect_template`
+- `propose_mapping`
+- `finalize_manifest`
+- `validate_manifest`
+- `validate_deck`
+- `render_presentation`
 
-```bash
-npm install
-npm run quality:check
+Deck image fields accept only `icon` objects:
+
+```json
+{"pack": "heroicons", "name": "cloud-arrow-up", "variant": "outline", "color": "#2563EB"}
 ```
 
-Useful commands:
-
-- `npm run lint`
-- `npm run typecheck`
-- `npm run test`
-- `npm run test:security`
-- `npm run build`
-
-## Publishing to npm
-
-```bash
-npm run build
-npm publish --access public
-```
-
-## License
-
-MIT License. See `LICENSE`.
+Paths, base64 images, uploaded assets, and arbitrary image URLs are intentionally unsupported.
