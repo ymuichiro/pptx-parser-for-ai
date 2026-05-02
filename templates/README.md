@@ -18,6 +18,20 @@ Invalid templates do **not** get skipped. Startup fails fast if a template:
 - violates the common semantic layout contract shared by all templates
 - collides with another template after lowercase stem normalization
 
+## Repository default template
+
+This repository includes a generated `default.pptx` used as the server fallback
+template. Regenerate it with:
+
+```bash
+.venv/bin/python scripts/make_default_template.py
+```
+
+The generator follows the visual direction in `examples/`, but emits a 16:9
+PowerPoint template. `default.manifest.json` may be kept as an inspection
+artifact, but runtime startup still regenerates mappings in memory and does not
+depend on that file.
+
 ## File naming rules
 
 - Names are normalised to lowercase; `Acme.pptx` and `acme.pptx` are treated as

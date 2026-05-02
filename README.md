@@ -10,6 +10,11 @@ mapping is reused for later render requests. If `default.pptx` or `default.potx`
 is present, `render_presentation` uses it automatically when the caller omits
 `template_name` or passes `null` / blank input.
 
+The repository ships with a generated production-oriented `templates/default.pptx`.
+Its source is `scripts/make_default_template.py`, and the visual direction is
+derived from the reference PNGs in `examples/`. The examples are 4:3 screenshots,
+but the generated PowerPoint template is 16:9.
+
 ## Run
 
 ```bash

@@ -1,7 +1,17 @@
 #!/usr/bin/env python3
 """
-Create templates/default.pptx (navy × white theme) and
-templates/default.manifest.json via inspect → propose → finalize pipeline.
+Create templates/default.pptx and templates/default.manifest.json.
+
+Design language derived from ./examples:
+
+- Pure white background on master and all layouts
+- Ultra-large bold black title (64pt content, 60pt cover/section)
+- Decorative concentric arcs on slide master (upper-right corner, gray, subtle)
+- Minimal open layout — no accent bars or filled panels on basic slides
+- Light card fills only for comparison and two-column layouts
+
+Runtime relies on startup auto-mapping; this script only prepares the
+template asset and a companion manifest artifact for inspection/debugging.
 
 Usage:
     python scripts/make_default_template.py
@@ -17,28 +27,31 @@ from pathlib import Path
 ROOT = Path(__file__).parent.parent
 sys.path.insert(0, str(ROOT / "src"))
 
+from copy import deepcopy
+
 from lxml import etree
 from pptx import Presentation
 from pptx.dml.color import RGBColor
+from pptx.enum.shapes import MSO_AUTO_SHAPE_TYPE
+from pptx.enum.text import MSO_ANCHOR, PP_ALIGN
 from pptx.oxml.ns import qn
+from pptx.shapes.autoshape import AutoShapeType
+from pptx.util import Inches, Pt
 
-from pptx_yaml_engine.mapper.service import (
-    finalize_manifest,
-    inspect_template,
-    propose_mapping,
-)
+_EMU = 914400  # English Metric Units per inch
 
-# ── constants ──────────────────────────────────────────────────────────────
-
-NAVY      = RGBColor(0x1A, 0x3A, 0x6C)
-WHITE     = RGBColor(0xFF, 0xFF, 0xFF)
-DARK_GRAY = RGBColor(0x33, 0x33, 0x33)
+from pptx_yaml_engine.mapper.service import finalize_manifest, inspect_template, propose_mapping
 
 TEMPLATES_DIR = ROOT / "templates"
-PPTX_OUT      = TEMPLATES_DIR / "default.pptx"
-JSON_OUT      = TEMPLATES_DIR / "default.manifest.json"
+PPTX_OUT = TEMPLATES_DIR / "default.pptx"
+JSON_OUT = TEMPLATES_DIR / "default.manifest.json"
 
-# ── visual helpers ─────────────────────────────────────────────────────────
+# Monochromatic editorial palette
+WHITE = RGBColor(0xFF, 0xFF, 0xFF)   # main background
+INK = RGBColor(0x11, 0x11, 0x11)    # title text – near black
+BODY = RGBColor(0x44, 0x44, 0x44)   # body / description text
+LINE = RGBColor(0xCC, 0xCC, 0xCC)   # separator lines, card borders
+CARD = RGBColor(0xF2, 0xF2, 0xF2)   # card background (comparison, two-col)
 
 
 def _solid_fill(fill_obj, rgb: RGBColor) -> None:
@@ -46,279 +59,461 @@ def _solid_fill(fill_obj, rgb: RGBColor) -> None:
     fill_obj.fore_color.rgb = rgb
 
 
-def _hex(rgb: RGBColor) -> str:
-    # RGBColor is an int subclass; str() returns the 6-digit uppercase hex.
-    return str(rgb)
+def _hide_line(line_obj) -> None:
+    line_obj.fill.background()
 
 
-def _set_defRPr_color(txBody, rgb: RGBColor) -> None:
-    """Set default run color in a:lstStyle/a:lvl1pPr/a:defRPr."""
-    lstStyle = txBody.find(qn("a:lstStyle"))
-    if lstStyle is None:
-        lstStyle = etree.SubElement(txBody, qn("a:lstStyle"))
-    lvl1 = lstStyle.find(qn("a:lvl1pPr"))
+def _set_defRPr_style(
+    tx_body,
+    *,
+    rgb: RGBColor | None = None,
+    size_pt: int | None = None,
+    bold: bool | None = None,
+) -> None:
+    """Inject default run properties into a placeholder's lstStyle."""
+    lst_style = tx_body.find(qn("a:lstStyle"))
+    if lst_style is None:
+        lst_style = etree.SubElement(tx_body, qn("a:lstStyle"))
+    lvl1 = lst_style.find(qn("a:lvl1pPr"))
     if lvl1 is None:
-        lvl1 = etree.SubElement(lstStyle, qn("a:lvl1pPr"))
+        lvl1 = etree.SubElement(lst_style, qn("a:lvl1pPr"))
     defRPr = lvl1.find(qn("a:defRPr"))
     if defRPr is None:
         defRPr = etree.SubElement(lvl1, qn("a:defRPr"))
-    for sf in defRPr.findall(qn("a:solidFill")):
-        defRPr.remove(sf)
-    solidFill = etree.SubElement(defRPr, qn("a:solidFill"))
-    srgbClr = etree.SubElement(solidFill, qn("a:srgbClr"))
-    srgbClr.set("val", _hex(rgb))
+
+    if rgb is not None:
+        for fill in defRPr.findall(qn("a:solidFill")):
+            defRPr.remove(fill)
+        solid_fill = etree.SubElement(defRPr, qn("a:solidFill"))
+        srgb = etree.SubElement(solid_fill, qn("a:srgbClr"))
+        srgb.set("val", str(rgb))
+
+    if size_pt is not None:
+        defRPr.set("sz", str(size_pt * 100))
+    if bold is not None:
+        defRPr.set("b", "1" if bold else "0")
 
 
-def _set_ph_color(layout, ph_idx: int, rgb: RGBColor) -> None:
+def _add_object_placeholder(layout, idx: int, *, left: float, top: float, width: float, height: float) -> None:
+    """Append a generic OBJECT (content) placeholder to a layout's spTree via raw XML.
+
+    This is required when a stock layout has fewer content placeholders than the
+    semantic mapping needs (e.g. Two Content only ships with 2, but three_cards needs 3).
+    The element is appended at the end of the spTree; call _configure_placeholder
+    immediately after to set typography and fill.
+    """
+    spTree = layout.shapes._spTree
+    ids = [int(el.get("id", "0")) for el in spTree.iter() if el.get("id") and el.get("id").isdigit()]
+    shape_id = max(ids, default=100) + 1
+    xml = (
+        f'<p:sp xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main"'
+        f' xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">'
+        f"<p:nvSpPr>"
+        f'<p:cNvPr id="{shape_id}" name="Content Placeholder {idx}"/>'
+        f"<p:cNvSpPr><a:spLocks noGrp=\"1\"/></p:cNvSpPr>"
+        f"<p:nvPr><p:ph idx=\"{idx}\"/></p:nvPr>"
+        f"</p:nvSpPr>"
+        f"<p:spPr>"
+        f"<a:xfrm>"
+        f'<a:off x="{int(left * _EMU)}" y="{int(top * _EMU)}"/>'
+        f'<a:ext cx="{int(width * _EMU)}" cy="{int(height * _EMU)}"/>'
+        f"</a:xfrm>"
+        f'<a:prstGeom prst="rect"><a:avLst/></a:prstGeom>'
+        f"</p:spPr>"
+        f"<p:txBody><a:bodyPr/><a:lstStyle/><a:p/></p:txBody>"
+        f"</p:sp>"
+    )
+    spTree.append(etree.fromstring(xml))
+
+
+def _layout_placeholder(layout, ph_idx: int):
     for ph in layout.placeholders:
         if ph.placeholder_format.idx == ph_idx:
-            _set_defRPr_color(ph.text_frame._txBody, rgb)
-            break
+            return ph
+    raise KeyError(f"placeholder idx={ph_idx} not found on layout {layout.name!r}")
 
 
-# ── template construction ──────────────────────────────────────────────────
+def _configure_placeholder(
+    layout,
+    ph_idx: int,
+    *,
+    left: float,
+    top: float,
+    width: float,
+    height: float,
+    text_rgb: RGBColor | None = None,
+    size_pt: int | None = None,
+    bold: bool | None = None,
+    margins: tuple[float, float, float, float] = (0.0, 0.0, 0.0, 0.0),
+    alignment: PP_ALIGN = PP_ALIGN.LEFT,
+    vertical_anchor: MSO_ANCHOR = MSO_ANCHOR.TOP,
+    fill_rgb: RGBColor | None = None,
+    line_rgb: RGBColor | None = None,
+) -> None:
+    ph = _layout_placeholder(layout, ph_idx)
+    ph.left = Inches(left)
+    ph.top = Inches(top)
+    ph.width = Inches(width)
+    ph.height = Inches(height)
 
-# Default python-pptx layout indices (verified from prior inspection):
-#  0  Title Slide          CENTER_TITLE(0), SUBTITLE(1)
-#  1  Title and Content    TITLE(0), OBJECT(1)
-#  2  Section Header       TITLE(0), BODY(1)
-#  3  Two Content          TITLE(0), OBJECT(1), OBJECT(2)
-#  4  Comparison           TITLE(0), BODY(1), OBJECT(2), BODY(3), OBJECT(4)
-#  5  Title Only           TITLE(0)
-#  6  Blank
-#  7  Content with Caption TITLE(0), OBJECT(1), BODY(2)
-#  8  Picture with Caption TITLE(0), PICTURE(1), BODY(2)
-#  9  Title and Vertical Text TITLE(0), BODY(1)
-# 10  Vertical Title and Text TITLE(0), BODY(1)
+    if fill_rgb is None:
+        ph.fill.background()
+    else:
+        _solid_fill(ph.fill, fill_rgb)
+
+    if line_rgb is None:
+        _hide_line(ph.line)
+    else:
+        ph.line.color.rgb = line_rgb
+
+    if not hasattr(ph, "text_frame"):
+        return
+
+    frame = ph.text_frame
+    frame.vertical_anchor = vertical_anchor
+    frame.word_wrap = True
+    frame.margin_left = Inches(margins[0])
+    frame.margin_top = Inches(margins[1])
+    frame.margin_right = Inches(margins[2])
+    frame.margin_bottom = Inches(margins[3])
+    frame.paragraphs[0].alignment = alignment
+    _set_defRPr_style(frame._txBody, rgb=text_rgb, size_pt=size_pt, bold=bold)
+
+
+def _add_shape(
+    container,
+    shape_type: MSO_AUTO_SHAPE_TYPE,
+    *,
+    left: float,
+    top: float,
+    width: float,
+    height: float,
+    fill_rgb: RGBColor | None = None,
+    line_rgb: RGBColor | None = None,
+    line_width_pt: float | None = None,
+    send_to_back: bool = True,
+) -> None:
+    """Add an autoshape to a layout or master via the internal spTree API."""
+    shapes = container.shapes
+    autoshape = AutoShapeType(shape_type)
+    shape_id = shapes._next_shape_id
+    sp = shapes._spTree.add_autoshape(
+        shape_id,
+        f"{autoshape.basename} {shape_id}",
+        autoshape.prst,
+        Inches(left),
+        Inches(top),
+        Inches(width),
+        Inches(height),
+    )
+    if send_to_back:
+        shapes._spTree.remove(sp)
+        shapes._spTree.insert(2, sp)
+    shape = shapes._shape_factory(sp)
+
+    if fill_rgb is None:
+        shape.fill.background()
+    else:
+        _solid_fill(shape.fill, fill_rgb)
+
+    if line_rgb is None:
+        _hide_line(shape.line)
+    else:
+        shape.line.color.rgb = line_rgb
+        if line_width_pt is not None:
+            shape.line.width = Pt(line_width_pt)
+
+
+def _add_master_arcs(prs: Presentation) -> None:
+    """Add decorative concentric oval arcs to the slide master.
+
+    Arcs are centered at the upper-right corner of the slide (13.333", 0"),
+    creating a subtle gray motif in the right portion of every slide.
+    Inner arcs are darker; outer arcs fade lighter.
+    """
+    # (radius_inches, gray_channel_byte, line_width_pt)
+    arc_specs = [
+        (4.0, 0xBB, 1.5),
+        (5.2, 0xC5, 1.25),
+        (6.4, 0xCE, 1.0),
+        (7.6, 0xD7, 0.75),
+        (8.8, 0xDF, 0.75),
+        (9.5, 0xE7, 0.5),
+    ]
+    cx = prs.slide_width.inches   # upper-right corner x (= slide width)
+    cy = 0.0                       # upper-right corner y (= slide top)
+
+    for r, gray, lw in arc_specs:
+        _add_shape(
+            prs.slide_master,
+            MSO_AUTO_SHAPE_TYPE.OVAL,
+            left=cx - r,
+            top=cy - r,
+            width=r * 2,
+            height=r * 2,
+            fill_rgb=None,
+            line_rgb=RGBColor(gray, gray, gray),
+            line_width_pt=lw,
+            send_to_back=True,
+        )
+
+
+# ---------------------------------------------------------------------------
+# Layout styling functions
+# ---------------------------------------------------------------------------
+
+def _style_cover_layout(layout) -> None:
+    """Title Slide – large bold title with subtitle on white."""
+    _solid_fill(layout.background.fill, WHITE)
+    # Title (CENTER_TITLE, idx=0) – prominent, upper area
+    _configure_placeholder(
+        layout, 0,
+        left=0.55, top=1.8, width=9.8, height=2.6,
+        text_rgb=INK, size_pt=60, bold=True,
+        vertical_anchor=MSO_ANCHOR.MIDDLE,
+    )
+    # Subtitle (SUBTITLE, idx=1)
+    _configure_placeholder(
+        layout, 1,
+        left=0.55, top=4.6, width=8.5, height=1.6,
+        text_rgb=BODY, size_pt=18,
+    )
+
+
+def _style_content_layout(layout) -> None:
+    """Title and Content – large bold title + open content area."""
+    _solid_fill(layout.background.fill, WHITE)
+    # Title (TITLE, idx=0) – reduced to 48pt so even 13-char JP titles fit on one line
+    _configure_placeholder(
+        layout, 0,
+        left=0.55, top=0.4, width=11.0, height=1.65,
+        text_rgb=INK, size_pt=48, bold=True,
+    )
+    # Content (OBJECT, idx=1) – starts with comfortable gap below title
+    _configure_placeholder(
+        layout, 1,
+        left=0.55, top=2.2, width=12.3, height=5.05,
+        text_rgb=BODY, size_pt=16,
+        margins=(0.0, 0.04, 0.0, 0.0),
+    )
+
+
+def _style_section_layout(layout) -> None:
+    """Section Header – large centered title for section breaks.
+
+    Default layout[2] positions TITLE at bottom (idx=0 top≈4.82") and
+    BODY above it (idx=1 top≈3.18"). We reposition both intentionally.
+    """
+    _solid_fill(layout.background.fill, WHITE)
+    # Body/subtitle above title (idx=1 in default Section Header)
+    _configure_placeholder(
+        layout, 1,
+        left=0.55, top=4.6, width=9.0, height=1.6,
+        text_rgb=BODY, size_pt=18,
+    )
+    # Title below body in template coordinates (prominent, upper area)
+    _configure_placeholder(
+        layout, 0,
+        left=0.55, top=2.0, width=10.0, height=2.3,
+        text_rgb=INK, size_pt=60, bold=True,
+        vertical_anchor=MSO_ANCHOR.MIDDLE,
+    )
+
+
+def _style_two_content_layout(layout) -> None:
+    """Two Content – redesigned as a true 3-column card layout.
+
+    The stock Two Content layout ships with only 2 OBJECT placeholders, but both
+    three_cards_horizontal and three_cards_vertical map here.  We inject a 3rd
+    OBJECT placeholder (idx=3) so the mapper assigns one card per column.
+
+    Column geometry (13.333" slide, 0.55" margins, 0.3" gaps):
+        card_width = (13.333 - 1.10 - 0.60) / 3 ≈ 3.878"
+        col1 left = 0.55   col2 left = 4.73   col3 left = 8.91
+    """
+    _solid_fill(layout.background.fill, WHITE)
+
+    # Title (TITLE, idx=0)
+    _configure_placeholder(
+        layout, 0,
+        left=0.55, top=0.35, width=11.0, height=1.45,
+        text_rgb=INK, size_pt=48, bold=True,
+    )
+
+    # Column geometry
+    col_w = 3.878
+    col_tops = (2.0, 2.0, 2.0)
+    col_lefts = (0.55, 4.73, 8.91)
+    col_h = 5.2
+
+    # Add the 3rd OBJECT placeholder before configuring (idx 1 & 2 already exist)
+    _add_object_placeholder(
+        layout, 3,
+        left=col_lefts[2], top=col_tops[2], width=col_w, height=col_h,
+    )
+
+    # Card background shapes (rounded rectangles, behind placeholders)
+    for col_left in col_lefts:
+        _add_shape(
+            layout, MSO_AUTO_SHAPE_TYPE.ROUNDED_RECTANGLE,
+            left=col_left - 0.08, top=col_tops[0] - 0.1, width=col_w + 0.16, height=col_h + 0.2,
+            fill_rgb=CARD, line_rgb=LINE, send_to_back=True,
+        )
+
+    # Left content (OBJECT, idx=1)
+    _configure_placeholder(
+        layout, 1,
+        left=col_lefts[0], top=col_tops[0], width=col_w, height=col_h,
+        text_rgb=BODY, size_pt=14,
+        margins=(0.08, 0.06, 0.08, 0.06),
+    )
+    # Center content (OBJECT, idx=2)
+    _configure_placeholder(
+        layout, 2,
+        left=col_lefts[1], top=col_tops[1], width=col_w, height=col_h,
+        text_rgb=BODY, size_pt=14,
+        margins=(0.08, 0.06, 0.08, 0.06),
+    )
+    # Right content (OBJECT, idx=3)
+    _configure_placeholder(
+        layout, 3,
+        left=col_lefts[2], top=col_tops[2], width=col_w, height=col_h,
+        text_rgb=BODY, size_pt=14,
+        margins=(0.08, 0.06, 0.08, 0.06),
+    )
+
+
+def _style_comparison_layout(layout) -> None:
+    """Comparison – title + two card columns with headers and body."""
+    _solid_fill(layout.background.fill, WHITE)
+    # Title (TITLE, idx=0)
+    _configure_placeholder(
+        layout, 0,
+        left=0.55, top=0.35, width=11.0, height=1.55,
+        text_rgb=INK, size_pt=54, bold=True,
+    )
+    # Left card
+    _add_shape(
+        layout, MSO_AUTO_SHAPE_TYPE.ROUNDED_RECTANGLE,
+        left=0.55, top=2.05, width=5.95, height=5.15,
+        fill_rgb=CARD, line_rgb=LINE, send_to_back=True,
+    )
+    # Right card
+    _add_shape(
+        layout, MSO_AUTO_SHAPE_TYPE.ROUNDED_RECTANGLE,
+        left=6.83, top=2.05, width=5.95, height=5.15,
+        fill_rgb=CARD, line_rgb=LINE, send_to_back=True,
+    )
+    # Left header (BODY, idx=1)
+    _configure_placeholder(
+        layout, 1,
+        left=0.88, top=2.25, width=5.3, height=0.55,
+        text_rgb=INK, size_pt=14, bold=True,
+        margins=(0.08, 0.04, 0.08, 0.0),
+    )
+    # Left body (OBJECT, idx=2)
+    _configure_placeholder(
+        layout, 2,
+        left=0.88, top=2.9, width=5.3, height=4.1,
+        text_rgb=BODY, size_pt=14,
+        margins=(0.08, 0.04, 0.08, 0.04),
+    )
+    # Right header (BODY, idx=3)
+    _configure_placeholder(
+        layout, 3,
+        left=7.16, top=2.25, width=5.3, height=0.55,
+        text_rgb=INK, size_pt=14, bold=True,
+        margins=(0.08, 0.04, 0.08, 0.0),
+    )
+    # Right body (OBJECT, idx=4)
+    _configure_placeholder(
+        layout, 4,
+        left=7.16, top=2.9, width=5.3, height=4.1,
+        text_rgb=BODY, size_pt=14,
+        margins=(0.08, 0.04, 0.08, 0.04),
+    )
+
+
+def _style_picture_layout(layout) -> None:
+    """Picture with Caption – title + large picture area + side caption.
+
+    Default layout[8] positions TITLE at bottom (idx=0) and PICTURE at top
+    (idx=1). We reposition all three placeholders for a horizontal split.
+    """
+    _solid_fill(layout.background.fill, WHITE)
+    # Title (TITLE, idx=0) – moved to top
+    _configure_placeholder(
+        layout, 0,
+        left=0.55, top=0.35, width=11.0, height=1.55,
+        text_rgb=INK, size_pt=54, bold=True,
+    )
+    # Picture placeholder (PICTURE, idx=1) – left area
+    _configure_placeholder(
+        layout, 1,
+        left=0.55, top=2.1, width=8.5, height=5.1,
+        fill_rgb=CARD, line_rgb=LINE,
+    )
+    # Caption (BODY, idx=2) – right column
+    _configure_placeholder(
+        layout, 2,
+        left=9.33, top=2.1, width=3.45, height=5.1,
+        text_rgb=BODY, size_pt=14,
+        margins=(0.0, 0.04, 0.0, 0.0),
+    )
+
+
+def _style_remaining_layouts(prs: Presentation) -> None:
+    """Apply white background to remaining stock layouts (5, 6, 7, 9, 10)."""
+    for idx in (5, 6, 7, 9, 10):
+        try:
+            _solid_fill(prs.slide_layouts[idx].background.fill, WHITE)
+        except IndexError:
+            pass
+
+
+# ---------------------------------------------------------------------------
+# Public build functions
+# ---------------------------------------------------------------------------
 
 def build_template() -> bytes:
     prs = Presentation()
-    prs.slide_width  = 12192000   # 16:9 widescreen
-    prs.slide_height = 6858000
+    prs.slide_width = Inches(13.333333)
+    prs.slide_height = Inches(7.5)
 
-    # Slide master: white background
+    # Master: pure white + subtle arc decorations
     _solid_fill(prs.slide_master.background.fill, WHITE)
+    _add_master_arcs(prs)
 
-    layouts = prs.slide_layouts
+    _style_cover_layout(prs.slide_layouts[0])
+    _style_content_layout(prs.slide_layouts[1])
+    _style_section_layout(prs.slide_layouts[2])
+    _style_two_content_layout(prs.slide_layouts[3])
+    _style_comparison_layout(prs.slide_layouts[4])
+    _style_picture_layout(prs.slide_layouts[8])
+    _style_remaining_layouts(prs)
 
-    # ── Layout 0: Title Slide  (cover_title, closing_end) ──
-    lay0 = layouts[0]
-    _solid_fill(lay0.background.fill, NAVY)
-    _set_ph_color(lay0, 0, WHITE)   # CENTER_TITLE
-    _set_ph_color(lay0, 1, WHITE)   # SUBTITLE
-
-    # ── Layout 1: Title and Content  (most content semantics) ──
-    lay1 = layouts[1]
-    _solid_fill(lay1.background.fill, WHITE)
-    _set_ph_color(lay1, 0, NAVY)        # title
-    _set_ph_color(lay1, 1, DARK_GRAY)   # content body
-
-    # ── Layout 2: Section Header  (section_divider) ──
-    lay2 = layouts[2]
-    _solid_fill(lay2.background.fill, NAVY)
-    _set_ph_color(lay2, 0, WHITE)   # TITLE
-    _set_ph_color(lay2, 1, WHITE)   # BODY
-
-    # ── Layout 3: Two Content  (three_cards_*) ──
-    lay3 = layouts[3]
-    _solid_fill(lay3.background.fill, WHITE)
-    _set_ph_color(lay3, 0, NAVY)
-    _set_ph_color(lay3, 1, DARK_GRAY)
-    _set_ph_color(lay3, 2, DARK_GRAY)
-
-    # ── Layout 4: Comparison  (comparison_2col) ──
-    lay4 = layouts[4]
-    _solid_fill(lay4.background.fill, WHITE)
-    _set_ph_color(lay4, 0, NAVY)
-    for idx in (1, 2, 3, 4):
-        _set_ph_color(lay4, idx, DARK_GRAY)
-
-    # ── Layout 8: Picture with Caption  (image_caption) ──
-    lay8 = layouts[8]
-    _solid_fill(lay8.background.fill, WHITE)
-    _set_ph_color(lay8, 0, NAVY)
-    _set_ph_color(lay8, 2, DARK_GRAY)   # BODY caption
-
-    buf = BytesIO()
-    prs.save(buf)
-    return buf.getvalue()
-
-
-# ── manifest overrides ─────────────────────────────────────────────────────
-#
-# _assign_common() always tries to bind a "subtitle" slot to the first
-# non-title placeholder.  For layouts without an explicit SUBTITLE-type
-# placeholder (Title and Content, Two Content, Comparison, Picture with
-# Caption) this consumes the content placeholder.  The overrides below
-# force the correct ppt_layout_name and content slot → idx bindings.
-
-OVERRIDES: dict = {
-    "layouts": {
-        # ── "Title Slide" based (SUBTITLE idx=1, so _assign_common is fine) ──
-
-        # closing_end: matched via ruleset alias; append optional fields to idx=1
-        "closing_end": {
-            "slots": {
-                "message": {"idx": 1, "kind": "text"},
-                "contact": {"idx": 1, "kind": "text"},
-                "cta":     {"idx": 1, "kind": "text"},
-            },
-        },
-
-        # ── "Title and Content" based (OBJECT idx=1 wrongly consumed as subtitle) ──
-
-        # agenda / list_basic: force layout name + bind items to idx=1
-        "agenda": {
-            "ppt_layout_name": "Title and Content",
-            "slots": {"items": {"idx": 1, "kind": "list"}},
-        },
-        "list_basic": {
-            "ppt_layout_name": "Title and Content",
-            "slots": {"items": {"idx": 1, "kind": "list"}},
-        },
-        # table_basic
-        "table_basic": {
-            "ppt_layout_name": "Title and Content",
-            "slots": {"table": {"idx": 1, "kind": "table"}},
-        },
-        # chart_basic
-        "chart_basic": {
-            "ppt_layout_name": "Title and Content",
-            "slots": {"chart": {"idx": 1, "kind": "chart"}},
-        },
-        # kpi_big_number: all metric fields appended to idx=1
-        "kpi_big_number": {
-            "ppt_layout_name": "Title and Content",
-            "slots": {
-                "metric.value":      {"idx": 1, "kind": "text"},
-                "metric.label":      {"idx": 1, "kind": "text"},
-                "metric.unit":       {"idx": 1, "kind": "text"},
-                "metric.delta":      {"idx": 1, "kind": "text"},
-                "supporting_points": {"idx": 1, "kind": "list"},
-            },
-        },
-        # timeline: all events appended to idx=1
-        "timeline": {
-            "ppt_layout_name": "Title and Content",
-            "slots": {
-                **{f"events[{i}].combined_text": {"idx": 1, "kind": "text"} for i in range(8)}
-            },
-        },
-        # appendix_backup: all content slots mapped to idx=1
-        "appendix_backup": {
-            "ppt_layout_name": "Title and Content",
-            "slots": {
-                "body":       {"idx": 1, "kind": "text"},
-                "items":      {"idx": 1, "kind": "list"},
-                "references": {"idx": 1, "kind": "list"},
-            },
-        },
-        # eol_notice: all detail fields mapped to idx=1
-        "eol_notice": {
-            "ppt_layout_name": "Title and Content",
-            "slots": {
-                "product_name":   {"idx": 1, "kind": "text"},
-                "end_of_sale":    {"idx": 1, "kind": "text"},
-                "end_of_support": {"idx": 1, "kind": "text"},
-                "replacement":    {"idx": 1, "kind": "text"},
-                "actions":        {"idx": 1, "kind": "list"},
-            },
-        },
-
-        # ── "Comparison" based (BODY idx=1 consumed as subtitle, so re-map) ──
-        # comparison_2col: "Comparison" auto-selected (0.98), fix broken left.* binding
-        "comparison_2col": {
-            "slots": {
-                "left.title":       {"idx": 1, "kind": "text"},
-                "left.description": {"idx": 2, "kind": "text"},
-                "right.title":      {"idx": 3, "kind": "text"},
-                "right.description": {"idx": 4, "kind": "text"},
-            },
-        },
-
-        # ── "Two Content" based ──
-        # three_cards_vertical: 2 cards in left column, 1 in right
-        "three_cards_vertical": {
-            "ppt_layout_name": "Two Content",
-            "slots": {
-                "title":                  {"idx": 0, "kind": "text"},
-                "cards[0].combined_text": {"idx": 1, "kind": "text"},
-                "cards[1].combined_text": {"idx": 1, "kind": "text"},
-                "cards[2].combined_text": {"idx": 2, "kind": "text"},
-            },
-        },
-        # three_cards_horizontal: 1 card in left, 2 in right
-        "three_cards_horizontal": {
-            "ppt_layout_name": "Two Content",
-            "slots": {
-                "title":                  {"idx": 0, "kind": "text"},
-                "cards[0].combined_text": {"idx": 1, "kind": "text"},
-                "cards[1].combined_text": {"idx": 2, "kind": "text"},
-                "cards[2].combined_text": {"idx": 2, "kind": "text"},
-            },
-        },
-
-        # ── "Picture with Caption" based ──
-        # image_caption: icon → PICTURE(idx=1), caption → BODY(idx=2)
-        "image_caption": {
-            "ppt_layout_name": "Picture with Caption",
-            "slots": {
-                "title":   {"idx": 0, "kind": "text"},
-                "icon":    {"idx": 1, "kind": "icon"},
-                "caption": {"idx": 2, "kind": "text"},
-            },
-        },
-    }
-}
-
-
-# ── manifest generation ────────────────────────────────────────────────────
+    output = BytesIO()
+    prs.save(output)
+    return output.getvalue()
 
 
 def build_manifest(template_bytes: bytes) -> dict:
     inspection = inspect_template(template_bytes)
-
-    print(f"  Inspected {len(inspection['layouts'])} layouts:")
-    for lay in inspection["layouts"]:
-        idxs = [str(p["placeholder_idx"]) for p in lay["placeholders"]]
-        print(f"    [{lay['layout_index']}] {lay['layout_name']!r}  idx={idxs}")
-
-    # "closing_end" aliases don't match any default layout name, so we add
-    # "title_slide" as a custom alias so it scores 0.98 against "Title Slide".
-    ruleset = {"aliases": {"closing_end": ["title_slide"]}}
-
-    proposal = propose_mapping(inspection, ruleset)
-
-    print(f"\n  Proposal covers {len(proposal['layouts'])} / 15 semantics:")
-    for sem, binding in sorted(proposal["layouts"].items()):
-        slots_list = list(binding.get("slots", {}).keys())
-        print(
-            f"    {sem:<28} → {binding['ppt_layout_name']!r:<24}"
-            f" ({binding['match_confidence']:.2f})  slots={slots_list}"
-        )
-
-    manifest = finalize_manifest(inspection, proposal, OVERRIDES)
-    print(f"\n  Manifest finalised: {len(manifest['layouts'])} layouts.")
-    return manifest
-
-
-# ── main ───────────────────────────────────────────────────────────────────
+    proposal = propose_mapping(inspection)
+    return finalize_manifest(inspection, proposal)
 
 
 def main() -> None:
     TEMPLATES_DIR.mkdir(parents=True, exist_ok=True)
 
-    print("Building template…")
     template_bytes = build_template()
     PPTX_OUT.write_bytes(template_bytes)
-    print(f"  Saved {PPTX_OUT.name}  ({len(template_bytes):,} bytes)\n")
 
-    print("Building manifest…")
     manifest = build_manifest(template_bytes)
     JSON_OUT.write_text(json.dumps(manifest, ensure_ascii=False, indent=2))
-    print(f"  Saved {JSON_OUT.name}\n")
 
-    print("Done ✓")
+    print(f"Saved {PPTX_OUT.relative_to(ROOT)}")
+    print(f"Saved {JSON_OUT.relative_to(ROOT)}")
 
 
 if __name__ == "__main__":
