@@ -3,6 +3,8 @@ from __future__ import annotations
 from collections.abc import Iterable
 from typing import Any
 
+from pptx_yaml_engine.utils.layout_names import layout_names_match
+
 
 def placeholder_type_name(value: Any) -> str:
     name = getattr(value, "name", None)
@@ -25,7 +27,11 @@ def find_layout_by_name(prs: Any, name: str) -> Any:
     if len(matches) == 1:
         return matches[0]
     if not matches:
-        return None
+        matches = [layout for layout in prs.slide_layouts if layout_names_match(str(layout.name), name)]
+        if len(matches) == 1:
+            return matches[0]
+        if not matches:
+            return None
     return matches
 
 

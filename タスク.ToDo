@@ -1,0 +1,19 @@
+このファイルは、現在の状態から見た残作業の一覧です。
+
+起動時の自動 mapping 生成、fail-fast、共通 contract 強制、dynamic idx 推定強化、mapper unit test、仕様更新までは完了しています。
+
+1. 本番用の POTX/PPTX テンプレート設計
+   - 現状の default/sample は標準 PowerPoint ベースです。
+   - 実運用向けに、各 semantic layout を前提とした専用 template を作成する必要があります。
+
+2. template 作成ルールの明文化
+   - template 作者向けに、変更してよい点と守るべき layout 構造を明文化する必要があります。
+   - 特に 3 columns は左から 1,2,3 で識別すること、placeholder 命名規約、built-in layout 名の扱いを記載すべきです。
+
+3. 実ファイル fixture を使った回帰テスト拡充
+   - 現在のテストは programmatic に生成した template が中心です。
+   - 実際に Office で保存した user-authored な `.pptx/.potx` fixture を追加し、startup / mapping / render を継続検証できるようにする必要があります。
+
+4. locale alias の拡張方針決定
+   - 現在は Microsoft Office 組み込み layout 名の英語 / 日本語を自動解釈します。
+   - 他言語環境も対象にするなら、対応 locale の追加方針と fixture を整備する必要があります。

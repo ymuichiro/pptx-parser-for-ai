@@ -9,6 +9,7 @@ from pptx import Presentation
 from pptx_yaml_engine.errors import DomainError, error_dict
 from pptx_yaml_engine.layouts import LAYOUT_ALIASES, LAYOUT_SPECS, SlotSpec, get_slot_spec
 from pptx_yaml_engine.utils.fingerprint import template_fingerprint
+from pptx_yaml_engine.utils.layout_names import canonical_builtin_layout_name, layout_names_match, normalize_layout_lookup_name
 from pptx_yaml_engine.utils.pptx import placeholder_type_name
 from pptx_yaml_engine.utils.template_bytes import normalize_template_for_python_pptx
 
@@ -60,6 +61,7 @@ def inspect_template(template_bytes: bytes) -> dict[str, Any]:
         layouts.append(
             {
                 "layout_name": layout.name,
+                "builtin_layout_name": canonical_builtin_layout_name(layout.name),
                 "layout_index": layout_index,
                 "shapes": shapes,
                 "placeholders": [shape for shape in shapes if shape["is_placeholder"]],
@@ -147,8 +149,8 @@ def _placeholder_binding(shape: dict[str, Any], *, kind: str) -> dict[str, Any]:
 
 
 def _score_layout(layout: dict[str, Any], semantic: str, aliases: tuple[str, ...]) -> tuple[float, str]:
-    layout_name = _norm(layout["layout_name"])
-    alias_norms = {_norm(alias) for alias in aliases}
+    layout_name = normalize_layout_lookup_name(str(layout["layout_name"]))
+    alias_norms = {normalize_layout_lookup_name(alias) for alias in aliases}
     placeholders = layout.get("placeholders", [])
     shape_names = " ".join(_norm(str(shape.get("shape_name", ""))) for shape in placeholders)
     types = [str(shape.get("placeholder_type", "")).upper() for shape in placeholders]
@@ -182,10 +184,14 @@ def _top_title(placeholders: list[dict[str, Any]]) -> dict[str, Any] | None:
     return None
 
 
-def _subtitle(placeholders: list[dict[str, Any]], title_idx: int | None) -> dict[str, Any] | None:
+def _subtitle(
+    placeholders: list[dict[str, Any]], title_idx: int | None, *, allow_fallback: bool = False
+) -> dict[str, Any] | None:
     subtitle_shapes = [shape for shape in placeholders if "SUBTITLE" in str(shape.get("placeholder_type", "")).upper()]
     if subtitle_shapes:
         return sorted(subtitle_shapes, key=lambda item: (item["norm_top"], item["norm_left"]))[0]
+    if not allow_fallback:
+        return None
     candidates = [shape for shape in placeholders if shape.get("placeholder_idx") != title_idx]
     if candidates:
         return sorted(candidates, key=lambda item: (item["norm_top"], item["norm_left"]))[0]
@@ -203,13 +209,17 @@ def _content_shapes(placeholders: list[dict[str, Any]], excluded: set[int]) -> l
     ]
 
 
-def _assign_common(slots: dict[str, Any], placeholders: list[dict[str, Any]]) -> set[int]:
+def _assign_common(semantic: str, slots: dict[str, Any], placeholders: list[dict[str, Any]]) -> set[int]:
     used: set[int] = set()
     title = _top_title(placeholders)
     if title is not None:
         slots["title"] = _placeholder_binding(title, kind="text")
         used.add(int(title["placeholder_idx"]))
-    subtitle = _subtitle(placeholders, next(iter(used), None))
+    subtitle = _subtitle(
+        placeholders,
+        next(iter(used), None),
+        allow_fallback=semantic in {"section_divider"},
+    )
     if subtitle is not None and subtitle.get("placeholder_idx") not in used:
         slots["subtitle"] = _placeholder_binding(subtitle, kind="text")
         used.add(int(subtitle["placeholder_idx"]))
@@ -232,7 +242,7 @@ def _bind_named_slots(layout_name: str, placeholders: list[dict[str, Any]]) -> d
 def _bind_generic(semantic: str, placeholders: list[dict[str, Any]]) -> dict[str, Any]:
     slots = _bind_named_slots(semantic, placeholders)
     used = {int(binding["placeholder"]["idx"]) for binding in slots.values()}
-    used.update(_assign_common(slots, placeholders))
+    used.update(_assign_common(semantic, slots, placeholders))
     content = _content_shapes(placeholders, used)
     textish = [shape for shape in content if _shape_kind(shape) == "text"]
     iconish = [shape for shape in content if _shape_kind(shape) == "icon"]
@@ -243,18 +253,26 @@ def _bind_generic(semantic: str, placeholders: list[dict[str, Any]]) -> dict[str
         if path not in slots and shapes:
             slots[path] = _placeholder_binding(shapes.pop(0), kind=kind)
 
+    def bind_same(path: str, shape: dict[str, Any] | None, kind: str) -> None:
+        if path not in slots and shape is not None:
+            slots[path] = _placeholder_binding(shape, kind=kind)
+
+    primary_text = textish[0] if textish else (content[0] if content else None)
+    secondary_text = textish[1] if len(textish) > 1 else None
+    primary_visual = content[0] if content else None
+
     if semantic in {"agenda", "list_basic"}:
-        bind_first("items", textish, "list")
+        bind_same("items", primary_text, "list")
     elif semantic == "table_basic":
-        bind_first("table", tableish or textish, "table")
-        bind_first("caption", textish, "text")
+        bind_same("table", tableish[0] if tableish else (textish[0] if textish else primary_visual), "table")
+        bind_same("caption", secondary_text, "text")
     elif semantic == "chart_basic":
-        bind_first("chart", chartish or textish, "chart")
-        bind_first("caption", textish, "text")
+        bind_same("chart", chartish[0] if chartish else (textish[0] if textish else primary_visual), "chart")
+        bind_same("caption", secondary_text, "text")
     elif semantic == "image_caption":
-        bind_first("icon", iconish or textish, "icon")
-        bind_first("caption", textish, "text")
-        bind_first("attribution", textish, "text")
+        bind_same("icon", iconish[0] if iconish else (textish[0] if textish else primary_visual), "icon")
+        bind_same("caption", primary_text, "text")
+        bind_same("attribution", secondary_text, "text")
     elif semantic == "comparison_2col":
         grouped = sorted(content, key=lambda item: item["norm_center_x"])
         left = sorted(grouped[: max(1, len(grouped) // 2)], key=lambda item: item["norm_center_y"])
@@ -268,39 +286,70 @@ def _bind_generic(semantic: str, placeholders: list[dict[str, Any]]) -> dict[str
             bind_first(f"{side}.bullets", texts, "list")
     elif semantic.startswith("three_cards"):
         grouped = sorted(content, key=lambda item: item["norm_center_x"])
-        chunk = max(1, (len(grouped) + 2) // 3)
-        groups = [grouped[index * chunk : (index + 1) * chunk] for index in range(3)]
-        for index, shapes in enumerate(groups):
-            ordered = sorted(shapes, key=lambda item: item["norm_center_y"])
-            icons = [shape for shape in ordered if _shape_kind(shape) == "icon"]
-            texts = [shape for shape in ordered if _shape_kind(shape) != "icon"]
-            bind_first(f"cards[{index}].icon", icons, "icon")
-            if len(texts) >= 2:
-                bind_first(f"cards[{index}].title", texts, "text")
-                bind_first(f"cards[{index}].description", texts, "text")
-            elif texts:
-                bind_first(f"cards[{index}].combined_text", texts, "text")
+        if len(grouped) >= 3:
+            chunk = max(1, (len(grouped) + 2) // 3)
+            groups = [grouped[index * chunk : (index + 1) * chunk] for index in range(3)]
+            for index, shapes in enumerate(groups):
+                ordered = sorted(shapes, key=lambda item: item["norm_center_y"])
+                icons = [shape for shape in ordered if _shape_kind(shape) == "icon"]
+                texts = [shape for shape in ordered if _shape_kind(shape) != "icon"]
+                bind_first(f"cards[{index}].icon", icons, "icon")
+                if len(texts) >= 2:
+                    bind_first(f"cards[{index}].title", texts, "text")
+                    bind_first(f"cards[{index}].description", texts, "text")
+                elif texts:
+                    bind_first(f"cards[{index}].combined_text", texts, "text")
+        elif len(grouped) == 2:
+            left_shape, right_shape = grouped
+            mapping = (
+                [(0, left_shape), (1, left_shape), (2, right_shape)]
+                if semantic == "three_cards_vertical"
+                else [(0, left_shape), (1, right_shape), (2, right_shape)]
+            )
+            for index, shape in mapping:
+                bind_same(f"cards[{index}].combined_text", shape, "text")
+        elif len(grouped) == 1:
+            for index in range(3):
+                bind_same(f"cards[{index}].combined_text", grouped[0], "text")
     elif semantic == "timeline":
         grouped = sorted(content, key=lambda item: item["norm_center_x"])
-        for index, shape in enumerate(grouped[:8]):
-            kind = _shape_kind(shape)
-            path = f"events[{index}].icon" if kind == "icon" else f"events[{index}].combined_text"
-            slots.setdefault(path, _placeholder_binding(shape, kind=kind))
+        if grouped:
+            for index in range(8):
+                shape = grouped[min(index, len(grouped) - 1)]
+                kind = _shape_kind(shape)
+                path = f"events[{index}].icon" if kind == "icon" else f"events[{index}].combined_text"
+                slots.setdefault(path, _placeholder_binding(shape, kind=kind))
     elif semantic == "kpi_big_number":
-        for path in ("metric.value", "metric.label", "metric.unit", "metric.delta", "supporting_points"):
-            kind = "list" if path == "supporting_points" else "text"
-            bind_first(path, textish, kind)
+        for path in ("metric.value", "metric.label", "metric.unit", "metric.delta"):
+            bind_same(path, primary_text, "text")
+        bind_same("supporting_points", primary_text, "list")
     elif semantic == "appendix_backup":
         for path, kind in (("body", "text"), ("items", "list"), ("references", "list")):
-            bind_first(path, textish, kind)
+            bind_same(path, primary_text, kind)
     elif semantic == "eol_notice":
-        for path, kind in (("product_name", "text"), ("end_of_sale", "text"), ("end_of_support", "text"), ("replacement", "text"), ("actions", "list")):
-            bind_first(path, textish, kind)
+        for path, kind in (
+            ("product_name", "text"),
+            ("end_of_sale", "text"),
+            ("end_of_support", "text"),
+            ("replacement", "text"),
+            ("actions", "list"),
+        ):
+            bind_same(path, primary_text, kind)
     elif semantic in {"cover_title", "section_divider", "closing_end"}:
         for path in ("date", "organization", "author", "section_no", "message", "contact", "cta"):
-            bind_first(path, textish, "text")
+            bind_same(path, primary_text, "text")
 
     return slots
+
+
+def generate_manifest(
+    template_bytes: bytes,
+    ruleset: dict[str, Any] | None = None,
+    overrides: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    inspection = inspect_template(template_bytes)
+    proposal = propose_mapping(inspection, ruleset)
+    return finalize_manifest(inspection, proposal, overrides)
 
 
 def _required_missing(semantic: str, slots: dict[str, Any]) -> list[str]:
@@ -427,12 +476,29 @@ def finalize_manifest(
 
 def validate_manifest_against_inspection(inspection: dict[str, Any], manifest: dict[str, Any]) -> dict[str, Any]:
     issues: list[dict[str, Any]] = []
-    layout_index = {layout["layout_name"]: layout for layout in inspection.get("layouts", [])}
     for semantic, binding in manifest.get("layouts", {}).items():
-        layout = layout_index.get(binding.get("ppt_layout_name"))
-        if layout is None:
+        exact_matches = [layout for layout in inspection.get("layouts", []) if layout.get("layout_name") == binding.get("ppt_layout_name")]
+        if exact_matches:
+            matches = exact_matches
+        else:
+            matches = [
+                layout
+                for layout in inspection.get("layouts", [])
+                if layout_names_match(str(layout.get("layout_name", "")), str(binding.get("ppt_layout_name", "")))
+            ]
+        if not matches:
             issues.append(error_dict("PPT_LAYOUT_NOT_FOUND", "PowerPoint layout not found", {"layout": semantic, "ppt_layout_name": binding.get("ppt_layout_name")}))
             continue
+        if len(matches) > 1:
+            issues.append(
+                error_dict(
+                    "DUPLICATE_LAYOUT_NAME",
+                    "PowerPoint layout name is duplicated",
+                    {"layout": semantic, "ppt_layout_name": binding.get("ppt_layout_name")},
+                )
+            )
+            continue
+        layout = matches[0]
         idx_to_type = {
             placeholder["placeholder_idx"]: placeholder.get("placeholder_type")
             for placeholder in layout.get("placeholders", [])

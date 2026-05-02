@@ -8,6 +8,8 @@ from starlette.testclient import TestClient
 
 from pptx_yaml_engine.server.app import create_app
 from pptx_yaml_engine.server.config import ServerConfig
+from pptx_yaml_engine.errors import DomainError
+import pptx_yaml_engine.server.template_registry as template_registry_module
 
 _VALID_DECK = {
     "version": 1,
@@ -155,7 +157,6 @@ def test_list_templates_returns_registered_template(tmp_path: Path, template_byt
     tpl_dir = tmp_path / "templates"
     tpl_dir.mkdir()
     (tpl_dir / "mytemplate.pptx").write_bytes(template_bytes)
-    (tpl_dir / "mytemplate.manifest.json").write_text(json.dumps(template_manifest), encoding="utf-8")
 
     app = create_app(_make_config(tmp_path, template_dir=str(tpl_dir)))
     with TestClient(app) as client:
@@ -173,7 +174,6 @@ def test_render_presentation_uses_default_template_when_name_omitted(
     tpl_dir = tmp_path / "templates"
     tpl_dir.mkdir()
     (tpl_dir / "default.pptx").write_bytes(template_bytes)
-    (tpl_dir / "default.manifest.json").write_text(json.dumps(template_manifest), encoding="utf-8")
 
     app = create_app(_make_config(tmp_path, template_dir=str(tpl_dir)))
     with TestClient(app) as client:
@@ -192,7 +192,6 @@ def test_render_presentation_blank_or_null_template_name_uses_default(
     tpl_dir = tmp_path / "templates"
     tpl_dir.mkdir()
     (tpl_dir / "default.pptx").write_bytes(template_bytes)
-    (tpl_dir / "default.manifest.json").write_text(json.dumps(template_manifest), encoding="utf-8")
 
     app = create_app(_make_config(tmp_path, template_dir=str(tpl_dir)))
     with TestClient(app) as client:
@@ -210,7 +209,6 @@ def test_render_presentation_explicit_named_template_still_works(
     tpl_dir = tmp_path / "templates"
     tpl_dir.mkdir()
     (tpl_dir / "named.pptx").write_bytes(template_bytes)
-    (tpl_dir / "named.manifest.json").write_text(json.dumps(template_manifest), encoding="utf-8")
 
     app = create_app(_make_config(tmp_path, template_dir=str(tpl_dir)))
     with TestClient(app) as client:
@@ -229,7 +227,6 @@ def test_render_presentation_missing_default_template_returns_clear_error(
     tpl_dir = tmp_path / "templates"
     tpl_dir.mkdir()
     (tpl_dir / "named.pptx").write_bytes(template_bytes)
-    (tpl_dir / "named.manifest.json").write_text(json.dumps(template_manifest), encoding="utf-8")
 
     app = create_app(_make_config(tmp_path, template_dir=str(tpl_dir)))
     with TestClient(app) as client:
@@ -246,7 +243,6 @@ def test_render_presentation_missing_named_template_still_returns_template_not_f
     tpl_dir = tmp_path / "templates"
     tpl_dir.mkdir()
     (tpl_dir / "default.pptx").write_bytes(template_bytes)
-    (tpl_dir / "default.manifest.json").write_text(json.dumps(template_manifest), encoding="utf-8")
 
     app = create_app(_make_config(tmp_path, template_dir=str(tpl_dir)))
     with TestClient(app) as client:
@@ -255,3 +251,38 @@ def test_render_presentation_missing_named_template_still_returns_template_not_f
 
     error_text = _tool_text(body)
     assert "TEMPLATE_NOT_FOUND" in error_text
+
+
+def test_app_startup_fails_fast_for_invalid_template(tmp_path: Path) -> None:
+    tpl_dir = tmp_path / "templates"
+    tpl_dir.mkdir()
+    (tpl_dir / "broken.pptx").write_bytes(b"not-a-powerpoint")
+
+    app = create_app(_make_config(tmp_path, template_dir=str(tpl_dir)))
+
+    with pytest.raises(Exception):
+        with TestClient(app):
+            pass
+
+
+def test_app_startup_fails_fast_for_template_contract_mismatch(
+    tmp_path: Path, template_bytes: bytes, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    tpl_dir = tmp_path / "templates"
+    tpl_dir.mkdir()
+    (tpl_dir / "broken_contract.pptx").write_bytes(template_bytes)
+
+    def fake_generate_manifest(_template_bytes: bytes) -> dict[str, object]:
+        raise DomainError(
+            "TEMPLATE_LAYOUT_CONTRACT_MISMATCH",
+            "Template does not satisfy the required semantic layout contract.",
+            {"expected": ["cover_title"], "actual": []},
+        )
+
+    monkeypatch.setattr(template_registry_module, "generate_manifest", fake_generate_manifest)
+
+    app = create_app(_make_config(tmp_path, template_dir=str(tpl_dir)))
+
+    with pytest.raises(Exception):
+        with TestClient(app):
+            pass

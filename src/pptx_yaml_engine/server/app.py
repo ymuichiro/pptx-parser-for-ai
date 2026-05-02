@@ -217,17 +217,15 @@ def create_mcp(config: ServerConfig, artifact_store: ArtifactStore, template_reg
                     DomainError(
                         "NO_TEMPLATES_CONFIGURED",
                         "No templates are available on this server. "
-                        "The operator must place .pptx files and companion .manifest.json "
-                        "files in the template directory.",
-                        )
+                        "The operator must place valid .pptx or .potx files in the template directory.",
                     )
+                )
             if normalized_name in {None, DEFAULT_TEMPLATE_NAME}:
                 raise _tool_error(
                     DomainError(
                         "DEFAULT_TEMPLATE_NOT_FOUND",
                         "No default template is available on this server. "
-                        "Add default.pptx or default.potx with a companion "
-                        "default.manifest.json file to the template directory.",
+                        "Add default.pptx or default.potx to the template directory.",
                         {"requested": template_name, "default": DEFAULT_TEMPLATE_NAME, "available": available},
                     )
                 )
@@ -324,11 +322,8 @@ def create_app(config: ServerConfig | None = None) -> Starlette:
     @contextlib.asynccontextmanager
     async def lifespan(_app: Starlette) -> AsyncIterator[None]:
         artifact_store.init()
-        warnings = template_registry.load()
-        for warning in warnings:
-            logger.warning("Template registry: %s", warning)
-        if not warnings:
-            logger.info("Template registry loaded %d template(s).", len(template_registry))
+        template_registry.load()
+        logger.info("Template registry loaded %d template(s).", len(template_registry))
         async with mcp.session_manager.run():
             yield
         artifact_store.stop()

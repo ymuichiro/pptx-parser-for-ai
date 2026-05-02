@@ -14,18 +14,19 @@ AIまたは開発者が実装・修正を行う場合、まずこのファイル
 - テンプレートの見た目・レイアウトは、事前に用意された `.pptx` / `.potx` が持つ
 - コンテンツは deck JSON が持つ
 - manifest が semantic slot と PowerPoint placeholder `idx` を結び付ける
+- deck JSON の詳細仕様は `SEMANTIC_DECK_SPEC.md` を参照する
 
 ### 主な利用者
 
 - **AI クライアント**: MCP ツールとしてプレゼン資料生成を実行する
-- **テンプレート運用者**: テンプレートファイルと manifest をテンプレートディレクトリに配置する
+- **テンプレート運用者**: テンプレートファイルをテンプレートディレクトリに配置する
 - **開発者**: deck schema、manifest 生成、レンダリング処理を保守する
 
 ### 主要ユースケース
 
 このアプリケーションで必ず成立すべき主要な利用シナリオは以下。
 
-1. 運用者が `.pptx` / `.potx` と対応する `.manifest.json` をテンプレートディレクトリへ配置する
+1. 運用者が `.pptx` / `.potx` をテンプレートディレクトリへ配置する
 2. AI クライアントが `render_presentation` を呼び出し、semantic deck JSON から `.pptx` を生成する
 3. AI クライアントが `template_name` を省略した場合でも、`default` テンプレートがあればそれで生成できる
 
@@ -85,7 +86,7 @@ AIまたは開発者が実装・修正を行う場合、まずこのファイル
 | 用語 | 意味 |
 | ---- | ---- |
 | Template file | サーバーが保持する `.pptx` または `.potx`。見た目と slide layout を定義する |
-| Manifest | semantic layout / slot を PowerPoint placeholder `idx` に対応付けた JSON |
+| Manifest | semantic layout / slot を PowerPoint placeholder `idx` に対応付けた JSON。起動時に template から生成される |
 | Template registry | テンプレートディレクトリを走査して有効テンプレートをメモリ上へロードしたもの |
 | Template name | テンプレートファイルの stem を lowercase 正規化した名前 |
 | Default template | stem が `default` のテンプレート。未指定系入力のフォールバック先 |
@@ -107,13 +108,16 @@ AIまたは開発者が実装・修正を行う場合、まずこのファイル
 実装時に絶対に壊してはいけないルール。
 
 - テンプレートは **テンプレートディレクトリ配下の `.pptx` / `.potx`** のみを通常フローで利用する
-- 通常フローで使う各テンプレートには、**同じ stem の `.manifest.json`** が必須である
-- manifest の `template_fingerprint` は、対応するテンプレート bytes と一致しなければならない
-- fingerprint が一致しないテンプレートはロード対象にしてはいけない
+- 通常フローでは、各テンプレートの manifest は **起動時に template bytes から自動生成**する
+- 生成された manifest の `template_fingerprint` は、対応するテンプレート bytes と一致しなければならない
+- 生成された manifest が template と整合しない場合、そのテンプレートはロードしてはいけない
 - template name はファイル stem を **lowercase 正規化**して扱う
-- `default.pptx` と `default.potx` は同時に有効化できない。normalized name が重複するため片方のみロードされる
+- Microsoft Office 組み込みの slide layout 名は、既知の locale 名から **英語 canonical 名として自動解釈**できなければならない
+- `default.pptx` と `default.potx` は同時に有効化できない。normalized name が重複するため **起動エラー** とする
 - `render_presentation` で `template_name` が **未指定 / null / 空文字 / 空白のみ** の場合は、`default` へフォールバックする
 - フォールバック要求時に `default` が存在しない場合は、`TEMPLATE_NOT_FOUND` ではなく **`DEFAULT_TEMPLATE_NOT_FOUND`** を返す
+- 発見した各 template は、**同じ semantic layout 群**を満たさなければならない
+- 起動時に template の mapping 生成や contract 検証に失敗した場合は、warning で継続せず **起動失敗** とする
 - deck の入力契約は **JSON** であり、root は `version`, `meta`, `slides` を基本とする
 - slide の種別指定は `type` ではなく **`layout`** を使う
 - 出力ファイルは必ず **PowerPoint テンプレートをベースに生成した `.pptx`** である
@@ -135,19 +139,20 @@ AIまたは開発者が実装・修正を行う場合、まずこのファイル
 手順:
 
 1. 運用者が `.pptx` または `.potx` を準備する
-2. `inspect_template -> propose_mapping -> finalize_manifest` を使って companion manifest を生成する
-3. テンプレートファイルと `<stem>.manifest.json` をテンプレートディレクトリへ配置する
-4. サーバーを再起動する
+2. テンプレートファイルをテンプレートディレクトリへ配置する
+3. サーバーを再起動する
 
 正常系:
 
-- テンプレートが registry にロードされ、`list_templates` に現れる
+- テンプレートが起動時に解析され、mapping が自動生成され、registry にロードされる
+- 組み込み layout 名が日本語などに localize されていても、既知の Microsoft Office 名は英語 canonical 名として解釈される
 
 異常系:
 
-- manifest 不在: テンプレートは warning とともにスキップされる
-- fingerprint 不一致: テンプレートは warning とともにスキップされる
-- normalized name 重複: 後勝ちではなく、重複ファイルはスキップされる
+- template を開けない: 起動失敗
+- mapping を生成できない: 起動失敗
+- 共通 semantic layout contract を満たさない: 起動失敗
+- normalized name 重複: 起動失敗
 
 完了条件:
 
@@ -161,7 +166,7 @@ AIまたは開発者が実装・修正を行う場合、まずこのファイル
 
 手順:
 
-1. 運用者が `default.pptx` または `default.potx` と `default.manifest.json` を配置する
+1. 運用者が `default.pptx` または `default.potx` を配置する
 2. AI クライアントが `render_presentation` を `template_name` 省略または空入力で呼ぶ
 3. サーバーが `default` を解決し、deck JSON を埋め込んで `.pptx` を生成する
 4. クライアントが artifact URL からファイルを取得する
@@ -439,7 +444,10 @@ AIまたは開発者が実装・修正を行う場合、まずこのファイル
 - `NO_TEMPLATES_CONFIGURED`: 利用可能テンプレートが 1 件もない
 - `DEFAULT_TEMPLATE_NOT_FOUND`: フォールバック先の `default` がない
 - `TEMPLATE_NOT_FOUND`: 明示指定 template が存在しない
-- `TEMPLATE_FINGERPRINT_MISMATCH`: template と manifest が不一致
+- `TEMPLATE_FINGERPRINT_MISMATCH`: 生成された manifest と template が不一致
+- `TEMPLATE_REGISTRY_LOAD_FAILED`: 起動時の template 解析・mapping 生成に失敗した
+- `TEMPLATE_LAYOUT_CONTRACT_MISMATCH`: template が共通 semantic layout contract を満たさない
+- `DUPLICATE_TEMPLATE_NAME`: lowercase 正規化後の template 名が重複した
 - `DECK_SCHEMA_INVALID`: deck JSON の構造が不正
 - `SEMANTIC_LAYOUT_NOT_FOUND`: 未知の layout、または manifest に存在しない layout
 - `PLACEHOLDER_IDX_NOT_FOUND`: manifest が指す idx が実 template に存在しない
@@ -447,11 +455,11 @@ AIまたは開発者が実装・修正を行う場合、まずこのファイル
 
 ### ログに残すべきエラー
 
-- テンプレートロード時の warning
-  - manifest 不在
-  - fingerprint 不一致
+- テンプレートロード失敗
+  - template open failure
+  - mapping generation failure
   - duplicate normalized name
-  - template / manifest 読み込み失敗
+  - common layout contract violation
 - render 失敗のうち、再現や運用判断に必要なもの
 
 ### ログに残してはいけない情報
