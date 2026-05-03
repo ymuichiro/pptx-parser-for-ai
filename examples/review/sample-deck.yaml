@@ -1,0 +1,90 @@
+version: 1
+meta:
+  title: Fixture Deck
+  language: en
+slides:
+  - layout: cover_title
+    title: Cover
+    subtitle: Subtitle
+  - layout: section_divider
+    title: Section
+  - layout: agenda
+    title: Agenda
+    items:
+      - One
+      - Two
+  - layout: list_basic
+    title: List
+    items:
+      - text: A
+        level: 0
+      - text: B
+        level: 1
+  - layout: table_basic
+    title: Table
+    table:
+      headers: [A, B]
+      rows:
+        - [1, 2]
+  - layout: comparison_2col
+    title: Compare
+    left:
+      title: Old
+      description: Before
+    right:
+      title: New
+      description: After
+  - layout: three_cards_vertical
+    title: Cards V
+    cards:
+      - title: A
+        description: AA
+      - title: B
+        description: BB
+      - title: C
+        description: CC
+  - layout: three_cards_horizontal
+    title: Cards H
+    cards:
+      - title: A
+        description: AA
+      - title: B
+        description: BB
+      - title: C
+        description: CC
+  - layout: timeline
+    title: Timeline
+    events:
+      - label: Q1
+        title: Plan
+        description: Start
+  - layout: closing_end
+    title: Thanks
+  - layout: kpi_big_number
+    title: KPI
+    metric:
+      value: "42"
+      label: Customers
+  - layout: chart_basic
+    title: Chart
+    chart:
+      kind: column
+      categories: [Q1, Q2]
+      series:
+        - name: Sales
+          values: [10, 12]
+  - layout: image_caption
+    title: Icon
+    icon:
+      pack: heroicons
+      name: cloud-arrow-up
+      variant: outline
+  - layout: appendix_backup
+    title: Appendix
+    items:
+      - Ref
+  - layout: eol_notice
+    title: EOL
+    product_name: Legacy API
+    actions:
+      - Migrate

@@ -9,7 +9,11 @@ from pptx import Presentation
 from pptx_yaml_engine.errors import DomainError, error_dict
 from pptx_yaml_engine.layouts import LAYOUT_ALIASES, LAYOUT_SPECS, SlotSpec, get_slot_spec
 from pptx_yaml_engine.utils.fingerprint import template_fingerprint
-from pptx_yaml_engine.utils.layout_names import canonical_builtin_layout_name, layout_names_match, normalize_layout_lookup_name
+from pptx_yaml_engine.utils.layout_names import (
+    canonical_builtin_layout_name,
+    layout_names_match,
+    normalize_layout_lookup_name,
+)
 from pptx_yaml_engine.utils.pptx import placeholder_type_name
 from pptx_yaml_engine.utils.template_bytes import normalize_template_for_python_pptx
 
@@ -150,12 +154,15 @@ def _placeholder_binding(shape: dict[str, Any], *, kind: str) -> dict[str, Any]:
 
 def _score_layout(layout: dict[str, Any], semantic: str, aliases: tuple[str, ...]) -> tuple[float, str]:
     layout_name = normalize_layout_lookup_name(str(layout["layout_name"]))
+    semantic_norm = normalize_layout_lookup_name(semantic)
     alias_norms = {normalize_layout_lookup_name(alias) for alias in aliases}
     placeholders = layout.get("placeholders", [])
     shape_names = " ".join(_norm(str(shape.get("shape_name", ""))) for shape in placeholders)
     types = [str(shape.get("placeholder_type", "")).upper() for shape in placeholders]
     type_counts = {kind: sum(1 for value in types if kind in value) for kind in ("TITLE", "SUBTITLE", "BODY", "OBJECT", "PICTURE", "TABLE", "CHART")}
 
+    if layout_name == semantic_norm:
+        return 0.99, "semantic_name"
     if layout_name in alias_norms or any(alias in layout_name for alias in alias_norms):
         return 0.98, "explicit_name"
     if semantic.replace("_", "") in shape_names.replace("_", ""):

@@ -30,6 +30,22 @@ http://127.0.0.1:3001/mcp
 
 Health and generated artifacts are available at `/health` and `/artifacts/{token}`.
 
+## Local YAML -> PPTX generation
+
+For manual/operator rendering from local assets, use the dedicated CLI with a
+template file, a finalized manifest JSON, and a deck YAML file:
+
+```bash
+uv run pptx-template-render \
+  --template templates/default.pptx \
+  --manifest templates/default.manifest.json \
+  --deck examples/review/sample-deck.yaml \
+  --output examples/review/sample-deck.generated.pptx
+```
+
+This command uses the mapper's finalized manifest as the contract between the
+semantic deck YAML and the PowerPoint template placeholders.
+
 ## Tools
 
 - `list_supported_layouts`

@@ -20,6 +20,7 @@ dependencies = [
 
 [project.scripts]
 pptx-template-mcp = "pptx_yaml_engine.server.app:main"
+pptx-template-render = "pptx_yaml_engine.cli:main"
 
 [dependency-groups]
 dev = [

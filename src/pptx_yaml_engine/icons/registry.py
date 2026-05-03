@@ -194,13 +194,90 @@ def _lucide_svg(name: str, color: str) -> str:
         return svg.replace("currentColor", color)
 
 
-def _fallback_png(size: int, color: str, background: str | None, padding_ratio: float) -> bytes:
+def _generic_icon_box(size: int, padding_ratio: float) -> tuple[float, float, float, float]:
+    pad = int(size * padding_ratio)
+    return (float(pad), float(pad), float(size - pad), float(size - pad))
+
+
+def _draw_generic_fallback(draw: ImageDraw.ImageDraw, box: tuple[float, float, float, float], *, color: str, stroke: int) -> None:
+    left, top, right, bottom = box
+    draw.rounded_rectangle((left, top, right, bottom), radius=max(4, int((right - left) * 0.16)), outline=color, width=stroke)
+    draw.line(
+        (
+            left + (right - left) * 0.18,
+            top + (bottom - top) * 0.62,
+            left + (right - left) * 0.43,
+            top + (bottom - top) * 0.78,
+            left + (right - left) * 0.78,
+            top + (bottom - top) * 0.28,
+        ),
+        fill=color,
+        width=stroke,
+    )
+
+
+def _draw_chart_bar_fallback(draw: ImageDraw.ImageDraw, box: tuple[float, float, float, float], *, color: str, stroke: int) -> None:
+    left, top, right, bottom = box
+    baseline = bottom - (bottom - top) * 0.1
+    draw.line((left, baseline, right, baseline), fill=color, width=stroke)
+    widths = (0.16, 0.16, 0.16)
+    heights = (0.34, 0.58, 0.82)
+    gap = (right - left) * 0.12
+    cursor = left + (right - left) * 0.08
+    for width_ratio, height_ratio in zip(widths, heights, strict=False):
+        bar_width = (right - left) * width_ratio
+        bar_top = top + (bottom - top) * (1 - height_ratio)
+        draw.rectangle((cursor, bar_top, cursor + bar_width, baseline), outline=color, width=stroke)
+        cursor += bar_width + gap
+
+
+def _draw_sparkles_fallback(draw: ImageDraw.ImageDraw, box: tuple[float, float, float, float], *, color: str, stroke: int) -> None:
+    left, top, right, bottom = box
+    cx = left + (right - left) * 0.42
+    cy = top + (bottom - top) * 0.42
+    size = (right - left) * 0.24
+    draw.line((cx, cy - size, cx, cy + size), fill=color, width=stroke)
+    draw.line((cx - size, cy, cx + size, cy), fill=color, width=stroke)
+    draw.line((cx - size * 0.7, cy - size * 0.7, cx + size * 0.7, cy + size * 0.7), fill=color, width=stroke)
+    draw.line((cx - size * 0.7, cy + size * 0.7, cx + size * 0.7, cy - size * 0.7), fill=color, width=stroke)
+    sx = left + (right - left) * 0.74
+    sy = top + (bottom - top) * 0.72
+    small = size * 0.45
+    draw.line((sx, sy - small, sx, sy + small), fill=color, width=max(1, stroke - 1))
+    draw.line((sx - small, sy, sx + small, sy), fill=color, width=max(1, stroke - 1))
+
+
+def _draw_cloud_arrow_up_fallback(draw: ImageDraw.ImageDraw, box: tuple[float, float, float, float], *, color: str, stroke: int) -> None:
+    left, top, right, bottom = box
+    width = right - left
+    height = bottom - top
+    cloud_top = top + height * 0.34
+    cloud_bottom = top + height * 0.74
+    draw.arc((left + width * 0.06, cloud_top + height * 0.12, left + width * 0.42, cloud_bottom), start=160, end=350, fill=color, width=stroke)
+    draw.arc((left + width * 0.26, cloud_top - height * 0.04, left + width * 0.66, cloud_bottom), start=180, end=360, fill=color, width=stroke)
+    draw.arc((left + width * 0.5, cloud_top + height * 0.08, right - width * 0.02, cloud_bottom), start=190, end=20, fill=color, width=stroke)
+    draw.line((left + width * 0.16, cloud_bottom * 0.99, right - width * 0.12, cloud_bottom * 0.99), fill=color, width=stroke)
+    center_x = left + width * 0.5
+    arrow_top = top + height * 0.12
+    arrow_bottom = top + height * 0.56
+    draw.line((center_x, arrow_bottom, center_x, arrow_top + height * 0.08), fill=color, width=stroke)
+    draw.line((center_x, arrow_top + height * 0.08, center_x - width * 0.12, arrow_top + height * 0.22), fill=color, width=stroke)
+    draw.line((center_x, arrow_top + height * 0.08, center_x + width * 0.12, arrow_top + height * 0.22), fill=color, width=stroke)
+
+
+FALLBACK_DRAWERS = {
+    "chart-bar": _draw_chart_bar_fallback,
+    "cloud-arrow-up": _draw_cloud_arrow_up_fallback,
+    "sparkles": _draw_sparkles_fallback,
+}
+
+
+def _fallback_png(name: str, size: int, color: str, background: str | None, padding_ratio: float) -> bytes:
     image = Image.new("RGBA", (size, size), background or (255, 255, 255, 0))
     draw = ImageDraw.Draw(image)
-    pad = int(size * padding_ratio)
     stroke = max(2, size // 18)
-    draw.rounded_rectangle((pad, pad, size - pad, size - pad), radius=max(4, size // 8), outline=color, width=stroke)
-    draw.line((pad * 1.6, size * 0.58, size * 0.45, size * 0.72, size * 0.74, size * 0.33), fill=color, width=stroke)
+    drawer = FALLBACK_DRAWERS.get(name, _draw_generic_fallback)
+    drawer(draw, _generic_icon_box(size, padding_ratio), color=color, stroke=stroke)
     output = io.BytesIO()
     image.save(output, format="PNG")
     return output.getvalue()
@@ -222,4 +299,5 @@ def resolve_icon(icon_ref: dict[str, Any], target_px: int = MAX_ICON_PX) -> byte
             ),
         )
     except Exception:
-        return _fallback_png(size, color, background, padding)
+        fallback_name = name if pack == "heroicons" else LUCIDE_ALIASES.get(name, name)
+        return _fallback_png(fallback_name, size, color, background, padding)

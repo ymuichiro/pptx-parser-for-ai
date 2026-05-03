@@ -1,6 +1,6 @@
 {
   "manifest_version": 1,
-  "template_fingerprint": "sha256:0206119e84ac45fa518a2e3f4f580c2575d985d6ac738e07135409ef5c139a27",
+  "template_fingerprint": "sha256:36f29d57e7f306378ef04f1d37346a8e5fe8e5ec098e7bcd26249c55fc414b68",
   "layouts": {
     "cover_title": {
       "ppt_layout_name": "Title Slide",
@@ -13,8 +13,8 @@
           "kind": "text",
           "placeholder": {
             "idx": 0,
-            "type": "CENTER_TITLE",
-            "shape_name": "Title 1"
+            "type": "TITLE",
+            "shape_name": "タイトル 6"
           }
         },
         "subtitle": {
@@ -39,7 +39,7 @@
           "placeholder": {
             "idx": 0,
             "type": "TITLE",
-            "shape_name": "Title 1"
+            "shape_name": "タイトル 6"
           }
         },
         "subtitle": {
@@ -64,15 +64,15 @@
           "placeholder": {
             "idx": 0,
             "type": "TITLE",
-            "shape_name": "Title 1"
+            "shape_name": "タイトル 6"
           }
         },
         "items": {
           "kind": "list",
           "placeholder": {
-            "idx": 1,
+            "idx": 13,
             "type": "OBJECT",
-            "shape_name": "Content Placeholder 2"
+            "shape_name": "コンテンツ プレースホルダー 8"
           }
         }
       }
@@ -89,15 +89,15 @@
           "placeholder": {
             "idx": 0,
             "type": "TITLE",
-            "shape_name": "Title 1"
+            "shape_name": "タイトル 6"
           }
         },
         "items": {
           "kind": "list",
           "placeholder": {
-            "idx": 1,
+            "idx": 13,
             "type": "OBJECT",
-            "shape_name": "Content Placeholder 2"
+            "shape_name": "コンテンツ プレースホルダー 8"
           }
         }
       }
@@ -114,15 +114,15 @@
           "placeholder": {
             "idx": 0,
             "type": "TITLE",
-            "shape_name": "Title 1"
+            "shape_name": "タイトル 6"
           }
         },
         "table": {
           "kind": "table",
           "placeholder": {
-            "idx": 1,
+            "idx": 13,
             "type": "OBJECT",
-            "shape_name": "Content Placeholder 2"
+            "shape_name": "コンテンツ プレースホルダー 8"
           }
         }
       }
@@ -139,7 +139,7 @@
           "placeholder": {
             "idx": 0,
             "type": "TITLE",
-            "shape_name": "Title 1"
+            "shape_name": "タイトル 9"
           }
         },
         "left.title": {
@@ -153,9 +153,9 @@
         "left.description": {
           "kind": "text",
           "placeholder": {
-            "idx": 2,
+            "idx": 13,
             "type": "OBJECT",
-            "shape_name": "Content Placeholder 3"
+            "shape_name": "コンテンツ プレースホルダー 14"
           }
         },
         "right.title": {
@@ -169,18 +169,18 @@
         "right.description": {
           "kind": "text",
           "placeholder": {
-            "idx": 4,
+            "idx": 14,
             "type": "OBJECT",
-            "shape_name": "Content Placeholder 5"
+            "shape_name": "コンテンツ プレースホルダー 16"
           }
         }
       }
     },
     "three_cards_vertical": {
-      "ppt_layout_name": "Two Content",
-      "match_confidence": 0.98,
+      "ppt_layout_name": "three_cards_vertical",
+      "match_confidence": 0.99,
       "layout_match": {
-        "strategy": "explicit_name"
+        "strategy": "semantic_name"
       },
       "slots": {
         "title": {
@@ -188,40 +188,40 @@
           "placeholder": {
             "idx": 0,
             "type": "TITLE",
-            "shape_name": "Title 1"
+            "shape_name": "タイトル 7"
           }
         },
         "cards[0].combined_text": {
           "kind": "text",
           "placeholder": {
-            "idx": 1,
+            "idx": 13,
             "type": "OBJECT",
-            "shape_name": "Content Placeholder 2"
+            "shape_name": "コンテンツ プレースホルダー 12"
           }
         },
         "cards[1].combined_text": {
           "kind": "text",
           "placeholder": {
-            "idx": 2,
+            "idx": 14,
             "type": "OBJECT",
-            "shape_name": "Content Placeholder 3"
+            "shape_name": "コンテンツ プレースホルダー 14"
           }
         },
         "cards[2].combined_text": {
           "kind": "text",
           "placeholder": {
-            "idx": 3,
+            "idx": 15,
             "type": "OBJECT",
-            "shape_name": "Content Placeholder 3"
+            "shape_name": "コンテンツ プレースホルダー 16"
           }
         }
       }
     },
     "three_cards_horizontal": {
-      "ppt_layout_name": "Two Content",
-      "match_confidence": 0.98,
+      "ppt_layout_name": "three_cards_horizontal",
+      "match_confidence": 0.99,
       "layout_match": {
-        "strategy": "explicit_name"
+        "strategy": "semantic_name"
       },
       "slots": {
         "title": {
@@ -229,31 +229,31 @@
           "placeholder": {
             "idx": 0,
             "type": "TITLE",
-            "shape_name": "Title 1"
+            "shape_name": "タイトル 7"
           }
         },
         "cards[0].combined_text": {
           "kind": "text",
           "placeholder": {
-            "idx": 1,
+            "idx": 13,
             "type": "OBJECT",
-            "shape_name": "Content Placeholder 2"
+            "shape_name": "コンテンツ プレースホルダー 12"
           }
         },
         "cards[1].combined_text": {
           "kind": "text",
           "placeholder": {
-            "idx": 2,
+            "idx": 14,
             "type": "OBJECT",
-            "shape_name": "Content Placeholder 3"
+            "shape_name": "コンテンツ プレースホルダー 14"
           }
         },
         "cards[2].combined_text": {
           "kind": "text",
           "placeholder": {
-            "idx": 3,
+            "idx": 15,
             "type": "OBJECT",
-            "shape_name": "Content Placeholder 3"
+            "shape_name": "コンテンツ プレースホルダー 16"
           }
         }
       }
@@ -270,71 +270,71 @@
           "placeholder": {
             "idx": 0,
             "type": "TITLE",
-            "shape_name": "Title 1"
+            "shape_name": "タイトル 6"
           }
         },
         "events[0].combined_text": {
           "kind": "text",
           "placeholder": {
-            "idx": 1,
+            "idx": 13,
             "type": "OBJECT",
-            "shape_name": "Content Placeholder 2"
+            "shape_name": "コンテンツ プレースホルダー 8"
           }
         },
         "events[1].combined_text": {
           "kind": "text",
           "placeholder": {
-            "idx": 1,
+            "idx": 13,
             "type": "OBJECT",
-            "shape_name": "Content Placeholder 2"
+            "shape_name": "コンテンツ プレースホルダー 8"
           }
         },
         "events[2].combined_text": {
           "kind": "text",
           "placeholder": {
-            "idx": 1,
+            "idx": 13,
             "type": "OBJECT",
-            "shape_name": "Content Placeholder 2"
+            "shape_name": "コンテンツ プレースホルダー 8"
           }
         },
         "events[3].combined_text": {
           "kind": "text",
           "placeholder": {
-            "idx": 1,
+            "idx": 13,
             "type": "OBJECT",
-            "shape_name": "Content Placeholder 2"
+            "shape_name": "コンテンツ プレースホルダー 8"
           }
         },
         "events[4].combined_text": {
           "kind": "text",
           "placeholder": {
-            "idx": 1,
+            "idx": 13,
             "type": "OBJECT",
-            "shape_name": "Content Placeholder 2"
+            "shape_name": "コンテンツ プレースホルダー 8"
           }
         },
         "events[5].combined_text": {
           "kind": "text",
           "placeholder": {
-            "idx": 1,
+            "idx": 13,
             "type": "OBJECT",
-            "shape_name": "Content Placeholder 2"
+            "shape_name": "コンテンツ プレースホルダー 8"
           }
         },
         "events[6].combined_text": {
           "kind": "text",
           "placeholder": {
-            "idx": 1,
+            "idx": 13,
             "type": "OBJECT",
-            "shape_name": "Content Placeholder 2"
+            "shape_name": "コンテンツ プレースホルダー 8"
           }
         },
         "events[7].combined_text": {
           "kind": "text",
           "placeholder": {
-            "idx": 1,
+            "idx": 13,
             "type": "OBJECT",
-            "shape_name": "Content Placeholder 2"
+            "shape_name": "コンテンツ プレースホルダー 8"
           }
         }
       }
@@ -350,8 +350,8 @@
           "kind": "text",
           "placeholder": {
             "idx": 0,
-            "type": "CENTER_TITLE",
-            "shape_name": "Title 1"
+            "type": "TITLE",
+            "shape_name": "タイトル 6"
           }
         },
         "subtitle": {
@@ -376,47 +376,47 @@
           "placeholder": {
             "idx": 0,
             "type": "TITLE",
-            "shape_name": "Title 1"
+            "shape_name": "タイトル 6"
           }
         },
         "metric.value": {
           "kind": "text",
           "placeholder": {
-            "idx": 1,
+            "idx": 13,
             "type": "OBJECT",
-            "shape_name": "Content Placeholder 2"
+            "shape_name": "コンテンツ プレースホルダー 8"
           }
         },
         "metric.label": {
           "kind": "text",
           "placeholder": {
-            "idx": 1,
+            "idx": 13,
             "type": "OBJECT",
-            "shape_name": "Content Placeholder 2"
+            "shape_name": "コンテンツ プレースホルダー 8"
           }
         },
         "metric.unit": {
           "kind": "text",
           "placeholder": {
-            "idx": 1,
+            "idx": 13,
             "type": "OBJECT",
-            "shape_name": "Content Placeholder 2"
+            "shape_name": "コンテンツ プレースホルダー 8"
           }
         },
         "metric.delta": {
           "kind": "text",
           "placeholder": {
-            "idx": 1,
+            "idx": 13,
             "type": "OBJECT",
-            "shape_name": "Content Placeholder 2"
+            "shape_name": "コンテンツ プレースホルダー 8"
           }
         },
         "supporting_points": {
           "kind": "list",
           "placeholder": {
-            "idx": 1,
+            "idx": 13,
             "type": "OBJECT",
-            "shape_name": "Content Placeholder 2"
+            "shape_name": "コンテンツ プレースホルダー 8"
           }
         }
       }
@@ -433,15 +433,15 @@
           "placeholder": {
             "idx": 0,
             "type": "TITLE",
-            "shape_name": "Title 1"
+            "shape_name": "タイトル 6"
           }
         },
         "chart": {
           "kind": "chart",
           "placeholder": {
-            "idx": 1,
+            "idx": 13,
             "type": "OBJECT",
-            "shape_name": "Content Placeholder 2"
+            "shape_name": "コンテンツ プレースホルダー 8"
           }
         }
       }
@@ -458,7 +458,7 @@
           "placeholder": {
             "idx": 0,
             "type": "TITLE",
-            "shape_name": "Title 1"
+            "shape_name": "タイトル 7"
           }
         },
         "icon": {
@@ -491,31 +491,31 @@
           "placeholder": {
             "idx": 0,
             "type": "TITLE",
-            "shape_name": "Title 1"
+            "shape_name": "タイトル 6"
           }
         },
         "body": {
           "kind": "text",
           "placeholder": {
-            "idx": 1,
+            "idx": 13,
             "type": "OBJECT",
-            "shape_name": "Content Placeholder 2"
+            "shape_name": "コンテンツ プレースホルダー 8"
           }
         },
         "items": {
           "kind": "list",
           "placeholder": {
-            "idx": 1,
+            "idx": 13,
             "type": "OBJECT",
-            "shape_name": "Content Placeholder 2"
+            "shape_name": "コンテンツ プレースホルダー 8"
           }
         },
         "references": {
           "kind": "list",
           "placeholder": {
-            "idx": 1,
+            "idx": 13,
             "type": "OBJECT",
-            "shape_name": "Content Placeholder 2"
+            "shape_name": "コンテンツ プレースホルダー 8"
           }
         }
       }
@@ -532,47 +532,47 @@
           "placeholder": {
             "idx": 0,
             "type": "TITLE",
-            "shape_name": "Title 1"
+            "shape_name": "タイトル 6"
           }
         },
         "product_name": {
           "kind": "text",
           "placeholder": {
-            "idx": 1,
+            "idx": 13,
             "type": "OBJECT",
-            "shape_name": "Content Placeholder 2"
+            "shape_name": "コンテンツ プレースホルダー 8"
           }
         },
         "end_of_sale": {
           "kind": "text",
           "placeholder": {
-            "idx": 1,
+            "idx": 13,
             "type": "OBJECT",
-            "shape_name": "Content Placeholder 2"
+            "shape_name": "コンテンツ プレースホルダー 8"
           }
         },
         "end_of_support": {
           "kind": "text",
           "placeholder": {
-            "idx": 1,
+            "idx": 13,
             "type": "OBJECT",
-            "shape_name": "Content Placeholder 2"
+            "shape_name": "コンテンツ プレースホルダー 8"
           }
         },
         "replacement": {
           "kind": "text",
           "placeholder": {
-            "idx": 1,
+            "idx": 13,
             "type": "OBJECT",
-            "shape_name": "Content Placeholder 2"
+            "shape_name": "コンテンツ プレースホルダー 8"
           }
         },
         "actions": {
           "kind": "list",
           "placeholder": {
-            "idx": 1,
+            "idx": 13,
             "type": "OBJECT",
-            "shape_name": "Content Placeholder 2"
+            "shape_name": "コンテンツ プレースホルダー 8"
           }
         }
       }
