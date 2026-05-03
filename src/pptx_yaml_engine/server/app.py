@@ -126,57 +126,15 @@ def create_mcp(config: ServerConfig, artifact_store: ArtifactStore, template_reg
     @mcp.tool()
     def list_supported_layouts() -> dict[str, Any]:
         """Return the 15 supported semantic PowerPoint layouts and their slot contracts."""
+        logger.info("Tool call: list_supported_layouts")
         return supported_layouts_response()
 
     @mcp.tool()
     def list_icons(pack: str | None = None, variant: str | None = None, query: str | None = None) -> dict[str, Any]:
         """List built-in icon names. Only these icon refs are allowed in deck payloads."""
         try:
+            logger.info("Tool call: list_icons")
             return list_icon_registry(pack=pack, variant=variant, query=query)
-        except DomainError as exc:
-            raise _tool_error(exc) from exc
-
-    @mcp.tool()
-    def inspect_template(template_b64: str) -> dict[str, Any]:
-        """Inspect a .pptx/.potx template and return layouts, placeholders, geometry, and fingerprint."""
-        try:
-            return {"inspection": inspect_template_impl(decode_b64(template_b64))}
-        except DomainError as exc:
-            raise _tool_error(exc) from exc
-
-    @mcp.tool()
-    def propose_mapping(inspection: dict[str, Any], ruleset: dict[str, Any] | None = None) -> dict[str, Any]:
-        """Generate a semantic layout/slot mapping proposal from an inspection result."""
-        try:
-            return {"proposal": propose_mapping_impl(inspection, ruleset)}
-        except DomainError as exc:
-            raise _tool_error(exc) from exc
-
-    @mcp.tool()
-    def finalize_manifest(
-        inspection: dict[str, Any],
-        proposal: dict[str, Any],
-        overrides: dict[str, Any] | None = None,
-    ) -> dict[str, Any]:
-        """Finalize a template manifest. Required unresolved slots fail explicitly."""
-        try:
-            return {"manifest": finalize_manifest_impl(inspection, proposal, overrides)}
-        except DomainError as exc:
-            raise _tool_error(exc) from exc
-
-    @mcp.tool()
-    def validate_manifest(template_b64: str, manifest: dict[str, Any]) -> dict[str, Any]:
-        """Validate that a manifest still matches the supplied template bytes."""
-        try:
-            return validate_manifest_impl(decode_b64(template_b64), manifest)
-        except DomainError as exc:
-            raise _tool_error(exc) from exc
-
-    @mcp.tool()
-    def validate_deck(deck: dict[str, Any], manifest: dict[str, Any]) -> dict[str, Any]:
-        """Validate deck JSON against the semantic schema and a finalized manifest."""
-        try:
-            return validate_deck_impl(deck, manifest)
         except DomainError as exc:
             raise _tool_error(exc) from exc
 
@@ -188,6 +146,7 @@ def create_mcp(config: ServerConfig, artifact_store: ArtifactStore, template_reg
         set of semantic layout keys (e.g. ``cover_title``, ``list_basic``) that
         the template supports.  Pass the ``name`` value to render_presentation.
         """
+        logger.info("Tool call: list_templates")
         templates = template_registry.list()
         return {"templates": templates, "count": len(templates)}
 
@@ -237,6 +196,11 @@ def create_mcp(config: ServerConfig, artifact_store: ArtifactStore, template_reg
                 )
             )
         try:
+            logger.info(
+                "Tool call: render_presentation template=%s slides=%d",
+                normalized_name or DEFAULT_TEMPLATE_NAME,
+                len(deck.get("slides", [])),
+            )
             pptx_bytes = render_pptx_impl(entry.template_bytes, entry.manifest, deck)
             artifact = artifact_store.publish(
                 pptx_bytes,
@@ -251,36 +215,87 @@ def create_mcp(config: ServerConfig, artifact_store: ArtifactStore, template_reg
         except DomainError as exc:
             raise _tool_error(exc) from exc
 
-    @mcp.tool()
-    def render_presentation_custom(
-        template_b64: str,
-        manifest: dict[str, Any],
-        deck: dict[str, Any],
-        file_name: str | None = None,
-    ) -> dict[str, Any]:
-        """Render a PowerPoint using a caller-supplied template and manifest.
+    if config.enable_operator_tools:
+        @mcp.tool()
+        def inspect_template(template_b64: str) -> dict[str, Any]:
+            """Inspect a .pptx/.potx template and return layouts, placeholders, geometry, and fingerprint."""
+            try:
+                logger.info("Tool call: inspect_template")
+                return {"inspection": inspect_template_impl(decode_b64(template_b64))}
+            except DomainError as exc:
+                raise _tool_error(exc) from exc
 
-        This is the advanced / operator tool.  For regular use, prefer
-        render_presentation() with a server-managed template instead.
+        @mcp.tool()
+        def propose_mapping(inspection: dict[str, Any], ruleset: dict[str, Any] | None = None) -> dict[str, Any]:
+            """Generate a semantic layout/slot mapping proposal from an inspection result."""
+            try:
+                logger.info("Tool call: propose_mapping")
+                return {"proposal": propose_mapping_impl(inspection, ruleset)}
+            except DomainError as exc:
+                raise _tool_error(exc) from exc
 
-        ``template_b64`` must be the base-64-encoded bytes of a ``.pptx`` or
-        ``.potx`` file.  ``manifest`` must be a finalized manifest whose
-        ``template_fingerprint`` matches the supplied template bytes.
-        """
-        try:
-            pptx_bytes = render_pptx_impl(decode_b64(template_b64), manifest, deck)
-            artifact = artifact_store.publish(
-                pptx_bytes,
-                file_name or deck.get("meta", {}).get("title", "presentation.pptx"),
-                _base_url(config),
-            )
-            return {
-                "success": True,
-                **artifact,
-                "slideCount": len(deck.get("slides", [])),
-            }
-        except DomainError as exc:
-            raise _tool_error(exc) from exc
+        @mcp.tool()
+        def finalize_manifest(
+            inspection: dict[str, Any],
+            proposal: dict[str, Any],
+            overrides: dict[str, Any] | None = None,
+        ) -> dict[str, Any]:
+            """Finalize a template manifest. Required unresolved slots fail explicitly."""
+            try:
+                logger.info("Tool call: finalize_manifest")
+                return {"manifest": finalize_manifest_impl(inspection, proposal, overrides)}
+            except DomainError as exc:
+                raise _tool_error(exc) from exc
+
+        @mcp.tool()
+        def validate_manifest(template_b64: str, manifest: dict[str, Any]) -> dict[str, Any]:
+            """Validate that a manifest still matches the supplied template bytes."""
+            try:
+                logger.info("Tool call: validate_manifest")
+                return validate_manifest_impl(decode_b64(template_b64), manifest)
+            except DomainError as exc:
+                raise _tool_error(exc) from exc
+
+        @mcp.tool()
+        def validate_deck(deck: dict[str, Any], manifest: dict[str, Any]) -> dict[str, Any]:
+            """Validate deck JSON against the semantic schema and a finalized manifest."""
+            try:
+                logger.info("Tool call: validate_deck")
+                return validate_deck_impl(deck, manifest)
+            except DomainError as exc:
+                raise _tool_error(exc) from exc
+
+        @mcp.tool()
+        def render_presentation_custom(
+            template_b64: str,
+            manifest: dict[str, Any],
+            deck: dict[str, Any],
+            file_name: str | None = None,
+        ) -> dict[str, Any]:
+            """Render a PowerPoint using a caller-supplied template and manifest.
+
+            This is the advanced / operator tool.  For regular use, prefer
+            render_presentation() with a server-managed template instead.
+
+            ``template_b64`` must be the base-64-encoded bytes of a ``.pptx`` or
+            ``.potx`` file.  ``manifest`` must be a finalized manifest whose
+            ``template_fingerprint`` matches the supplied template bytes.
+            """
+            try:
+                logger.info("Tool call: render_presentation_custom slides=%d", len(deck.get("slides", [])))
+                pptx_bytes = render_pptx_impl(decode_b64(template_b64), manifest, deck)
+                artifact = artifact_store.publish(
+                    pptx_bytes,
+                    file_name or deck.get("meta", {}).get("title", "presentation.pptx"),
+                    _base_url(config),
+                )
+                return {
+                    "success": True,
+                    **artifact,
+                    "slideCount": len(deck.get("slides", [])),
+                }
+            except DomainError as exc:
+                raise _tool_error(exc) from exc
 
     return mcp
 

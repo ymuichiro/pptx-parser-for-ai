@@ -49,6 +49,7 @@ The shipped `.env.example` is already aligned to the current public host:
 ```env
 APP_PORT=13001
 ALLOWED_HOSTS=127.0.0.1,localhost,app.internal,generate-slide.notelligent.app
+ENABLE_OPERATOR_TOOLS=false
 PUBLIC_BASE_URL=https://generate-slide.notelligent.app
 ```
 
@@ -86,6 +87,14 @@ Operational checks:
 - `https://generate-slide.notelligent.app/health` returns `200`
 - `https://generate-slide.notelligent.app/mcp` accepts MCP initialize/tool calls
 - `render_presentation` returns `downloadUrl` values rooted at `https://generate-slide.notelligent.app`
+- Public deployment should expose only the end-user tool set:
+  - `list_supported_layouts`
+  - `list_icons`
+  - `list_templates`
+  - `render_presentation`
+
+If you need template inspection / manifest-authoring tools for operator work,
+set `ENABLE_OPERATOR_TOOLS=true` and restart the app.
 
 ## Local YAML -> PPTX generation
 

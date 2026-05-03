@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from dataclasses import replace
 from pathlib import Path
 
 import pytest
@@ -33,6 +34,7 @@ def _make_config(tmp_path: Path, template_dir: str | None = None) -> ServerConfi
         allowed_hosts=["testserver", "127.0.0.1", "localhost"],
         artifact_root_dir=str(tmp_path),
         artifact_ttl_seconds=900,
+        enable_operator_tools=False,
         host="127.0.0.1",
         max_output_bytes=1_000_000,
         max_request_bytes=1_000_000,
@@ -128,6 +130,14 @@ def _render_call(arguments: dict) -> dict:
     }
 
 
+_MCP_TOOLS_LIST = {
+    "jsonrpc": "2.0",
+    "id": 11,
+    "method": "tools/list",
+    "params": {},
+}
+
+
 def test_list_templates_returns_empty_when_no_templates(tmp_path: Path) -> None:
     """list_templates returns an empty list when no templates are configured."""
     app = create_app(_make_config(tmp_path))
@@ -139,6 +149,34 @@ def test_list_templates_returns_empty_when_no_templates(tmp_path: Path) -> None:
     result = _tool_json(body)
     assert result["count"] == 0
     assert result["templates"] == []
+
+
+def test_public_server_hides_operator_tools_by_default(tmp_path: Path) -> None:
+    app = create_app(_make_config(tmp_path))
+    with TestClient(app) as client:
+        client.post("/mcp/", json=_MCP_INIT, headers={"Accept": "application/json", "Content-Type": "application/json"})
+        body = _mcp_post(client, _MCP_TOOLS_LIST)
+
+    tools = body["result"]["tools"]
+    names = {tool["name"] for tool in tools}
+    assert names == {"list_supported_layouts", "list_icons", "list_templates", "render_presentation"}
+
+
+def test_operator_server_exposes_manifest_authoring_tools(tmp_path: Path) -> None:
+    config = _make_config(tmp_path)
+    config = replace(config, enable_operator_tools=True)
+    app = create_app(config)
+    with TestClient(app) as client:
+        client.post("/mcp/", json=_MCP_INIT, headers={"Accept": "application/json", "Content-Type": "application/json"})
+        body = _mcp_post(client, _MCP_TOOLS_LIST)
+
+    names = {tool["name"] for tool in body["result"]["tools"]}
+    assert "inspect_template" in names
+    assert "propose_mapping" in names
+    assert "finalize_manifest" in names
+    assert "validate_manifest" in names
+    assert "validate_deck" in names
+    assert "render_presentation_custom" in names
 
 
 def test_render_presentation_no_templates_configured(tmp_path: Path) -> None:
