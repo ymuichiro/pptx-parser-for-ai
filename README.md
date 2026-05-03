@@ -30,6 +30,63 @@ http://127.0.0.1:3001/mcp
 
 Health and generated artifacts are available at `/health` and `/artifacts/{token}`.
 
+## Docker / Cloudflare Tunnel
+
+Create `.env` first:
+
+```bash
+make init-env
+```
+
+Minimum settings for named-tunnel publishing:
+
+- `CLOUDFLARE_TUNNEL_TOKEN`
+- `ALLOWED_HOSTS`
+- `PUBLIC_BASE_URL`
+
+The shipped `.env.example` is already aligned to the current public host:
+
+```env
+APP_PORT=13001
+ALLOWED_HOSTS=127.0.0.1,localhost,app.internal,generate-slide.notelligent.app
+PUBLIC_BASE_URL=https://generate-slide.notelligent.app
+```
+
+Start the local Docker stack:
+
+```bash
+make up
+```
+
+Start the named Cloudflare Tunnel together with the app:
+
+```bash
+make up-tunnel
+```
+
+Stop the stack:
+
+```bash
+make down
+```
+
+Local Docker endpoints:
+
+- MCP endpoint: `http://127.0.0.1:13001/mcp`
+- Health check: `http://127.0.0.1:13001/health`
+
+Named Tunnel target:
+
+- Hostname: `generate-slide.notelligent.app`
+- Service URL: `http://app:3001`
+- Path: empty
+
+Operational checks:
+
+- `https://generate-slide.notelligent.app/health` returns `200`
+- `https://generate-slide.notelligent.app/mcp` accepts MCP initialize/tool calls
+- `render_presentation` returns `downloadUrl` values rooted at `https://generate-slide.notelligent.app`
+
 ## Local YAML -> PPTX generation
 
 For manual/operator rendering from local assets, use the dedicated CLI with a

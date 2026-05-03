@@ -183,6 +183,7 @@ def test_render_presentation_uses_default_template_when_name_omitted(
     result = _tool_json(body)
     assert result["success"] is True
     assert result["slideCount"] == 1
+    assert result["downloadUrl"].startswith("http://testserver/artifacts/")
 
 
 @pytest.mark.parametrize("template_name", [None, "", "   "])
