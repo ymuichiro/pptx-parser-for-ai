@@ -6,11 +6,11 @@ from pathlib import Path
 
 import pytest
 
+import pptx_yaml_engine.server.template_registry as template_registry_module
 from pptx_yaml_engine.errors import DomainError
 from pptx_yaml_engine.layouts import LAYOUT_SPECS
 from pptx_yaml_engine.server.template_registry import DEFAULT_TEMPLATE_NAME, TemplateRegistry
 from pptx_yaml_engine.utils.fingerprint import template_fingerprint
-import pptx_yaml_engine.server.template_registry as template_registry_module
 
 
 def _write_template(directory: Path, stem: str, template_bytes: bytes, suffix: str = ".pptx") -> None:

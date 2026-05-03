@@ -6,10 +6,10 @@ from pathlib import Path
 import pytest
 from starlette.testclient import TestClient
 
+import pptx_yaml_engine.server.template_registry as template_registry_module
+from pptx_yaml_engine.errors import DomainError
 from pptx_yaml_engine.server.app import create_app
 from pptx_yaml_engine.server.config import ServerConfig
-from pptx_yaml_engine.errors import DomainError
-import pptx_yaml_engine.server.template_registry as template_registry_module
 
 _VALID_DECK = {
     "version": 1,
@@ -260,9 +260,8 @@ def test_app_startup_fails_fast_for_invalid_template(tmp_path: Path) -> None:
 
     app = create_app(_make_config(tmp_path, template_dir=str(tpl_dir)))
 
-    with pytest.raises(Exception):
-        with TestClient(app):
-            pass
+    with pytest.raises(DomainError), TestClient(app):
+        pass
 
 
 def test_app_startup_fails_fast_for_template_contract_mismatch(
@@ -283,6 +282,5 @@ def test_app_startup_fails_fast_for_template_contract_mismatch(
 
     app = create_app(_make_config(tmp_path, template_dir=str(tpl_dir)))
 
-    with pytest.raises(Exception):
-        with TestClient(app):
-            pass
+    with pytest.raises(DomainError), TestClient(app):
+        pass
