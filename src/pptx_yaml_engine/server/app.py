@@ -110,8 +110,14 @@ def create_mcp(config: ServerConfig, artifact_store: ArtifactStore, template_reg
     mcp = FastMCP(
         "pptx-template-engine",
         instructions=(
-            "Generate PowerPoint files by mapping semantic deck JSON into a pre-authored "
-            "PowerPoint template manifest. Use icon refs only for visual/image slots."
+            "Generate PowerPoint files with server-managed templates only; never ask the user for "
+            "template files, template_b64, or manifest JSON. Start by calling list_templates() and "
+            "list_supported_layouts(), then plan a varied deck. Prefer richer layouts when they fit: "
+            "use comparison_2col for two viewpoints, three_cards_horizontal or three_cards_vertical "
+            "for three peer items, timeline for chronology, kpi_big_number for one headline metric, "
+            "and chart_basic or table_basic for evidence. Use agenda once near the front, use "
+            "section_divider only for major transitions, and avoid repetitive runs of section_divider "
+            "or list_basic if a richer layout matches the content. Use icon refs only for visual/image slots."
         ),
         json_response=True,
         stateless_http=True,
@@ -159,8 +165,12 @@ def create_mcp(config: ServerConfig, artifact_store: ArtifactStore, template_reg
         """Render a PowerPoint file using a server-managed template.
 
         Call list_templates() first to discover available template names and
-        which semantic layouts each one supports. Build the deck using only
-        layouts that appear in the chosen template's supported_layouts list.
+        which semantic layouts each one supports, then call
+        list_supported_layouts() to choose slide types intentionally. Build the
+        deck using only layouts that appear in the chosen template's
+        supported_layouts list. Prefer a varied outline instead of repeating
+        ``section_divider`` and ``list_basic`` unless the content is truly just
+        a section break or bullet list.
         If ``template_name`` is omitted, ``null``, empty, or whitespace-only,
         the server falls back to the template named ``default``.
 

@@ -4,7 +4,6 @@ from io import BytesIO
 from pathlib import Path
 
 from pptx import Presentation
-from pptx.enum.shapes import MSO_SHAPE_TYPE
 
 from pptx_yaml_engine.layouts import LAYOUT_SPECS
 from pptx_yaml_engine.mapper.service import generate_manifest, inspect_template, validate_manifest
@@ -77,36 +76,73 @@ def test_repo_default_template_special_layouts_render_structured_content() -> No
     prs = Presentation(BytesIO(output))
 
     list_texts = _slide_texts(prs.slides[3])
-    assert "1" in list_texts
-    assert "A" in list_texts
-    assert "B" in list_texts
+    list_combined = "\n".join(list_texts)
+    assert "A" in list_combined
+    assert "B" in list_combined
+    assert "1" not in list_texts
 
     comparison_texts = _slide_texts(prs.slides[5])
+    comparison_combined = "\n".join(comparison_texts)
     assert "Old" in comparison_texts
-    assert "Before" in comparison_texts
+    assert "Before" in comparison_combined
     assert "New" in comparison_texts
-    assert "After" in comparison_texts
+    assert "After" in comparison_combined
     assert "Old\nBefore" not in comparison_texts
+    assert prs.slides[5].placeholders[1].text.strip() == "Old"
+    assert prs.slides[5].placeholders[13].text.strip() == "Before"
+    assert prs.slides[5].placeholders[3].text.strip() == "New"
+    assert prs.slides[5].placeholders[14].text.strip() == "After"
+    assert all(getattr(shape, "is_placeholder", False) for shape in prs.slides[5].shapes)
+
+    cards_v = prs.slides[6]
+    cards_v_texts = "\n".join(_slide_texts(cards_v))
+    assert "A" in cards_v_texts
+    assert "AA" in cards_v_texts
+    assert "B" in cards_v_texts
+    assert "BB" in cards_v_texts
+    assert "C" in cards_v_texts
+    assert "CC" in cards_v_texts
+    assert cards_v.placeholders[13].text.strip() == "A\nAA"
+    assert cards_v.placeholders[14].text.strip() == "B\nBB"
+    assert cards_v.placeholders[15].text.strip() == "C\nCC"
+    assert all(getattr(shape, "is_placeholder", False) for shape in cards_v.shapes)
+
+    cards_h = prs.slides[7]
+    cards_h_texts = "\n".join(_slide_texts(cards_h))
+    assert "A" in cards_h_texts
+    assert "AA" in cards_h_texts
+    assert "B" in cards_h_texts
+    assert "BB" in cards_h_texts
+    assert "C" in cards_h_texts
+    assert "CC" in cards_h_texts
+    assert cards_h.placeholders[13].text.strip() == "A\nAA"
+    assert cards_h.placeholders[14].text.strip() == "B\nBB"
+    assert cards_h.placeholders[15].text.strip() == "C\nCC"
+    assert all(getattr(shape, "is_placeholder", False) for shape in cards_h.shapes)
 
     timeline_texts = _slide_texts(prs.slides[8])
-    assert "Q1" in timeline_texts
-    assert "Plan" in timeline_texts
-    assert "Start" in timeline_texts
-    assert any(shape.shape_type == MSO_SHAPE_TYPE.AUTO_SHAPE for shape in prs.slides[8].shapes)
+    timeline_combined = "\n".join(timeline_texts)
+    assert "Q1" in timeline_combined
+    assert "Plan" in timeline_combined
+    assert "Start" in timeline_combined
+    assert prs.slides[8].placeholders[13].text.strip() == "Q1\nPlan\nStart"
+    assert all(getattr(shape, "is_placeholder", False) for shape in prs.slides[8].shapes)
 
     kpi_texts = _slide_texts(prs.slides[10])
-    assert "42" in kpi_texts
-    assert "Customers" in kpi_texts
-    assert "42\nCustomers" not in kpi_texts
+    kpi_combined = "\n".join(kpi_texts)
+    assert "42" in kpi_combined
+    assert "Customers" in kpi_combined
+    assert "42\nCustomers" in kpi_combined
 
     image_slide = prs.slides[12]
     image_texts = _slide_texts(image_slide)
     assert "Icon" in image_texts
-    assert any(shape.shape_type == MSO_SHAPE_TYPE.PICTURE for shape in image_slide.shapes)
+    assert any(shape.placeholder_format.idx == 1 for shape in image_slide.placeholders)
 
     appendix_texts = _slide_texts(prs.slides[13])
     assert "Appendix" in appendix_texts
 
     eol_texts = _slide_texts(prs.slides[14])
-    assert "Product" in eol_texts
-    assert "Legacy API" in eol_texts
+    eol_combined = "\n".join(eol_texts)
+    assert "Legacy API" in eol_combined
+    assert "Migrate" in eol_combined

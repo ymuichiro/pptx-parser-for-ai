@@ -14,6 +14,7 @@ AIまたは開発者が実装・修正を行う場合、まずこのファイル
 - テンプレートの見た目・レイアウトは、事前に用意された `.pptx` / `.potx` が持つ
 - コンテンツは deck JSON が持つ
 - manifest が semantic slot と PowerPoint placeholder `idx` を結び付ける
+- 通常の render では、Python が新しいスライド UI やレイアウトを描き起こさず、template の既存 placeholder / content 領域へ差し込む
 - deck JSON の詳細仕様は `SEMANTIC_DECK_SPEC.md` を参照する
 
 ### 主な利用者
@@ -121,6 +122,7 @@ AIまたは開発者が実装・修正を行う場合、まずこのファイル
 - deck の入力契約は **JSON** であり、root は `version`, `meta`, `slides` を基本とする
 - slide の種別指定は `type` ではなく **`layout`** を使う
 - 出力ファイルは必ず **PowerPoint テンプレートをベースに生成した `.pptx`** である
+- 通常フローの render は **template に存在しない新規レイアウト装飾を Python 側で描き起こしてはいけない**
 - 任意画像 URL、ローカルファイルパス、base64 画像は通常フローで受け付けてはいけない
 
 これらのルールに反する実装をしてはいけない。

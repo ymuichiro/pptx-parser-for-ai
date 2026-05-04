@@ -67,25 +67,25 @@ def full_deck() -> dict[str, Any]:
             {
                 "layout": "comparison_2col",
                 "title": "Compare",
-                "left": {"title": "Old", "description": "Before"},
-                "right": {"title": "New", "description": "After"},
+                "left": {"title": "Old", "description": "Before", "icon": icon},
+                "right": {"title": "New", "description": "After", "icon": icon},
             },
             {
                 "layout": "three_cards_vertical",
                 "title": "Cards V",
                 "cards": [
-                    {"title": "A", "description": "AA"},
-                    {"title": "B", "description": "BB"},
-                    {"title": "C", "description": "CC"},
+                    {"title": "A", "description": "AA", "icon": icon},
+                    {"title": "B", "description": "BB", "icon": icon},
+                    {"title": "C", "description": "CC", "icon": icon},
                 ],
             },
             {
                 "layout": "three_cards_horizontal",
                 "title": "Cards H",
                 "cards": [
-                    {"title": "A", "description": "AA"},
-                    {"title": "B", "description": "BB"},
-                    {"title": "C", "description": "CC"},
+                    {"title": "A", "description": "AA", "icon": icon},
+                    {"title": "B", "description": "BB", "icon": icon},
+                    {"title": "C", "description": "CC", "icon": icon},
                 ],
             },
             {"layout": "timeline", "title": "Timeline", "events": [{"label": "Q1", "title": "Plan", "description": "Start"}]},

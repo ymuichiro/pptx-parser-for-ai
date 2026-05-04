@@ -22,6 +22,7 @@ semantic deck JSON とは、**PowerPoint の見た目ではなく、スライド
 | Semantic deck JSON | スライドの意味とコンテンツ |
 
 つまり、semantic deck JSON は「どのレイアウトのスライドに、どんな内容を入れるか」を表現します。
+通常フローでは、Python が deck から新しいカード UI やタイムライン UI を描き起こすのではなく、template が持つ既存 placeholder / content 領域へ内容を流し込みます。
 
 ---
 

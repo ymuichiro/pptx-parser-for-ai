@@ -2,7 +2,7 @@
 
 Template-driven PowerPoint generation MCP server.
 
-This project maps semantic deck JSON into placeholders from a pre-authored `.pptx` template. The template owns visual design; the deck owns content; the manifest connects semantic slots to PowerPoint placeholder `idx` values.
+This project maps semantic deck JSON into placeholders from a pre-authored `.pptx` template. The template owns visual design; the deck owns content; the manifest connects semantic slots to PowerPoint placeholder `idx` values. In the normal render path, Python does not synthesize new slide layouts or redraw card/timeline UI; it fills the template's existing placeholders and content regions.
 
 Server-managed templates are loaded from the templates directory at startup.
 Each `.pptx` / `.potx` is inspected once, mapped once, and the generated

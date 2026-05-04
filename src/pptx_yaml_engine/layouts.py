@@ -268,12 +268,103 @@ LAYOUT_ALIASES: dict[str, tuple[str, ...]] = {
 }
 
 
+LAYOUT_SELECTION_GUIDANCE: dict[str, dict[str, str]] = {
+    "cover_title": {
+        "whenToUse": "Use once for the opening slide with the deck topic and framing subtitle.",
+        "avoidWhen": "Do not reuse for normal content pages.",
+    },
+    "section_divider": {
+        "whenToUse": "Use only to separate major sections or topic shifts.",
+        "avoidWhen": "Do not alternate section_divider and list_basic repeatedly; usually 0-2 divider slides are enough.",
+    },
+    "agenda": {
+        "whenToUse": "Use near the front when the deck has several sections or a clear narrative arc.",
+        "avoidWhen": "Do not use for detailed content; keep it to the high-level flow.",
+    },
+    "list_basic": {
+        "whenToUse": "Use when bullets are genuinely the clearest representation and ordering matters.",
+        "avoidWhen": "Avoid long runs of list_basic slides when comparison, cards, timeline, KPI, chart, or table would communicate better.",
+    },
+    "table_basic": {
+        "whenToUse": "Use for compact factual matrices such as plans, ownership, pricing, or feature grids.",
+        "avoidWhen": "Avoid when the takeaway is a single trend or contrast; use chart_basic or comparison_2col instead.",
+    },
+    "comparison_2col": {
+        "whenToUse": "Use for before/after, old/new, vendor A vs vendor B, or two strategic viewpoints.",
+        "avoidWhen": "Avoid when there are more than two parallel items or when the slide is just a plain bullet list.",
+    },
+    "three_cards_vertical": {
+        "whenToUse": "Use for three stacked pillars, phases, or recommendations with slightly longer descriptions.",
+        "avoidWhen": "Avoid when you have only one or two items, or when chronology is more important than grouping.",
+    },
+    "three_cards_horizontal": {
+        "whenToUse": "Use for three parallel items such as products, layers, strengths, or use cases.",
+        "avoidWhen": "Avoid when card text is too long to scan quickly or when a true comparison between two sides is stronger.",
+    },
+    "timeline": {
+        "whenToUse": "Use for chronology, roadmap, rollout phases, or sequential milestones.",
+        "avoidWhen": "Avoid for unordered concepts; cards or lists are better for those.",
+    },
+    "closing_end": {
+        "whenToUse": "Use once at the end for summary, next step, or thank-you framing.",
+        "avoidWhen": "Do not place it mid-deck.",
+    },
+    "kpi_big_number": {
+        "whenToUse": "Use when one metric is the main message and 2-3 short supporting points add context.",
+        "avoidWhen": "Avoid when multiple metrics need equal weight; use table_basic or chart_basic instead.",
+    },
+    "chart_basic": {
+        "whenToUse": "Use for trends, distributions, or category comparisons where the chart itself is the evidence.",
+        "avoidWhen": "Avoid when exact prose explanation matters more than the visual pattern.",
+    },
+    "image_caption": {
+        "whenToUse": "Use for a single icon-led concept, architecture component, or spotlighted capability.",
+        "avoidWhen": "Avoid when the slide needs multiple peer items; use cards instead.",
+    },
+    "appendix_backup": {
+        "whenToUse": "Use for backup details, references, assumptions, or optional supporting notes.",
+        "avoidWhen": "Avoid in the main story unless the material is clearly supplemental.",
+    },
+    "eol_notice": {
+        "whenToUse": "Use for lifecycle notices, migration guidance, and operational action items.",
+        "avoidWhen": "Avoid for general announcements that are not lifecycle-driven.",
+    },
+}
+
+
 def supported_layouts_response() -> dict[str, Any]:
     return {
+        "selectionGuidance": {
+            "recommendedWorkflow": [
+                "Call list_templates() and list_supported_layouts() before writing the deck.",
+                "Start with a short outline, then choose the richest fitting layout for each slide instead of defaulting to bullets.",
+                "Diversify the middle of the deck with comparison_2col, three_cards_horizontal or three_cards_vertical, timeline, kpi_big_number, chart_basic, or table_basic when they fit.",
+                "Use section_divider only for major transitions and avoid long consecutive runs of list_basic slides.",
+            ],
+            "compositionHeuristics": [
+                "Use agenda once near the front for decks with several sections.",
+                "Use comparison_2col for two viewpoints or before/after framing.",
+                "Use three_cards_horizontal for three peer items and three_cards_vertical for three stacked recommendations or phases.",
+                "Use kpi_big_number when one number is the headline message.",
+                "Use timeline for chronology and chart_basic for evidence driven by numeric trends.",
+            ],
+            "sampleOutline": [
+                {"position": 1, "layout": "cover_title", "reason": "Open with the topic and framing subtitle."},
+                {"position": 2, "layout": "agenda", "reason": "Set the structure if the deck has multiple sections."},
+                {"position": 3, "layout": "comparison_2col", "reason": "Frame two perspectives or a before/after contrast."},
+                {"position": 4, "layout": "three_cards_horizontal", "reason": "Show three pillars, products, or layers."},
+                {"position": 5, "layout": "timeline", "reason": "Explain chronology or rollout steps."},
+                {"position": 6, "layout": "kpi_big_number", "reason": "Highlight one decisive metric."},
+                {"position": 7, "layout": "list_basic", "reason": "Reserve bullets for takeaways or action items."},
+                {"position": 8, "layout": "closing_end", "reason": "End with summary or next step."},
+            ],
+        },
         "layouts": [
             {
                 "name": spec.name,
                 "description": spec.description,
+                "whenToUse": LAYOUT_SELECTION_GUIDANCE[spec.name]["whenToUse"],
+                "avoidWhen": LAYOUT_SELECTION_GUIDANCE[spec.name]["avoidWhen"],
                 "requiredFields": list(spec.required_fields),
                 "optionalFields": list(spec.optional_fields),
                 "slots": [
