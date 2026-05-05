@@ -79,22 +79,10 @@ def full_deck() -> dict[str, Any]:
                     {"title": "C", "description": "CC", "icon": icon},
                 ],
             },
-            {
-                "layout": "three_cards_horizontal",
-                "title": "Cards H",
-                "cards": [
-                    {"title": "A", "description": "AA", "icon": icon},
-                    {"title": "B", "description": "BB", "icon": icon},
-                    {"title": "C", "description": "CC", "icon": icon},
-                ],
-            },
-            {"layout": "timeline", "title": "Timeline", "events": [{"label": "Q1", "title": "Plan", "description": "Start"}]},
             {"layout": "closing_end", "title": "Thanks"},
-            {"layout": "kpi_big_number", "title": "KPI", "metric": {"value": "42", "label": "Customers"}},
             {"layout": "chart_basic", "title": "Chart", "chart": {"kind": "column", "categories": ["Q1", "Q2"], "series": [{"name": "Sales", "values": [10, 12]}]}},
             {"layout": "image_caption", "title": "Icon", "icon": icon},
             {"layout": "appendix_backup", "title": "Appendix", "items": ["Ref"]},
-            {"layout": "eol_notice", "title": "EOL", "product_name": "Legacy API", "actions": ["Migrate"]},
         ],
     }
 

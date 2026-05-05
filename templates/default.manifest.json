@@ -1,6 +1,6 @@
 {
   "manifest_version": 1,
-  "template_fingerprint": "sha256:a838852f4f7f99f3da99db83737fed6f9154836f94eeda9d6b9d98228db557cb",
+  "template_fingerprint": "sha256:fd6822bd88ca454c701ccaea1f2bc203dba7d321ec30d18b248ed793346968dc",
   "layouts": {
     "cover_title": {
       "ppt_layout_name": "Title Slide",
@@ -257,136 +257,6 @@
         }
       }
     },
-    "three_cards_horizontal": {
-      "ppt_layout_name": "three_cards_horizontal",
-      "match_confidence": 0.99,
-      "layout_match": {
-        "strategy": "semantic_name"
-      },
-      "slots": {
-        "cards[0].combined_text": {
-          "kind": "text",
-          "placeholder": {
-            "idx": 13,
-            "type": "OBJECT",
-            "shape_name": "slot__card_1_combined_text"
-          }
-        },
-        "cards[1].combined_text": {
-          "kind": "text",
-          "placeholder": {
-            "idx": 14,
-            "type": "OBJECT",
-            "shape_name": "slot__card_2_combined_text"
-          }
-        },
-        "cards[2].combined_text": {
-          "kind": "text",
-          "placeholder": {
-            "idx": 15,
-            "type": "OBJECT",
-            "shape_name": "slot__card_3_combined_text"
-          }
-        },
-        "cards[0].icon": {
-          "kind": "icon",
-          "placeholder": {
-            "idx": 16,
-            "type": "PICTURE",
-            "shape_name": "slot__card_1_icon"
-          }
-        },
-        "cards[1].icon": {
-          "kind": "icon",
-          "placeholder": {
-            "idx": 17,
-            "type": "PICTURE",
-            "shape_name": "slot__card_2_icon"
-          }
-        },
-        "cards[2].icon": {
-          "kind": "icon",
-          "placeholder": {
-            "idx": 18,
-            "type": "PICTURE",
-            "shape_name": "slot__card_3_icon"
-          }
-        },
-        "title": {
-          "kind": "text",
-          "placeholder": {
-            "idx": 0,
-            "type": "TITLE",
-            "shape_name": "タイトル 7"
-          }
-        }
-      }
-    },
-    "timeline": {
-      "ppt_layout_name": "timeline",
-      "match_confidence": 0.99,
-      "layout_match": {
-        "strategy": "semantic_name"
-      },
-      "slots": {
-        "events[0].combined_text": {
-          "kind": "text",
-          "placeholder": {
-            "idx": 13,
-            "type": "OBJECT",
-            "shape_name": "slot__event_1_combined_text"
-          }
-        },
-        "events[1].combined_text": {
-          "kind": "text",
-          "placeholder": {
-            "idx": 14,
-            "type": "OBJECT",
-            "shape_name": "slot__event_2_combined_text"
-          }
-        },
-        "events[2].combined_text": {
-          "kind": "text",
-          "placeholder": {
-            "idx": 15,
-            "type": "OBJECT",
-            "shape_name": "slot__event_3_combined_text"
-          }
-        },
-        "events[3].combined_text": {
-          "kind": "text",
-          "placeholder": {
-            "idx": 16,
-            "type": "OBJECT",
-            "shape_name": "slot__event_4_combined_text"
-          }
-        },
-        "events[4].combined_text": {
-          "kind": "text",
-          "placeholder": {
-            "idx": 17,
-            "type": "OBJECT",
-            "shape_name": "slot__event_5_combined_text"
-          }
-        },
-        "events[5].combined_text": {
-          "kind": "text",
-          "placeholder": {
-            "idx": 18,
-            "type": "OBJECT",
-            "shape_name": "slot__event_6_combined_text"
-          }
-        },
-        "title": {
-          "kind": "text",
-          "placeholder": {
-            "idx": 0,
-            "type": "TITLE",
-            "shape_name": "タイトル 6"
-          }
-        }
-      }
-    },
     "closing_end": {
       "ppt_layout_name": "Title Slide",
       "match_confidence": 0.98,
@@ -408,63 +278,6 @@
             "idx": 1,
             "type": "SUBTITLE",
             "shape_name": "Subtitle 2"
-          }
-        }
-      }
-    },
-    "kpi_big_number": {
-      "ppt_layout_name": "kpi_big_number",
-      "match_confidence": 0.99,
-      "layout_match": {
-        "strategy": "semantic_name"
-      },
-      "slots": {
-        "metric.value": {
-          "kind": "text",
-          "placeholder": {
-            "idx": 13,
-            "type": "OBJECT",
-            "shape_name": "slot__metric_value"
-          }
-        },
-        "metric.delta": {
-          "kind": "text",
-          "placeholder": {
-            "idx": 14,
-            "type": "OBJECT",
-            "shape_name": "slot__metric_delta"
-          }
-        },
-        "supporting_points": {
-          "kind": "list",
-          "placeholder": {
-            "idx": 15,
-            "type": "OBJECT",
-            "shape_name": "slot__supporting_points"
-          }
-        },
-        "title": {
-          "kind": "text",
-          "placeholder": {
-            "idx": 0,
-            "type": "TITLE",
-            "shape_name": "Title 1"
-          }
-        },
-        "metric.label": {
-          "kind": "text",
-          "placeholder": {
-            "idx": 13,
-            "type": "OBJECT",
-            "shape_name": "slot__metric_value"
-          }
-        },
-        "metric.unit": {
-          "kind": "text",
-          "placeholder": {
-            "idx": 13,
-            "type": "OBJECT",
-            "shape_name": "slot__metric_value"
           }
         }
       }
@@ -564,63 +377,6 @@
             "idx": 13,
             "type": "OBJECT",
             "shape_name": "slot__body"
-          }
-        }
-      }
-    },
-    "eol_notice": {
-      "ppt_layout_name": "comparison_2col",
-      "match_confidence": 0.985,
-      "layout_match": {
-        "strategy": "comparison_layout"
-      },
-      "slots": {
-        "title": {
-          "kind": "text",
-          "placeholder": {
-            "idx": 0,
-            "type": "TITLE",
-            "shape_name": "タイトル 9"
-          }
-        },
-        "product_name": {
-          "kind": "text",
-          "placeholder": {
-            "idx": 1,
-            "type": "BODY",
-            "shape_name": "slot__left_title"
-          }
-        },
-        "end_of_sale": {
-          "kind": "text",
-          "placeholder": {
-            "idx": 13,
-            "type": "OBJECT",
-            "shape_name": "slot__left_description"
-          }
-        },
-        "end_of_support": {
-          "kind": "text",
-          "placeholder": {
-            "idx": 3,
-            "type": "BODY",
-            "shape_name": "slot__right_title"
-          }
-        },
-        "replacement": {
-          "kind": "text",
-          "placeholder": {
-            "idx": 14,
-            "type": "OBJECT",
-            "shape_name": "slot__right_description"
-          }
-        },
-        "actions": {
-          "kind": "list",
-          "placeholder": {
-            "idx": 14,
-            "type": "OBJECT",
-            "shape_name": "slot__right_description"
           }
         }
       }

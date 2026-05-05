@@ -36,30 +36,15 @@ def test_finalize_manifest_standard_template_succeeds_without_overrides() -> Non
     assert manifest["template_fingerprint"] == inspection["template_fingerprint"]
 
 
-def test_three_cards_bindings_follow_left_to_right_order_for_two_content_layout() -> None:
+def test_three_cards_vertical_bindings_follow_top_to_bottom_order() -> None:
     inspection = inspect_template(make_template_bytes())
     manifest = finalize_manifest(inspection, propose_mapping(inspection))
 
     vertical = manifest["layouts"]["three_cards_vertical"]["slots"]
-    horizontal = manifest["layouts"]["three_cards_horizontal"]["slots"]
 
     assert vertical["cards[0].combined_text"]["placeholder"]["idx"] == 1
     assert vertical["cards[1].combined_text"]["placeholder"]["idx"] == 1
     assert vertical["cards[2].combined_text"]["placeholder"]["idx"] == 2
-    assert horizontal["cards[0].combined_text"]["placeholder"]["idx"] == 1
-    assert horizontal["cards[1].combined_text"]["placeholder"]["idx"] == 2
-    assert horizontal["cards[2].combined_text"]["placeholder"]["idx"] == 2
-
-
-def test_timeline_manifest_exposes_eight_event_slots_on_standard_template() -> None:
-    inspection = inspect_template(make_template_bytes())
-    manifest = finalize_manifest(inspection, propose_mapping(inspection))
-
-    timeline_slots = manifest["layouts"]["timeline"]["slots"]
-    event_slots = sorted(path for path in timeline_slots if path.startswith("events["))
-    assert len(event_slots) == 8
-    assert event_slots[0] == "events[0].combined_text"
-    assert event_slots[-1] == "events[7].combined_text"
 
 
 def test_validate_manifest_reports_unknown_placeholder_idx() -> None:
@@ -128,7 +113,7 @@ def test_propose_mapping_uses_placeholder_types_not_idx_order_for_title_and_cont
     assert agenda_slots["items"]["placeholder"]["idx"] == 4
 
 
-def test_propose_mapping_three_cards_uses_left_to_right_geometry_with_irregular_idx_values() -> None:
+def test_propose_mapping_three_cards_vertical_uses_top_to_bottom_geometry_with_irregular_idx_values() -> None:
     inspection = _inspection_with_layout(
         "Two Content",
         [
@@ -173,213 +158,10 @@ def test_propose_mapping_three_cards_uses_left_to_right_geometry_with_irregular_
 
     proposal = propose_mapping(inspection)
     vertical = proposal["layouts"]["three_cards_vertical"]["slots"]
-    horizontal = proposal["layouts"]["three_cards_horizontal"]["slots"]
 
     assert vertical["cards[0].combined_text"]["placeholder"]["idx"] == 7
     assert vertical["cards[1].combined_text"]["placeholder"]["idx"] == 7
     assert vertical["cards[2].combined_text"]["placeholder"]["idx"] == 99
-    assert horizontal["cards[0].combined_text"]["placeholder"]["idx"] == 7
-    assert horizontal["cards[1].combined_text"]["placeholder"]["idx"] == 99
-    assert horizontal["cards[2].combined_text"]["placeholder"]["idx"] == 99
-
-
-def test_propose_mapping_prefers_exact_semantic_layout_name_over_generic_alias() -> None:
-    inspection = {
-        "version": 1,
-        "template_fingerprint": "sha256:test",
-        "slide_width_emu": 12192000,
-        "slide_height_emu": 6858000,
-        "layouts": [
-            {
-                "layout_name": "Two Content",
-                "layout_index": 0,
-                "shapes": [
-                    {
-                        "shape_name": "Title 1",
-                        "is_placeholder": True,
-                        "placeholder_idx": 0,
-                        "placeholder_type": "TITLE",
-                        "norm_left": 0.1,
-                        "norm_top": 0.05,
-                        "norm_width": 0.8,
-                        "norm_height": 0.1,
-                        "norm_center_x": 0.5,
-                        "norm_center_y": 0.1,
-                    },
-                    {
-                        "shape_name": "Content Placeholder 2",
-                        "is_placeholder": True,
-                        "placeholder_idx": 13,
-                        "placeholder_type": "OBJECT",
-                        "norm_left": 0.05,
-                        "norm_top": 0.2,
-                        "norm_width": 0.25,
-                        "norm_height": 0.6,
-                        "norm_center_x": 0.175,
-                        "norm_center_y": 0.5,
-                    },
-                    {
-                        "shape_name": "Content Placeholder 3",
-                        "is_placeholder": True,
-                        "placeholder_idx": 14,
-                        "placeholder_type": "OBJECT",
-                        "norm_left": 0.37,
-                        "norm_top": 0.2,
-                        "norm_width": 0.25,
-                        "norm_height": 0.6,
-                        "norm_center_x": 0.495,
-                        "norm_center_y": 0.5,
-                    },
-                ],
-                "placeholders": [
-                    {
-                        "shape_name": "Title 1",
-                        "is_placeholder": True,
-                        "placeholder_idx": 0,
-                        "placeholder_type": "TITLE",
-                        "norm_left": 0.1,
-                        "norm_top": 0.05,
-                        "norm_width": 0.8,
-                        "norm_height": 0.1,
-                        "norm_center_x": 0.5,
-                        "norm_center_y": 0.1,
-                    },
-                    {
-                        "shape_name": "Content Placeholder 2",
-                        "is_placeholder": True,
-                        "placeholder_idx": 13,
-                        "placeholder_type": "OBJECT",
-                        "norm_left": 0.05,
-                        "norm_top": 0.2,
-                        "norm_width": 0.25,
-                        "norm_height": 0.6,
-                        "norm_center_x": 0.175,
-                        "norm_center_y": 0.5,
-                    },
-                    {
-                        "shape_name": "Content Placeholder 3",
-                        "is_placeholder": True,
-                        "placeholder_idx": 14,
-                        "placeholder_type": "OBJECT",
-                        "norm_left": 0.37,
-                        "norm_top": 0.2,
-                        "norm_width": 0.25,
-                        "norm_height": 0.6,
-                        "norm_center_x": 0.495,
-                        "norm_center_y": 0.5,
-                    },
-                ],
-            },
-            {
-                "layout_name": "three_cards_horizontal",
-                "layout_index": 1,
-                "shapes": [
-                    {
-                        "shape_name": "Title 1",
-                        "is_placeholder": True,
-                        "placeholder_idx": 0,
-                        "placeholder_type": "TITLE",
-                        "norm_left": 0.1,
-                        "norm_top": 0.05,
-                        "norm_width": 0.8,
-                        "norm_height": 0.1,
-                        "norm_center_x": 0.5,
-                        "norm_center_y": 0.1,
-                    },
-                    {
-                        "shape_name": "Content Placeholder 2",
-                        "is_placeholder": True,
-                        "placeholder_idx": 13,
-                        "placeholder_type": "OBJECT",
-                        "norm_left": 0.05,
-                        "norm_top": 0.2,
-                        "norm_width": 0.25,
-                        "norm_height": 0.6,
-                        "norm_center_x": 0.175,
-                        "norm_center_y": 0.5,
-                    },
-                    {
-                        "shape_name": "Content Placeholder 3",
-                        "is_placeholder": True,
-                        "placeholder_idx": 14,
-                        "placeholder_type": "OBJECT",
-                        "norm_left": 0.37,
-                        "norm_top": 0.2,
-                        "norm_width": 0.25,
-                        "norm_height": 0.6,
-                        "norm_center_x": 0.495,
-                        "norm_center_y": 0.5,
-                    },
-                    {
-                        "shape_name": "Content Placeholder 4",
-                        "is_placeholder": True,
-                        "placeholder_idx": 15,
-                        "placeholder_type": "OBJECT",
-                        "norm_left": 0.69,
-                        "norm_top": 0.2,
-                        "norm_width": 0.25,
-                        "norm_height": 0.6,
-                        "norm_center_x": 0.815,
-                        "norm_center_y": 0.5,
-                    },
-                ],
-                "placeholders": [
-                    {
-                        "shape_name": "Title 1",
-                        "is_placeholder": True,
-                        "placeholder_idx": 0,
-                        "placeholder_type": "TITLE",
-                        "norm_left": 0.1,
-                        "norm_top": 0.05,
-                        "norm_width": 0.8,
-                        "norm_height": 0.1,
-                        "norm_center_x": 0.5,
-                        "norm_center_y": 0.1,
-                    },
-                    {
-                        "shape_name": "Content Placeholder 2",
-                        "is_placeholder": True,
-                        "placeholder_idx": 13,
-                        "placeholder_type": "OBJECT",
-                        "norm_left": 0.05,
-                        "norm_top": 0.2,
-                        "norm_width": 0.25,
-                        "norm_height": 0.6,
-                        "norm_center_x": 0.175,
-                        "norm_center_y": 0.5,
-                    },
-                    {
-                        "shape_name": "Content Placeholder 3",
-                        "is_placeholder": True,
-                        "placeholder_idx": 14,
-                        "placeholder_type": "OBJECT",
-                        "norm_left": 0.37,
-                        "norm_top": 0.2,
-                        "norm_width": 0.25,
-                        "norm_height": 0.6,
-                        "norm_center_x": 0.495,
-                        "norm_center_y": 0.5,
-                    },
-                    {
-                        "shape_name": "Content Placeholder 4",
-                        "is_placeholder": True,
-                        "placeholder_idx": 15,
-                        "placeholder_type": "OBJECT",
-                        "norm_left": 0.69,
-                        "norm_top": 0.2,
-                        "norm_width": 0.25,
-                        "norm_height": 0.6,
-                        "norm_center_x": 0.815,
-                        "norm_center_y": 0.5,
-                    },
-                ],
-            },
-        ],
-    }
-
-    proposal = propose_mapping(inspection)
-
-    assert proposal["layouts"]["three_cards_horizontal"]["ppt_layout_name"] == "three_cards_horizontal"
 
 
 def test_propose_mapping_normalizes_japanese_builtin_layout_name_to_title_and_content() -> None:

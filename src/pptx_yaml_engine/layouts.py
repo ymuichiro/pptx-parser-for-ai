@@ -130,35 +130,6 @@ LAYOUT_SPECS: dict[str, LayoutSpec] = {
         slots=_card_slots(),
         example={"layout": "three_cards_vertical", "title": "Pillars", "cards": [{"title": "A", "description": "..."}, {"title": "B", "description": "..."}, {"title": "C", "description": "..."}]},
     ),
-    "three_cards_horizontal": LayoutSpec(
-        name="three_cards_horizontal",
-        description="Three-card horizontal slide.",
-        required_fields=("title", "cards"),
-        optional_fields=("subtitle",),
-        slots=_card_slots(),
-        example={"layout": "three_cards_horizontal", "title": "Pillars", "cards": [{"title": "A", "description": "..."}, {"title": "B", "description": "..."}, {"title": "C", "description": "..."}]},
-    ),
-    "timeline": LayoutSpec(
-        name="timeline",
-        description="Timeline slide.",
-        required_fields=("title", "events"),
-        optional_fields=("subtitle",),
-        slots=tuple(
-            [SlotSpec("title", "text", True), SlotSpec("subtitle", "text")]
-            + [
-                slot
-                for idx in range(8)
-                for slot in (
-                    SlotSpec(f"events[{idx}].icon", "icon"),
-                    SlotSpec(f"events[{idx}].label", "text"),
-                    SlotSpec(f"events[{idx}].title", "text"),
-                    SlotSpec(f"events[{idx}].description", "text"),
-                    SlotSpec(f"events[{idx}].combined_text", "text"),
-                )
-            ]
-        ),
-        example={"layout": "timeline", "title": "Roadmap", "events": [{"label": "Q1", "title": "Plan", "description": "..."}]},
-    ),
     "closing_end": LayoutSpec(
         name="closing_end",
         description="Closing slide.",
@@ -172,22 +143,6 @@ LAYOUT_SPECS: dict[str, LayoutSpec] = {
             SlotSpec("cta", "text"),
         ),
         example={"layout": "closing_end", "title": "Thank You", "contact": "team@example.com"},
-    ),
-    "kpi_big_number": LayoutSpec(
-        name="kpi_big_number",
-        description="KPI big number slide.",
-        required_fields=("title", "metric"),
-        optional_fields=("subtitle", "supporting_points"),
-        slots=(
-            SlotSpec("title", "text", True),
-            SlotSpec("subtitle", "text"),
-            SlotSpec("metric.value", "text", True),
-            SlotSpec("metric.label", "text"),
-            SlotSpec("metric.unit", "text"),
-            SlotSpec("metric.delta", "text"),
-            SlotSpec("supporting_points", "list"),
-        ),
-        example={"layout": "kpi_big_number", "title": "Growth", "metric": {"value": "42", "label": "Customers"}},
     ),
     "chart_basic": LayoutSpec(
         name="chart_basic",
@@ -230,22 +185,6 @@ LAYOUT_SPECS: dict[str, LayoutSpec] = {
         ),
         example={"layout": "appendix_backup", "title": "Appendix", "items": ["Detail"]},
     ),
-    "eol_notice": LayoutSpec(
-        name="eol_notice",
-        description="End-of-life notice slide.",
-        required_fields=("title", "product_name"),
-        optional_fields=("subtitle", "end_of_sale", "end_of_support", "replacement", "actions"),
-        slots=(
-            SlotSpec("title", "text", True),
-            SlotSpec("subtitle", "text"),
-            SlotSpec("product_name", "text", True),
-            SlotSpec("end_of_sale", "text"),
-            SlotSpec("end_of_support", "text"),
-            SlotSpec("replacement", "text"),
-            SlotSpec("actions", "list"),
-        ),
-        example={"layout": "eol_notice", "title": "EOL Notice", "product_name": "Legacy API"},
-    ),
 }
 
 
@@ -257,14 +196,10 @@ LAYOUT_ALIASES: dict[str, tuple[str, ...]] = {
     "table_basic": ("table", "table_basic", "title_and_content", "yaml__table_basic"),
     "comparison_2col": ("comparison", "2col_compare", "comparison_2col", "yaml__comparison_2col"),
     "three_cards_vertical": ("3col_vertical", "3col_cards_vertical", "three_cards_vertical", "two_content", "yaml__three_cards_vertical"),
-    "three_cards_horizontal": ("3col_horizontal", "3col_cards_horizontal", "three_cards_horizontal", "two_content", "yaml__three_cards_horizontal"),
-    "timeline": ("timeline", "roadmap", "title_and_content", "yaml__timeline"),
     "closing_end": ("closing", "end", "thank_you", "closing_end", "title_slide", "yaml__closing_end"),
-    "kpi_big_number": ("kpi", "big_number", "kpi_big_number", "title_and_content", "yaml__kpi_big_number"),
     "chart_basic": ("chart", "chart_basic", "title_and_content", "yaml__chart_basic"),
     "image_caption": ("image_caption", "picture_caption", "picture_with_caption", "icon_caption", "yaml__image_caption"),
     "appendix_backup": ("appendix", "backup", "appendix_backup", "title_and_content", "yaml__appendix_backup"),
-    "eol_notice": ("eol", "end_of_life", "eol_notice", "title_and_content", "yaml__eol_notice"),
 }
 
 
@@ -283,7 +218,7 @@ LAYOUT_SELECTION_GUIDANCE: dict[str, dict[str, str]] = {
     },
     "list_basic": {
         "whenToUse": "Use when bullets are genuinely the clearest representation and ordering matters.",
-        "avoidWhen": "Avoid long runs of list_basic slides when comparison, cards, timeline, KPI, chart, or table would communicate better.",
+        "avoidWhen": "Avoid long runs of list_basic slides when comparison, cards, chart, or table would communicate better.",
     },
     "table_basic": {
         "whenToUse": "Use for compact factual matrices such as plans, ownership, pricing, or feature grids.",
@@ -297,21 +232,9 @@ LAYOUT_SELECTION_GUIDANCE: dict[str, dict[str, str]] = {
         "whenToUse": "Use for three stacked pillars, phases, or recommendations with slightly longer descriptions.",
         "avoidWhen": "Avoid when you have only one or two items, or when chronology is more important than grouping.",
     },
-    "three_cards_horizontal": {
-        "whenToUse": "Use for three parallel items such as products, layers, strengths, or use cases.",
-        "avoidWhen": "Avoid when card text is too long to scan quickly or when a true comparison between two sides is stronger.",
-    },
-    "timeline": {
-        "whenToUse": "Use for chronology, roadmap, rollout phases, or sequential milestones.",
-        "avoidWhen": "Avoid for unordered concepts; cards or lists are better for those.",
-    },
     "closing_end": {
         "whenToUse": "Use once at the end for summary, next step, or thank-you framing.",
         "avoidWhen": "Do not place it mid-deck.",
-    },
-    "kpi_big_number": {
-        "whenToUse": "Use when one metric is the main message and 2-3 short supporting points add context.",
-        "avoidWhen": "Avoid when multiple metrics need equal weight; use table_basic or chart_basic instead.",
     },
     "chart_basic": {
         "whenToUse": "Use for trends, distributions, or category comparisons where the chart itself is the evidence.",
@@ -325,10 +248,6 @@ LAYOUT_SELECTION_GUIDANCE: dict[str, dict[str, str]] = {
         "whenToUse": "Use for backup details, references, assumptions, or optional supporting notes.",
         "avoidWhen": "Avoid in the main story unless the material is clearly supplemental.",
     },
-    "eol_notice": {
-        "whenToUse": "Use for lifecycle notices, migration guidance, and operational action items.",
-        "avoidWhen": "Avoid for general announcements that are not lifecycle-driven.",
-    },
 }
 
 
@@ -338,25 +257,22 @@ def supported_layouts_response() -> dict[str, Any]:
             "recommendedWorkflow": [
                 "Call list_templates() and list_supported_layouts() before writing the deck.",
                 "Start with a short outline, then choose the richest fitting layout for each slide instead of defaulting to bullets.",
-                "Diversify the middle of the deck with comparison_2col, three_cards_horizontal or three_cards_vertical, timeline, kpi_big_number, chart_basic, or table_basic when they fit.",
+                "Diversify the middle of the deck with comparison_2col, three_cards_vertical, chart_basic, or table_basic when they fit.",
                 "Use section_divider only for major transitions and avoid long consecutive runs of list_basic slides.",
             ],
             "compositionHeuristics": [
                 "Use agenda once near the front for decks with several sections.",
                 "Use comparison_2col for two viewpoints or before/after framing.",
-                "Use three_cards_horizontal for three peer items and three_cards_vertical for three stacked recommendations or phases.",
-                "Use kpi_big_number when one number is the headline message.",
-                "Use timeline for chronology and chart_basic for evidence driven by numeric trends.",
+                "Use three_cards_vertical for three stacked recommendations or phases.",
+                "Use chart_basic for evidence driven by numeric trends.",
             ],
             "sampleOutline": [
                 {"position": 1, "layout": "cover_title", "reason": "Open with the topic and framing subtitle."},
                 {"position": 2, "layout": "agenda", "reason": "Set the structure if the deck has multiple sections."},
                 {"position": 3, "layout": "comparison_2col", "reason": "Frame two perspectives or a before/after contrast."},
-                {"position": 4, "layout": "three_cards_horizontal", "reason": "Show three pillars, products, or layers."},
-                {"position": 5, "layout": "timeline", "reason": "Explain chronology or rollout steps."},
-                {"position": 6, "layout": "kpi_big_number", "reason": "Highlight one decisive metric."},
-                {"position": 7, "layout": "list_basic", "reason": "Reserve bullets for takeaways or action items."},
-                {"position": 8, "layout": "closing_end", "reason": "End with summary or next step."},
+                {"position": 4, "layout": "three_cards_vertical", "reason": "Show three pillars, phases, or recommendations."},
+                {"position": 5, "layout": "list_basic", "reason": "Reserve bullets for takeaways or action items."},
+                {"position": 6, "layout": "closing_end", "reason": "End with summary or next step."},
             ],
         },
         "layouts": [

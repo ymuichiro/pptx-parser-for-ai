@@ -12,4 +12,4 @@ def test_supported_layouts_response_includes_selection_guidance() -> None:
     layouts = {layout["name"]: layout for layout in response["layouts"]}
     assert layouts["comparison_2col"]["whenToUse"]
     assert layouts["comparison_2col"]["avoidWhen"]
-    assert layouts["three_cards_horizontal"]["whenToUse"]
+    assert layouts["three_cards_vertical"]["whenToUse"]

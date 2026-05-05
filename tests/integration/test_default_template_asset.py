@@ -48,9 +48,7 @@ def test_repo_default_template_replaces_vertical_text_layouts_with_custom_card_l
     inspection = inspect_template(template_bytes)
     layout_names = [layout["layout_name"] for layout in inspection["layouts"]]
 
-    assert "Title and Vertical Text" not in layout_names
-    assert "Vertical Title and Text" not in layout_names
-    assert "three_cards_horizontal" in layout_names
+    assert "three_cards_horizontal" not in layout_names
     assert "three_cards_vertical" in layout_names
 
 
@@ -65,7 +63,6 @@ def test_repo_default_template_renders_full_deck() -> None:
     texts = "\n".join(shape.text for slide in prs.slides for shape in slide.shapes if hasattr(shape, "text"))
     assert "Fixture Deck" not in texts
     assert "Cover" in texts
-    assert "Legacy API" in texts
 
 
 def test_repo_default_template_special_layouts_render_structured_content() -> None:
@@ -107,42 +104,10 @@ def test_repo_default_template_special_layouts_render_structured_content() -> No
     assert cards_v.placeholders[15].text.strip() == "C\nCC"
     assert all(getattr(shape, "is_placeholder", False) for shape in cards_v.shapes)
 
-    cards_h = prs.slides[7]
-    cards_h_texts = "\n".join(_slide_texts(cards_h))
-    assert "A" in cards_h_texts
-    assert "AA" in cards_h_texts
-    assert "B" in cards_h_texts
-    assert "BB" in cards_h_texts
-    assert "C" in cards_h_texts
-    assert "CC" in cards_h_texts
-    assert cards_h.placeholders[13].text.strip() == "A\nAA"
-    assert cards_h.placeholders[14].text.strip() == "B\nBB"
-    assert cards_h.placeholders[15].text.strip() == "C\nCC"
-    assert all(getattr(shape, "is_placeholder", False) for shape in cards_h.shapes)
-
-    timeline_texts = _slide_texts(prs.slides[8])
-    timeline_combined = "\n".join(timeline_texts)
-    assert "Q1" in timeline_combined
-    assert "Plan" in timeline_combined
-    assert "Start" in timeline_combined
-    assert prs.slides[8].placeholders[13].text.strip() == "Q1\nPlan\nStart"
-    assert all(getattr(shape, "is_placeholder", False) for shape in prs.slides[8].shapes)
-
-    kpi_texts = _slide_texts(prs.slides[10])
-    kpi_combined = "\n".join(kpi_texts)
-    assert "42" in kpi_combined
-    assert "Customers" in kpi_combined
-    assert "42\nCustomers" in kpi_combined
-
-    image_slide = prs.slides[12]
+    image_slide = prs.slides[9]
     image_texts = _slide_texts(image_slide)
     assert "Icon" in image_texts
     assert any(shape.placeholder_format.idx == 1 for shape in image_slide.placeholders)
 
-    appendix_texts = _slide_texts(prs.slides[13])
+    appendix_texts = _slide_texts(prs.slides[10])
     assert "Appendix" in appendix_texts
-
-    eol_texts = _slide_texts(prs.slides[14])
-    eol_combined = "\n".join(eol_texts)
-    assert "Legacy API" in eol_combined
-    assert "Migrate" in eol_combined

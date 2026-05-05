@@ -63,51 +63,8 @@ slides:
           pack: heroicons
           name: cloud-arrow-up
           variant: outline
-  - layout: three_cards_horizontal
-    title: Cards H
-    cards:
-      - title: A
-        description: AA
-        icon:
-          pack: heroicons
-          name: cloud-arrow-up
-          variant: outline
-      - title: B
-        description: BB
-        icon:
-          pack: heroicons
-          name: cloud-arrow-up
-          variant: outline
-      - title: C
-        description: CC
-        icon:
-          pack: heroicons
-          name: cloud-arrow-up
-          variant: outline
-  - layout: timeline
-    title: Timeline
-    events:
-      - label: Q1
-        title: Plan
-        description: Start
-      - label: Q2
-        title: Build
-        description: Execute
-      - label: Q3
-        title: Launch
-        description: Expand
   - layout: closing_end
     title: Thanks
-  - layout: kpi_big_number
-    title: KPI
-    metric:
-      value: "42"
-      label: Customers
-      delta: +18%
-    supporting_points:
-      - NPS up 6 pt
-      - Churn down 2 pt
-      - API usage doubled
   - layout: chart_basic
     title: Chart
     chart:
@@ -132,12 +89,3 @@ slides:
     references:
       - Source A
       - Source B
-  - layout: eol_notice
-    title: EOL
-    product_name: Legacy API
-    end_of_sale: 2026-12-31
-    end_of_support: 2027-06-30
-    replacement: New Platform API
-    actions:
-      - Migrate
-      - Notify customers

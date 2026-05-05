@@ -163,11 +163,6 @@ def _score_layout(layout: dict[str, Any], semantic: str, aliases: tuple[str, ...
 
     if layout_name == semantic_norm:
         return 0.99, "semantic_name"
-    if semantic == "eol_notice" and "slot__" in shape_names and layout_name in {
-        normalize_layout_lookup_name("comparison"),
-        normalize_layout_lookup_name("comparison_2col"),
-    }:
-        return 0.985, "comparison_layout"
     if layout_name in alias_norms or any(alias in layout_name for alias in alias_norms):
         return 0.98, "explicit_name"
     if semantic.replace("_", "") in shape_names.replace("_", ""):
@@ -180,9 +175,7 @@ def _score_layout(layout: dict[str, Any], semantic: str, aliases: tuple[str, ...
         return 0.78, "placeholder_geometry"
     if semantic.startswith("three_cards") and type_counts["TITLE"] >= 1 and len(placeholders) >= 4:
         return 0.76, "placeholder_geometry"
-    if semantic == "timeline" and len(placeholders) >= 4:
-        return 0.72, "placeholder_geometry"
-    if semantic in {"table_basic", "chart_basic", "image_caption", "kpi_big_number", "eol_notice"} and type_counts["TITLE"] >= 1:
+    if semantic in {"table_basic", "chart_basic", "image_caption"} and type_counts["TITLE"] >= 1:
         return 0.70, "placeholder_geometry"
     return 0.0, "not_matched"
 
@@ -332,46 +325,10 @@ def _bind_generic(semantic: str, placeholders: list[dict[str, Any]]) -> dict[str
         elif len(grouped) == 1:
             for index in range(3):
                 bind_same(f"cards[{index}].combined_text", grouped[0], "text")
-    elif semantic == "timeline":
-        grouped = sorted(content, key=lambda item: (item["norm_top"], item["norm_left"]))
-        if grouped:
-            for index in range(8):
-                shape = grouped[min(index, len(grouped) - 1)]
-                kind = _shape_kind(shape)
-                path = f"events[{index}].icon" if kind == "icon" else f"events[{index}].combined_text"
-                slots.setdefault(path, _placeholder_binding(shape, kind=kind))
-    elif semantic == "kpi_big_number":
-        bind_same("metric.value", primary_text, "text")
-        bind_from_existing("metric.label", "metric.value", kind="text")
-        bind_from_existing("metric.unit", "metric.value", kind="text")
-        bind_same("metric.delta", secondary_text, "text")
-        bind_same("supporting_points", secondary_text or primary_text, "list")
     elif semantic == "appendix_backup":
         bind_same("body", primary_text, "text")
         bind_from_existing("items", "body", kind="list")
         bind_same("references", secondary_text or primary_text, "list")
-    elif semantic == "eol_notice":
-        grouped = sorted(content, key=lambda item: item["norm_center_x"])
-        left = sorted(grouped[: max(1, len(grouped) // 2)], key=lambda item: item["norm_center_y"])
-        right = sorted(grouped[max(1, len(grouped) // 2) :], key=lambda item: item["norm_center_y"])
-        if left or right:
-            left_text = [shape for shape in left if _shape_kind(shape) != "icon"]
-            right_text = [shape for shape in right if _shape_kind(shape) != "icon"]
-            actions_target = right_text[-1] if right_text else (left_text[-1] if left_text else None)
-            bind_first("product_name", left_text, "text")
-            bind_first("end_of_sale", left_text, "text")
-            bind_first("end_of_support", right_text, "text")
-            bind_first("replacement", right_text, "text")
-            bind_same("actions", actions_target, "list")
-        else:
-            for path, kind in (
-                ("product_name", "text"),
-                ("end_of_sale", "text"),
-                ("end_of_support", "text"),
-                ("replacement", "text"),
-                ("actions", "list"),
-            ):
-                bind_same(path, primary_text, kind)
     elif semantic in {"cover_title", "section_divider", "closing_end"}:
         for path in ("date", "organization", "author", "section_no", "message", "contact", "cta"):
             bind_same(path, primary_text, "text")

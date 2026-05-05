@@ -18,10 +18,10 @@ def test_inspect_finalize_render_all_layouts(template_bytes: bytes, template_man
 
     output = render_pptx(template_bytes, template_manifest, full_deck())
     prs = Presentation(BytesIO(output))
-    assert len(prs.slides) == 15
+    assert len(prs.slides) == 11
     texts = "\n".join(shape.text for slide in prs.slides for shape in slide.shapes if hasattr(shape, "text"))
     assert "Cover" in texts
-    assert "Legacy API" in texts
+    assert "Appendix" in texts
 
 
 def test_potx_template_bytes_are_accepted() -> None:

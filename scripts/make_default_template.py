@@ -56,11 +56,8 @@ LAYOUT_FILES = {
     "section_header": "ppt/slideLayouts/slideLayout3.xml",
     "two_content": "ppt/slideLayouts/slideLayout4.xml",
     "comparison": "ppt/slideLayouts/slideLayout5.xml",
-    "title_only": "ppt/slideLayouts/slideLayout6.xml",
-    "blank": "ppt/slideLayouts/slideLayout7.xml",
     "content_with_caption": "ppt/slideLayouts/slideLayout8.xml",
     "picture_with_caption": "ppt/slideLayouts/slideLayout9.xml",
-    "three_cards_horizontal": "ppt/slideLayouts/slideLayout10.xml",
     "three_cards_vertical": "ppt/slideLayouts/slideLayout11.xml",
 }
 
@@ -492,102 +489,6 @@ def _three_cards_layout_xml(
     return root
 
 
-def _kpi_layout_xml(layouts: dict[str, etree._Element]) -> etree._Element:
-    root = _copy_layout(layouts["title_only"], layouts["title_only"], name="kpi_big_number")
-    content_shape = _find_placeholder_by_idx(layouts["title_and_content"], 13)
-
-    metric_value = _clone_placeholder(
-        root,
-        content_shape,
-        name="slot__metric_value",
-        placeholder_type="obj",
-        placeholder_idx=13,
-        left=0.080,
-        top=0.200,
-        width=0.670,
-        height=0.300,
-    )
-    _clone_placeholder(
-        root,
-        content_shape,
-        name="slot__metric_delta",
-        placeholder_type="obj",
-        placeholder_idx=14,
-        left=0.792,
-        top=0.188,
-        width=0.170,
-        height=0.095,
-    )
-    _clone_placeholder(
-        root,
-        content_shape,
-        name="slot__supporting_points",
-        placeholder_type="obj",
-        placeholder_idx=15,
-        left=0.085,
-        top=0.565,
-        width=0.830,
-        height=0.260,
-    )
-
-    # Large metric number in white on navy background; smaller label below
-    _set_ph_lst_style(
-        metric_value,
-        {0: {"sz": 5600, "bold": True, "color": WHITE}, 1: {"sz": 1800, "color": CARD_BG}},
-    )
-
-    # Enterprise decoratives: navy metric panel, accent delta badge, light supporting area
-    _insert_decos(
-        root,
-        _deco_shape(200, "deco_metric_panel", 0.058, 0.155, 0.710, 0.370, fill_hex=NAVY),
-        _deco_shape(201, "deco_delta_badge", 0.782, 0.155, 0.190, 0.150, fill_hex=ACCENT),
-        _deco_shape(202, "deco_support_area", 0.058, 0.540, 0.884, 0.310, fill_hex=GRAY_LT),
-    )
-    return root
-
-
-def _timeline_layout_xml(layouts: dict[str, etree._Element]) -> etree._Element:
-    root = _copy_layout(layouts["blank"], layouts["blank"], name="timeline")
-    title_shape = deepcopy(_find_placeholder_by_type(layouts["title_and_content"], "title"))
-    _set_shape_identity(title_shape, shape_id=_max_shape_id(root) + 1, name="タイトル 6", placeholder_type="title")
-    _set_geometry(title_shape, left=0.019, top=0.032, width=0.962, height=0.094)
-    _append_shape(root, title_shape)
-
-    content_shape = _find_placeholder_by_idx(layouts["title_and_content"], 13)
-    num_events = 6
-    start_top = 0.172
-    height = 0.102
-    gap = 0.022
-    for index in range(num_events):
-        _clone_placeholder(
-            root,
-            content_shape,
-            name=f"slot__event_{index + 1}_combined_text",
-            placeholder_type="obj",
-            placeholder_idx=13 + index,
-            left=0.100,
-            top=start_top + index * (height + gap),
-            width=0.870,
-            height=height,
-        )
-
-    # Enterprise decoratives: vertical timeline line + a dot marker per event slot
-    event_tops = [start_top + i * (height + gap) for i in range(num_events)]
-    line_top = start_top - 0.020
-    line_bottom = start_top + (num_events - 1) * (height + gap) + height + 0.020
-    decos: list[etree._Element] = [
-        _deco_shape(200, "deco_timeline_line", 0.060, line_top, 0.008, line_bottom - line_top, fill_hex=BLUE),
-    ]
-    for idx, et in enumerate(event_tops):
-        dot_cx = 0.052
-        dot_cy = et + height / 2 - 0.016
-        decos.append(
-            _deco_shape(201 + idx, f"deco_event_{idx+1}_dot", dot_cx, dot_cy, 0.024, 0.030, fill_hex=NAVY, prst="ellipse")
-        )
-    _insert_decos(root, *decos)
-    return root
-
-
 def _appendix_layout_xml(layouts: dict[str, etree._Element]) -> etree._Element:
     root = _copy_layout(layouts["two_content"], layouts["content_with_caption"], name="appendix_backup")
     left = _find_placeholder_by_idx(root, 13)
@@ -618,23 +519,6 @@ def build_template() -> bytes:
 
     layouts = _load_layouts()
 
-    # three_cards_horizontal: 3 columns, each card has a CARD_BG panel + NAVY header + ACCENT top line
-    h_card_w = 0.285
-    h_card_starts = [0.030, 0.358, 0.685]
-    h_icon_w, h_icon_h = 0.100, 0.110
-    h_header_h = 0.150
-    h_card_top = 0.143
-    h_content_top = h_card_top + h_header_h + 0.008
-    h_content_h = 0.640
-    h_decos: list[etree._Element] = []
-    for ci, xs in enumerate(h_card_starts):
-        dbase = 200 + ci * 3
-        h_decos += [
-            _deco_shape(dbase, f"deco_h_card{ci+1}_bg", xs, h_card_top, h_card_w, h_header_h + h_content_h + 0.008, fill_hex=CARD_BG),
-            _deco_shape(dbase + 1, f"deco_h_card{ci+1}_hdr", xs, h_card_top, h_card_w, h_header_h, fill_hex=NAVY),
-            _deco_shape(dbase + 2, f"deco_h_card{ci+1}_acc", xs, h_card_top, h_card_w, 0.007, fill_hex=ACCENT),
-        ]
-
     # three_cards_vertical: 3 rows, each strip has a CARD_BG background + NAVY left accent bar
     v_strip_h = 0.224
     v_strip_starts = [0.148, 0.400, 0.652]
@@ -652,24 +536,7 @@ def build_template() -> bytes:
         LAYOUT_FILES["title_slide"]: _title_slide_layout_xml(layouts),
         LAYOUT_FILES["section_header"]: _section_header_layout_xml(layouts),
         LAYOUT_FILES["comparison"]: _comparison_layout_xml(layouts),
-        LAYOUT_FILES["title_only"]: _kpi_layout_xml(layouts),
-        LAYOUT_FILES["blank"]: _timeline_layout_xml(layouts),
         LAYOUT_FILES["content_with_caption"]: _appendix_layout_xml(layouts),
-        LAYOUT_FILES["three_cards_horizontal"]: _three_cards_layout_xml(
-            layouts,
-            name="three_cards_horizontal",
-            card_boxes=[
-                (h_card_starts[0] + 0.008, h_content_top, h_card_w - 0.016, h_content_h),
-                (h_card_starts[1] + 0.008, h_content_top, h_card_w - 0.016, h_content_h),
-                (h_card_starts[2] + 0.008, h_content_top, h_card_w - 0.016, h_content_h),
-            ],
-            icon_boxes=[
-                (h_card_starts[0] + (h_card_w - h_icon_w) / 2, h_card_top + (h_header_h - h_icon_h) / 2, h_icon_w, h_icon_h),
-                (h_card_starts[1] + (h_card_w - h_icon_w) / 2, h_card_top + (h_header_h - h_icon_h) / 2, h_icon_w, h_icon_h),
-                (h_card_starts[2] + (h_card_w - h_icon_w) / 2, h_card_top + (h_header_h - h_icon_h) / 2, h_icon_w, h_icon_h),
-            ],
-            decoratives=h_decos,
-        ),
         LAYOUT_FILES["three_cards_vertical"]: _three_cards_layout_xml(
             layouts,
             name="three_cards_vertical",
