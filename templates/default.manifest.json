@@ -1,12 +1,12 @@
 {
   "manifest_version": 1,
-  "template_fingerprint": "sha256:fd6822bd88ca454c701ccaea1f2bc203dba7d321ec30d18b248ed793346968dc",
+  "template_fingerprint": "sha256:cf52b802b71260cbf80d3631d197724e99f3e933044c38eca9b19638fd46bc86",
   "layouts": {
     "cover_title": {
-      "ppt_layout_name": "Title Slide",
-      "match_confidence": 0.98,
+      "ppt_layout_name": "cover_title",
+      "match_confidence": 1.0,
       "layout_match": {
-        "strategy": "explicit_name"
+        "strategy": "semantic_name"
       },
       "slots": {
         "title": {
@@ -14,7 +14,7 @@
           "placeholder": {
             "idx": 0,
             "type": "TITLE",
-            "shape_name": "タイトル 6"
+            "shape_name": "AI_TITLE"
           }
         },
         "subtitle": {
@@ -22,16 +22,40 @@
           "placeholder": {
             "idx": 1,
             "type": "SUBTITLE",
-            "shape_name": "Subtitle 2"
+            "shape_name": "AI_SUBTITLE"
+          }
+        },
+        "date": {
+          "kind": "text",
+          "placeholder": {
+            "idx": 13,
+            "type": "BODY",
+            "shape_name": "AI_DATE"
+          }
+        },
+        "organization": {
+          "kind": "text",
+          "placeholder": {
+            "idx": 14,
+            "type": "BODY",
+            "shape_name": "AI_ORGANIZATION"
+          }
+        },
+        "author": {
+          "kind": "text",
+          "placeholder": {
+            "idx": 15,
+            "type": "BODY",
+            "shape_name": "AI_AUTHOR"
           }
         }
       }
     },
     "section_divider": {
-      "ppt_layout_name": "Section Header",
-      "match_confidence": 0.98,
+      "ppt_layout_name": "section_divider",
+      "match_confidence": 1.0,
       "layout_match": {
-        "strategy": "explicit_name"
+        "strategy": "semantic_name"
       },
       "slots": {
         "title": {
@@ -39,7 +63,7 @@
           "placeholder": {
             "idx": 0,
             "type": "TITLE",
-            "shape_name": "タイトル 6"
+            "shape_name": "AI_TITLE"
           }
         },
         "subtitle": {
@@ -47,16 +71,24 @@
           "placeholder": {
             "idx": 1,
             "type": "BODY",
-            "shape_name": "Text Placeholder 2"
+            "shape_name": "AI_SUBTITLE"
+          }
+        },
+        "section_no": {
+          "kind": "text",
+          "placeholder": {
+            "idx": 13,
+            "type": "BODY",
+            "shape_name": "AI_SECTION_NO"
           }
         }
       }
     },
     "agenda": {
-      "ppt_layout_name": "Title and Content",
-      "match_confidence": 0.98,
+      "ppt_layout_name": "agenda",
+      "match_confidence": 1.0,
       "layout_match": {
-        "strategy": "explicit_name"
+        "strategy": "semantic_name"
       },
       "slots": {
         "title": {
@@ -64,7 +96,15 @@
           "placeholder": {
             "idx": 0,
             "type": "TITLE",
-            "shape_name": "タイトル 6"
+            "shape_name": "AI_TITLE"
+          }
+        },
+        "subtitle": {
+          "kind": "text",
+          "placeholder": {
+            "idx": 14,
+            "type": "BODY",
+            "shape_name": "AI_SUBTITLE"
           }
         },
         "items": {
@@ -72,16 +112,16 @@
           "placeholder": {
             "idx": 13,
             "type": "OBJECT",
-            "shape_name": "コンテンツ プレースホルダー 8"
+            "shape_name": "AI_ITEMS"
           }
         }
       }
     },
     "list_basic": {
-      "ppt_layout_name": "Title and Content",
-      "match_confidence": 0.98,
+      "ppt_layout_name": "list_basic",
+      "match_confidence": 1.0,
       "layout_match": {
-        "strategy": "explicit_name"
+        "strategy": "semantic_name"
       },
       "slots": {
         "title": {
@@ -89,7 +129,15 @@
           "placeholder": {
             "idx": 0,
             "type": "TITLE",
-            "shape_name": "タイトル 6"
+            "shape_name": "AI_TITLE"
+          }
+        },
+        "subtitle": {
+          "kind": "text",
+          "placeholder": {
+            "idx": 14,
+            "type": "BODY",
+            "shape_name": "AI_SUBTITLE"
           }
         },
         "items": {
@@ -97,16 +145,16 @@
           "placeholder": {
             "idx": 13,
             "type": "OBJECT",
-            "shape_name": "コンテンツ プレースホルダー 8"
+            "shape_name": "AI_ITEMS"
           }
         }
       }
     },
     "table_basic": {
-      "ppt_layout_name": "Title and Content",
-      "match_confidence": 0.98,
+      "ppt_layout_name": "table_basic",
+      "match_confidence": 1.0,
       "layout_match": {
-        "strategy": "explicit_name"
+        "strategy": "semantic_name"
       },
       "slots": {
         "title": {
@@ -114,56 +162,56 @@
           "placeholder": {
             "idx": 0,
             "type": "TITLE",
-            "shape_name": "タイトル 6"
+            "shape_name": "AI_TITLE"
+          }
+        },
+        "subtitle": {
+          "kind": "text",
+          "placeholder": {
+            "idx": 14,
+            "type": "BODY",
+            "shape_name": "AI_SUBTITLE"
           }
         },
         "table": {
           "kind": "table",
           "placeholder": {
             "idx": 13,
-            "type": "OBJECT",
-            "shape_name": "コンテンツ プレースホルダー 8"
+            "type": "TABLE",
+            "shape_name": "AI_TABLE"
+          }
+        },
+        "caption": {
+          "kind": "text",
+          "placeholder": {
+            "idx": 15,
+            "type": "BODY",
+            "shape_name": "AI_CAPTION"
           }
         }
       }
     },
     "comparison_2col": {
       "ppt_layout_name": "comparison_2col",
-      "match_confidence": 0.99,
+      "match_confidence": 1.0,
       "layout_match": {
         "strategy": "semantic_name"
       },
       "slots": {
-        "left.title": {
+        "title": {
           "kind": "text",
           "placeholder": {
-            "idx": 1,
+            "idx": 0,
+            "type": "TITLE",
+            "shape_name": "AI_TITLE"
+          }
+        },
+        "subtitle": {
+          "kind": "text",
+          "placeholder": {
+            "idx": 19,
             "type": "BODY",
-            "shape_name": "slot__left_title"
-          }
-        },
-        "right.title": {
-          "kind": "text",
-          "placeholder": {
-            "idx": 3,
-            "type": "BODY",
-            "shape_name": "slot__right_title"
-          }
-        },
-        "left.description": {
-          "kind": "text",
-          "placeholder": {
-            "idx": 13,
-            "type": "OBJECT",
-            "shape_name": "slot__left_description"
-          }
-        },
-        "right.description": {
-          "kind": "text",
-          "placeholder": {
-            "idx": 14,
-            "type": "OBJECT",
-            "shape_name": "slot__right_description"
+            "shape_name": "AI_SUBTITLE"
           }
         },
         "left.icon": {
@@ -171,7 +219,31 @@
           "placeholder": {
             "idx": 15,
             "type": "PICTURE",
-            "shape_name": "slot__left_icon"
+            "shape_name": "AI_LEFT_ICON"
+          }
+        },
+        "left.title": {
+          "kind": "text",
+          "placeholder": {
+            "idx": 1,
+            "type": "BODY",
+            "shape_name": "AI_LEFT_TITLE"
+          }
+        },
+        "left.description": {
+          "kind": "text",
+          "placeholder": {
+            "idx": 13,
+            "type": "OBJECT",
+            "shape_name": "AI_LEFT_DESCRIPTION"
+          }
+        },
+        "left.bullets": {
+          "kind": "list",
+          "placeholder": {
+            "idx": 17,
+            "type": "OBJECT",
+            "shape_name": "AI_LEFT_BULLETS"
           }
         },
         "right.icon": {
@@ -179,48 +251,56 @@
           "placeholder": {
             "idx": 16,
             "type": "PICTURE",
-            "shape_name": "slot__right_icon"
+            "shape_name": "AI_RIGHT_ICON"
           }
         },
-        "title": {
+        "right.title": {
           "kind": "text",
           "placeholder": {
-            "idx": 0,
-            "type": "TITLE",
-            "shape_name": "タイトル 9"
+            "idx": 3,
+            "type": "BODY",
+            "shape_name": "AI_RIGHT_TITLE"
+          }
+        },
+        "right.description": {
+          "kind": "text",
+          "placeholder": {
+            "idx": 14,
+            "type": "OBJECT",
+            "shape_name": "AI_RIGHT_DESCRIPTION"
+          }
+        },
+        "right.bullets": {
+          "kind": "list",
+          "placeholder": {
+            "idx": 18,
+            "type": "OBJECT",
+            "shape_name": "AI_RIGHT_BULLETS"
           }
         }
       }
     },
     "three_cards_vertical": {
       "ppt_layout_name": "three_cards_vertical",
-      "match_confidence": 0.99,
+      "match_confidence": 1.0,
       "layout_match": {
         "strategy": "semantic_name"
       },
       "slots": {
-        "cards[0].combined_text": {
+        "title": {
           "kind": "text",
           "placeholder": {
-            "idx": 13,
-            "type": "OBJECT",
-            "shape_name": "slot__card_1_combined_text"
+            "idx": 0,
+            "type": "TITLE",
+            "shape_name": "AI_TITLE"
           }
         },
-        "cards[1].combined_text": {
+        "subtitle": {
           "kind": "text",
           "placeholder": {
-            "idx": 14,
-            "type": "OBJECT",
-            "shape_name": "slot__card_2_combined_text"
-          }
-        },
-        "cards[2].combined_text": {
-          "kind": "text",
-          "placeholder": {
-            "idx": 15,
-            "type": "OBJECT",
-            "shape_name": "slot__card_3_combined_text"
+            "idx": 19,
+            "type": "BODY",
+            "shape_name": "AI_SUBTITLE"
           }
         },
         "cards[0].icon": {
@@ -228,7 +308,23 @@
           "placeholder": {
             "idx": 16,
             "type": "PICTURE",
-            "shape_name": "slot__card_1_icon"
+            "shape_name": "AI_CARDS_1_ICON"
+          }
+        },
+        "cards[0].title": {
+          "kind": "text",
+          "placeholder": {
+            "idx": 20,
+            "type": "BODY",
+            "shape_name": "AI_CARDS_1_TITLE"
+          }
+        },
+        "cards[0].description": {
+          "kind": "text",
+          "placeholder": {
+            "idx": 13,
+            "type": "OBJECT",
+            "shape_name": "AI_CARDS_1_DESCRIPTION"
           }
         },
         "cards[1].icon": {
@@ -236,7 +332,23 @@
           "placeholder": {
             "idx": 17,
             "type": "PICTURE",
-            "shape_name": "slot__card_2_icon"
+            "shape_name": "AI_CARDS_2_ICON"
+          }
+        },
+        "cards[1].title": {
+          "kind": "text",
+          "placeholder": {
+            "idx": 21,
+            "type": "BODY",
+            "shape_name": "AI_CARDS_2_TITLE"
+          }
+        },
+        "cards[1].description": {
+          "kind": "text",
+          "placeholder": {
+            "idx": 14,
+            "type": "OBJECT",
+            "shape_name": "AI_CARDS_2_DESCRIPTION"
           }
         },
         "cards[2].icon": {
@@ -244,24 +356,32 @@
           "placeholder": {
             "idx": 18,
             "type": "PICTURE",
-            "shape_name": "slot__card_3_icon"
+            "shape_name": "AI_CARDS_3_ICON"
           }
         },
-        "title": {
+        "cards[2].title": {
           "kind": "text",
           "placeholder": {
-            "idx": 0,
-            "type": "TITLE",
-            "shape_name": "タイトル 7"
+            "idx": 22,
+            "type": "BODY",
+            "shape_name": "AI_CARDS_3_TITLE"
+          }
+        },
+        "cards[2].description": {
+          "kind": "text",
+          "placeholder": {
+            "idx": 15,
+            "type": "OBJECT",
+            "shape_name": "AI_CARDS_3_DESCRIPTION"
           }
         }
       }
     },
     "closing_end": {
-      "ppt_layout_name": "Title Slide",
-      "match_confidence": 0.98,
+      "ppt_layout_name": "closing_end",
+      "match_confidence": 1.0,
       "layout_match": {
-        "strategy": "explicit_name"
+        "strategy": "semantic_name"
       },
       "slots": {
         "title": {
@@ -269,7 +389,7 @@
           "placeholder": {
             "idx": 0,
             "type": "TITLE",
-            "shape_name": "タイトル 6"
+            "shape_name": "AI_TITLE"
           }
         },
         "subtitle": {
@@ -277,16 +397,40 @@
           "placeholder": {
             "idx": 1,
             "type": "SUBTITLE",
-            "shape_name": "Subtitle 2"
+            "shape_name": "AI_SUBTITLE"
+          }
+        },
+        "message": {
+          "kind": "text",
+          "placeholder": {
+            "idx": 13,
+            "type": "BODY",
+            "shape_name": "AI_MESSAGE"
+          }
+        },
+        "contact": {
+          "kind": "text",
+          "placeholder": {
+            "idx": 14,
+            "type": "BODY",
+            "shape_name": "AI_CONTACT"
+          }
+        },
+        "cta": {
+          "kind": "text",
+          "placeholder": {
+            "idx": 15,
+            "type": "BODY",
+            "shape_name": "AI_CTA"
           }
         }
       }
     },
     "chart_basic": {
-      "ppt_layout_name": "Title and Content",
-      "match_confidence": 0.98,
+      "ppt_layout_name": "chart_basic",
+      "match_confidence": 1.0,
       "layout_match": {
-        "strategy": "explicit_name"
+        "strategy": "semantic_name"
       },
       "slots": {
         "title": {
@@ -294,24 +438,40 @@
           "placeholder": {
             "idx": 0,
             "type": "TITLE",
-            "shape_name": "タイトル 6"
+            "shape_name": "AI_TITLE"
+          }
+        },
+        "subtitle": {
+          "kind": "text",
+          "placeholder": {
+            "idx": 14,
+            "type": "BODY",
+            "shape_name": "AI_SUBTITLE"
           }
         },
         "chart": {
           "kind": "chart",
           "placeholder": {
             "idx": 13,
-            "type": "OBJECT",
-            "shape_name": "コンテンツ プレースホルダー 8"
+            "type": "CHART",
+            "shape_name": "AI_CHART"
+          }
+        },
+        "caption": {
+          "kind": "text",
+          "placeholder": {
+            "idx": 15,
+            "type": "BODY",
+            "shape_name": "AI_CAPTION"
           }
         }
       }
     },
     "image_caption": {
-      "ppt_layout_name": "Picture with Caption",
-      "match_confidence": 0.98,
+      "ppt_layout_name": "image_caption",
+      "match_confidence": 1.0,
       "layout_match": {
-        "strategy": "explicit_name"
+        "strategy": "semantic_name"
       },
       "slots": {
         "title": {
@@ -319,7 +479,15 @@
           "placeholder": {
             "idx": 0,
             "type": "TITLE",
-            "shape_name": "タイトル 7"
+            "shape_name": "AI_TITLE"
+          }
+        },
+        "subtitle": {
+          "kind": "text",
+          "placeholder": {
+            "idx": 13,
+            "type": "BODY",
+            "shape_name": "AI_SUBTITLE"
           }
         },
         "icon": {
@@ -327,7 +495,7 @@
           "placeholder": {
             "idx": 1,
             "type": "PICTURE",
-            "shape_name": "Picture Placeholder 2"
+            "shape_name": "AI_ICON"
           }
         },
         "caption": {
@@ -335,24 +503,56 @@
           "placeholder": {
             "idx": 2,
             "type": "BODY",
-            "shape_name": "Text Placeholder 3"
+            "shape_name": "AI_CAPTION"
+          }
+        },
+        "attribution": {
+          "kind": "text",
+          "placeholder": {
+            "idx": 14,
+            "type": "BODY",
+            "shape_name": "AI_ATTRIBUTION"
           }
         }
       }
     },
     "appendix_backup": {
       "ppt_layout_name": "appendix_backup",
-      "match_confidence": 0.99,
+      "match_confidence": 1.0,
       "layout_match": {
         "strategy": "semantic_name"
       },
       "slots": {
+        "title": {
+          "kind": "text",
+          "placeholder": {
+            "idx": 0,
+            "type": "TITLE",
+            "shape_name": "AI_TITLE"
+          }
+        },
+        "subtitle": {
+          "kind": "text",
+          "placeholder": {
+            "idx": 15,
+            "type": "BODY",
+            "shape_name": "AI_SUBTITLE"
+          }
+        },
         "body": {
           "kind": "text",
           "placeholder": {
             "idx": 13,
             "type": "OBJECT",
-            "shape_name": "slot__body"
+            "shape_name": "AI_BODY"
+          }
+        },
+        "items": {
+          "kind": "list",
+          "placeholder": {
+            "idx": 16,
+            "type": "OBJECT",
+            "shape_name": "AI_ITEMS"
           }
         },
         "references": {
@@ -360,23 +560,7 @@
           "placeholder": {
             "idx": 14,
             "type": "OBJECT",
-            "shape_name": "slot__references"
-          }
-        },
-        "title": {
-          "kind": "text",
-          "placeholder": {
-            "idx": 0,
-            "type": "TITLE",
-            "shape_name": "タイトル 7"
-          }
-        },
-        "items": {
-          "kind": "list",
-          "placeholder": {
-            "idx": 13,
-            "type": "OBJECT",
-            "shape_name": "slot__body"
+            "shape_name": "AI_REFERENCES"
           }
         }
       }

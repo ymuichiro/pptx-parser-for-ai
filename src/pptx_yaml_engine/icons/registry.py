@@ -265,9 +265,171 @@ def _draw_cloud_arrow_up_fallback(draw: ImageDraw.ImageDraw, box: tuple[float, f
     draw.line((center_x, arrow_top + height * 0.08, center_x + width * 0.12, arrow_top + height * 0.22), fill=color, width=stroke)
 
 
+def _draw_beaker_fallback(draw: ImageDraw.ImageDraw, box: tuple[float, float, float, float], *, color: str, stroke: int) -> None:
+    left, top, right, bottom = box
+    width = right - left
+    height = bottom - top
+    neck_left = left + width * 0.38
+    neck_right = left + width * 0.62
+    shoulder_left = left + width * 0.2
+    shoulder_right = left + width * 0.8
+    neck_bottom = top + height * 0.38
+    lip_y = top + height * 0.1
+    body_bottom = bottom - height * 0.06
+    draw.line((neck_left, lip_y, neck_right, lip_y), fill=color, width=stroke)
+    draw.line((neck_left, lip_y, neck_left, neck_bottom), fill=color, width=stroke)
+    draw.line((neck_right, lip_y, neck_right, neck_bottom), fill=color, width=stroke)
+    points = [
+        (neck_left, neck_bottom),
+        (shoulder_left, body_bottom),
+        (shoulder_right, body_bottom),
+        (neck_right, neck_bottom),
+    ]
+    draw.line([*points, points[0]], fill=color, width=stroke)
+    draw.arc((shoulder_left, body_bottom - height * 0.16, shoulder_right, body_bottom + height * 0.08), start=0, end=180, fill=color, width=stroke)
+    liquid_y = top + height * 0.68
+    draw.line((left + width * 0.28, liquid_y, right - width * 0.28, liquid_y), fill=color, width=max(1, stroke - 1))
+    draw.ellipse((left + width * 0.4, top + height * 0.46, left + width * 0.47, top + height * 0.53), outline=color, width=max(1, stroke - 1))
+    draw.ellipse((left + width * 0.56, top + height * 0.57, left + width * 0.65, top + height * 0.66), outline=color, width=max(1, stroke - 1))
+
+
+def _draw_shield_check_fallback(draw: ImageDraw.ImageDraw, box: tuple[float, float, float, float], *, color: str, stroke: int) -> None:
+    left, top, right, bottom = box
+    width = right - left
+    height = bottom - top
+    points = [
+        (left + width * 0.5, top + height * 0.08),
+        (right - width * 0.14, top + height * 0.22),
+        (right - width * 0.22, top + height * 0.68),
+        (left + width * 0.5, bottom - height * 0.08),
+        (left + width * 0.22, top + height * 0.68),
+        (left + width * 0.14, top + height * 0.22),
+    ]
+    draw.line([*points, points[0]], fill=color, width=stroke)
+    draw.line(
+        (
+            left + width * 0.34,
+            top + height * 0.52,
+            left + width * 0.46,
+            top + height * 0.64,
+            left + width * 0.68,
+            top + height * 0.38,
+        ),
+        fill=color,
+        width=stroke,
+    )
+
+
+def _draw_clipboard_document_check_fallback(
+    draw: ImageDraw.ImageDraw,
+    box: tuple[float, float, float, float],
+    *,
+    color: str,
+    stroke: int,
+) -> None:
+    left, top, right, bottom = box
+    width = right - left
+    height = bottom - top
+    draw.rounded_rectangle((left + width * 0.18, top + height * 0.18, right - width * 0.18, bottom - height * 0.06), radius=max(3, int(width * 0.07)), outline=color, width=stroke)
+    draw.rounded_rectangle((left + width * 0.34, top + height * 0.06, right - width * 0.34, top + height * 0.24), radius=max(2, int(width * 0.04)), outline=color, width=stroke)
+    draw.line((left + width * 0.36, top + height * 0.42, right - width * 0.34, top + height * 0.42), fill=color, width=max(1, stroke - 1))
+    draw.line((left + width * 0.36, top + height * 0.56, right - width * 0.38, top + height * 0.56), fill=color, width=max(1, stroke - 1))
+    draw.line(
+        (
+            left + width * 0.36,
+            top + height * 0.72,
+            left + width * 0.45,
+            top + height * 0.81,
+            right - width * 0.32,
+            top + height * 0.62,
+        ),
+        fill=color,
+        width=stroke,
+    )
+
+
+def _draw_command_line_fallback(draw: ImageDraw.ImageDraw, box: tuple[float, float, float, float], *, color: str, stroke: int) -> None:
+    left, top, right, bottom = box
+    width = right - left
+    height = bottom - top
+    draw.rounded_rectangle((left + width * 0.04, top + height * 0.16, right - width * 0.04, bottom - height * 0.16), radius=max(4, int(width * 0.08)), outline=color, width=stroke)
+    draw.line((left + width * 0.04, top + height * 0.32, right - width * 0.04, top + height * 0.32), fill=color, width=stroke)
+    prompt_x = left + width * 0.22
+    prompt_y = top + height * 0.58
+    draw.line(
+        (
+            prompt_x,
+            prompt_y - height * 0.12,
+            prompt_x + width * 0.14,
+            prompt_y,
+            prompt_x,
+            prompt_y + height * 0.12,
+        ),
+        fill=color,
+        width=stroke,
+    )
+    draw.line((left + width * 0.5, top + height * 0.68, right - width * 0.22, top + height * 0.68), fill=color, width=stroke)
+
+
+def _draw_calendar_days_fallback(draw: ImageDraw.ImageDraw, box: tuple[float, float, float, float], *, color: str, stroke: int) -> None:
+    left, top, right, bottom = box
+    width = right - left
+    height = bottom - top
+    draw.rounded_rectangle((left + width * 0.08, top + height * 0.16, right - width * 0.08, bottom - height * 0.08), radius=max(4, int(width * 0.08)), outline=color, width=stroke)
+    draw.line((left + width * 0.08, top + height * 0.34, right - width * 0.08, top + height * 0.34), fill=color, width=stroke)
+    draw.line((left + width * 0.28, top + height * 0.08, left + width * 0.28, top + height * 0.24), fill=color, width=stroke)
+    draw.line((right - width * 0.28, top + height * 0.08, right - width * 0.28, top + height * 0.24), fill=color, width=stroke)
+    dot = max(2, int(width * 0.035))
+    for row_y in (0.5, 0.66, 0.82):
+        for col_x in (0.28, 0.5, 0.72):
+            cx = left + width * col_x
+            cy = top + height * row_y
+            draw.ellipse((cx - dot, cy - dot, cx + dot, cy + dot), fill=color)
+
+
+def _draw_presentation_chart_line_fallback(
+    draw: ImageDraw.ImageDraw,
+    box: tuple[float, float, float, float],
+    *,
+    color: str,
+    stroke: int,
+) -> None:
+    left, top, right, bottom = box
+    width = right - left
+    height = bottom - top
+    screen_top = top + height * 0.16
+    screen_bottom = top + height * 0.66
+    draw.line((left + width * 0.1, screen_top, right - width * 0.1, screen_top), fill=color, width=stroke)
+    draw.rectangle((left + width * 0.16, screen_top, right - width * 0.16, screen_bottom), outline=color, width=stroke)
+    draw.line(
+        (
+            left + width * 0.28,
+            screen_bottom - height * 0.12,
+            left + width * 0.42,
+            screen_bottom - height * 0.26,
+            left + width * 0.56,
+            screen_bottom - height * 0.18,
+            right - width * 0.28,
+            screen_top + height * 0.16,
+        ),
+        fill=color,
+        width=stroke,
+    )
+    stand_x = left + width * 0.5
+    draw.line((stand_x, screen_bottom, stand_x, bottom - height * 0.12), fill=color, width=stroke)
+    draw.line((stand_x, bottom - height * 0.12, left + width * 0.34, bottom - height * 0.02), fill=color, width=stroke)
+    draw.line((stand_x, bottom - height * 0.12, right - width * 0.34, bottom - height * 0.02), fill=color, width=stroke)
+
+
 FALLBACK_DRAWERS = {
+    "beaker": _draw_beaker_fallback,
+    "calendar-days": _draw_calendar_days_fallback,
     "chart-bar": _draw_chart_bar_fallback,
+    "clipboard-document-check": _draw_clipboard_document_check_fallback,
     "cloud-arrow-up": _draw_cloud_arrow_up_fallback,
+    "command-line": _draw_command_line_fallback,
+    "presentation-chart-line": _draw_presentation_chart_line_fallback,
+    "shield-check": _draw_shield_check_fallback,
     "sparkles": _draw_sparkles_fallback,
 }
 

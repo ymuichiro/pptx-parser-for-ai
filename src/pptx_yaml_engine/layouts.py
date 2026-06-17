@@ -124,7 +124,7 @@ LAYOUT_SPECS: dict[str, LayoutSpec] = {
     ),
     "three_cards_vertical": LayoutSpec(
         name="three_cards_vertical",
-        description="Three-card vertical slide.",
+        description="Three-card slide with three side-by-side columns.",
         required_fields=("title", "cards"),
         optional_fields=("subtitle",),
         slots=_card_slots(),
@@ -191,16 +191,97 @@ LAYOUT_SPECS: dict[str, LayoutSpec] = {
 LAYOUT_ALIASES: dict[str, tuple[str, ...]] = {
     "cover_title": ("cover", "title_slide", "cover_title", "yaml__cover_title"),
     "section_divider": ("section", "section_header", "section_divider", "yaml__section_divider"),
-    "agenda": ("agenda", "toc", "table_of_contents", "title_and_content", "yaml__agenda"),
-    "list_basic": ("list", "list_basic", "bullets", "title_and_content", "yaml__list_basic"),
-    "table_basic": ("table", "table_basic", "title_and_content", "yaml__table_basic"),
+    "agenda": ("agenda", "toc", "table_of_contents", "yaml__agenda"),
+    "list_basic": ("list", "list_basic", "bullets", "yaml__list_basic"),
+    "table_basic": ("table", "table_basic", "yaml__table_basic"),
     "comparison_2col": ("comparison", "2col_compare", "comparison_2col", "yaml__comparison_2col"),
-    "three_cards_vertical": ("3col_vertical", "3col_cards_vertical", "three_cards_vertical", "two_content", "yaml__three_cards_vertical"),
-    "closing_end": ("closing", "end", "thank_you", "closing_end", "title_slide", "yaml__closing_end"),
-    "chart_basic": ("chart", "chart_basic", "title_and_content", "yaml__chart_basic"),
+    "three_cards_vertical": (
+        "3col_vertical",
+        "3col",
+        "3col_cards_vertical",
+        "three_column",
+        "three_columns",
+        "three_cards",
+        "three_cards_vertical",
+        "yaml__three_cards_vertical",
+    ),
+    "closing_end": ("closing", "end", "thank_you", "closing_end", "yaml__closing_end"),
+    "chart_basic": ("chart", "chart_basic", "yaml__chart_basic"),
     "image_caption": ("image_caption", "picture_caption", "picture_with_caption", "icon_caption", "yaml__image_caption"),
-    "appendix_backup": ("appendix", "backup", "appendix_backup", "title_and_content", "yaml__appendix_backup"),
+    "appendix_backup": ("appendix", "backup", "appendix_backup", "yaml__appendix_backup"),
 }
+
+
+def _default_ai_placeholder_name(path: str) -> str:
+    tokens: list[str] = []
+    for part in path.split("."):
+        if "[" in part and part.endswith("]"):
+            name, index_raw = part[:-1].split("[", 1)
+            if name:
+                tokens.append(name.upper())
+            tokens.append(str(int(index_raw) + 1))
+            continue
+        tokens.append(part.upper())
+    return "AI_" + "_".join(tokens)
+
+
+def _card_aliases(index: int, field: str, *extra: str) -> tuple[str, ...]:
+    number = index + 1
+    return (
+        f"AI_CARD{number}_{field}",
+        f"AI_COL{number}_{field}",
+        f"AI_COLUMN{number}_{field}",
+        *extra,
+    )
+
+
+LAYOUT_SLOT_NAME_ALIASES: dict[str, dict[str, tuple[str, ...]]] = {
+    "agenda": {
+        "items": ("AI_BODY", "AI_AGENDA_ITEMS"),
+    },
+    "list_basic": {
+        "items": ("AI_BODY", "AI_LIST_ITEMS"),
+    },
+    "comparison_2col": {
+        "left.icon": ("AI_COL1_ICON", "AI_COLUMN1_ICON"),
+        "left.title": ("AI_COL1_TITLE", "AI_COLUMN1_TITLE", "AI_COL1_HEADING", "AI_COLUMN1_HEADING"),
+        "left.description": ("AI_LEFT_BODY", "AI_COL1_DESCRIPTION", "AI_COLUMN1_DESCRIPTION", "AI_COL1_BODY", "AI_COLUMN1_BODY"),
+        "left.bullets": ("AI_LEFT_ITEMS", "AI_COL1_ITEMS", "AI_COLUMN1_ITEMS"),
+        "right.icon": ("AI_COL2_ICON", "AI_COLUMN2_ICON"),
+        "right.title": ("AI_COL2_TITLE", "AI_COLUMN2_TITLE", "AI_COL2_HEADING", "AI_COLUMN2_HEADING"),
+        "right.description": ("AI_RIGHT_BODY", "AI_COL2_DESCRIPTION", "AI_COLUMN2_DESCRIPTION", "AI_COL2_BODY", "AI_COLUMN2_BODY"),
+        "right.bullets": ("AI_RIGHT_ITEMS", "AI_COL2_ITEMS", "AI_COLUMN2_ITEMS"),
+    },
+    "three_cards_vertical": {
+        "cards[0].icon": _card_aliases(0, "ICON"),
+        "cards[0].title": _card_aliases(0, "TITLE", "AI_CARD1_HEADING", "AI_COL1_HEADING", "AI_COLUMN1_HEADING"),
+        "cards[0].description": _card_aliases(0, "DESCRIPTION", "AI_CARD1_BODY", "AI_COL1_BODY", "AI_COLUMN1_BODY"),
+        "cards[0].combined_text": _card_aliases(0, "COMBINED_TEXT", "AI_CARD1_TEXT", "AI_COL1_TEXT", "AI_COLUMN1_TEXT"),
+        "cards[1].icon": _card_aliases(1, "ICON"),
+        "cards[1].title": _card_aliases(1, "TITLE", "AI_CARD2_HEADING", "AI_COL2_HEADING", "AI_COLUMN2_HEADING"),
+        "cards[1].description": _card_aliases(1, "DESCRIPTION", "AI_CARD2_BODY", "AI_COL2_BODY", "AI_COLUMN2_BODY"),
+        "cards[1].combined_text": _card_aliases(1, "COMBINED_TEXT", "AI_CARD2_TEXT", "AI_COL2_TEXT", "AI_COLUMN2_TEXT"),
+        "cards[2].icon": _card_aliases(2, "ICON"),
+        "cards[2].title": _card_aliases(2, "TITLE", "AI_CARD3_HEADING", "AI_COL3_HEADING", "AI_COLUMN3_HEADING"),
+        "cards[2].description": _card_aliases(2, "DESCRIPTION", "AI_CARD3_BODY", "AI_COL3_BODY", "AI_COLUMN3_BODY"),
+        "cards[2].combined_text": _card_aliases(2, "COMBINED_TEXT", "AI_CARD3_TEXT", "AI_COL3_TEXT", "AI_COLUMN3_TEXT"),
+    },
+    "appendix_backup": {
+        "body": ("AI_APPENDIX_BODY",),
+    },
+}
+
+
+def slot_ai_placeholder_names(layout: str, path: str) -> tuple[str, ...]:
+    names = (_default_ai_placeholder_name(path), *LAYOUT_SLOT_NAME_ALIASES.get(layout, {}).get(path, ()))
+    unique_names: list[str] = []
+    seen: set[str] = set()
+    for name in names:
+        if name in seen:
+            continue
+        seen.add(name)
+        unique_names.append(name)
+    return tuple(unique_names)
 
 
 LAYOUT_SELECTION_GUIDANCE: dict[str, dict[str, str]] = {
@@ -229,8 +310,8 @@ LAYOUT_SELECTION_GUIDANCE: dict[str, dict[str, str]] = {
         "avoidWhen": "Avoid when there are more than two parallel items or when the slide is just a plain bullet list.",
     },
     "three_cards_vertical": {
-        "whenToUse": "Use for three stacked pillars, phases, or recommendations with slightly longer descriptions.",
-        "avoidWhen": "Avoid when you have only one or two items, or when chronology is more important than grouping.",
+        "whenToUse": "Use for three parallel pillars, offerings, or recommendations that benefit from side-by-side comparison.",
+        "avoidWhen": "Avoid when the narrative is chronological or when each item needs a long description better suited to stacked rows.",
     },
     "closing_end": {
         "whenToUse": "Use once at the end for summary, next step, or thank-you framing.",
@@ -251,11 +332,79 @@ LAYOUT_SELECTION_GUIDANCE: dict[str, dict[str, str]] = {
 }
 
 
+SLOT_CAPACITY_GUIDANCE: dict[SlotKind, str] = {
+    "text": "Aim for 1-2 short lines. Long prose should be split into another slide or list slot.",
+    "list": "Aim for 3-6 bullets. Keep each bullet concise enough to fit the authored placeholder.",
+    "table": "Aim for 3-5 columns and 3-6 body rows. Larger tables need a custom template with a larger table placeholder.",
+    "chart": "Aim for 1 chart with up to 6 categories and 1-3 series for readable enterprise slides.",
+    "icon": "Use a picture placeholder sized as a visual square. Deck values must be built-in icon refs, not arbitrary images.",
+}
+
+SLOT_KIND_PLACEHOLDER_TYPES: dict[SlotKind, tuple[str, ...]] = {
+    "text": ("TITLE", "CENTER_TITLE", "SUBTITLE", "BODY", "OBJECT"),
+    "list": ("TITLE", "CENTER_TITLE", "SUBTITLE", "BODY", "OBJECT"),
+    "table": ("TABLE",),
+    "chart": ("CHART",),
+    "icon": ("PICTURE",),
+}
+
+
+def _layout_authoring_contract(spec: LayoutSpec) -> dict[str, Any]:
+    layout_names = list(dict.fromkeys((spec.name, *LAYOUT_ALIASES.get(spec.name, ()))))
+    return {
+        "semanticLayoutName": spec.name,
+        "powerPointLayoutNames": layout_names,
+        "requiredAiPlaceholders": [
+            {
+                "slot": slot.path,
+                "kind": slot.kind,
+                "aiNames": list(slot_ai_placeholder_names(spec.name, slot.path)),
+                "compatiblePlaceholderTypes": list(SLOT_KIND_PLACEHOLDER_TYPES[slot.kind]),
+                "capacityGuidance": SLOT_CAPACITY_GUIDANCE[slot.kind],
+            }
+            for slot in spec.slots
+            if slot.required
+        ],
+        "optionalAiPlaceholders": [
+            {
+                "slot": slot.path,
+                "kind": slot.kind,
+                "aiNames": list(slot_ai_placeholder_names(spec.name, slot.path)),
+                "compatiblePlaceholderTypes": list(SLOT_KIND_PLACEHOLDER_TYPES[slot.kind]),
+                "capacityGuidance": SLOT_CAPACITY_GUIDANCE[slot.kind],
+            }
+            for slot in spec.slots
+            if not slot.required
+        ],
+    }
+
+
+def template_authoring_contract_response() -> dict[str, Any]:
+    return {
+        "contractVersion": 1,
+        "rules": [
+            "Create one PowerPoint slide layout per supported semantic layout.",
+            "Name each PowerPoint slide layout with the semantic layout key or a documented alias.",
+            "Rename each bindable placeholder in PowerPoint's Selection Pane to one of the listed AI_* names.",
+            "Use PowerPoint placeholders only; AI_* names on ordinary shapes are invalid.",
+            "Do not rely on geometry, placeholder type, slot__*, or placeholder__* fallback mapping.",
+        ],
+        "slotKindCapacityGuidance": dict(SLOT_CAPACITY_GUIDANCE),
+        "slotKindCompatiblePlaceholderTypes": {
+            kind: list(types)
+            for kind, types in SLOT_KIND_PLACEHOLDER_TYPES.items()
+        },
+        "layouts": [_layout_authoring_contract(spec) for spec in LAYOUT_SPECS.values()],
+    }
+
+
 def supported_layouts_response() -> dict[str, Any]:
     return {
         "selectionGuidance": {
             "recommendedWorkflow": [
                 "Call list_templates() and list_supported_layouts() before writing the deck.",
+                "Write the full deck JSON before calling render_presentation(): use an object with version=1 and a slides array; do not send a partial probe call.",
+                "Call render_presentation() once per finalized deck; if it returns success=true and a download_url, use that output instead of re-rendering the same deck.",
                 "Start with a short outline, then choose the richest fitting layout for each slide instead of defaulting to bullets.",
                 "Diversify the middle of the deck with comparison_2col, three_cards_vertical, chart_basic, or table_basic when they fit.",
                 "Use section_divider only for major transitions and avoid long consecutive runs of list_basic slides.",
@@ -263,14 +412,14 @@ def supported_layouts_response() -> dict[str, Any]:
             "compositionHeuristics": [
                 "Use agenda once near the front for decks with several sections.",
                 "Use comparison_2col for two viewpoints or before/after framing.",
-                "Use three_cards_vertical for three stacked recommendations or phases.",
+                "Use three_cards_vertical for three side-by-side pillars or options.",
                 "Use chart_basic for evidence driven by numeric trends.",
             ],
             "sampleOutline": [
                 {"position": 1, "layout": "cover_title", "reason": "Open with the topic and framing subtitle."},
                 {"position": 2, "layout": "agenda", "reason": "Set the structure if the deck has multiple sections."},
                 {"position": 3, "layout": "comparison_2col", "reason": "Frame two perspectives or a before/after contrast."},
-                {"position": 4, "layout": "three_cards_vertical", "reason": "Show three pillars, phases, or recommendations."},
+                {"position": 4, "layout": "three_cards_vertical", "reason": "Show three parallel pillars, options, or recommendations."},
                 {"position": 5, "layout": "list_basic", "reason": "Reserve bullets for takeaways or action items."},
                 {"position": 6, "layout": "closing_end", "reason": "End with summary or next step."},
             ],
@@ -284,9 +433,17 @@ def supported_layouts_response() -> dict[str, Any]:
                 "requiredFields": list(spec.required_fields),
                 "optionalFields": list(spec.optional_fields),
                 "slots": [
-                    {"path": slot.path, "kind": slot.kind, "required": slot.required}
+                    {
+                        "path": slot.path,
+                        "kind": slot.kind,
+                        "required": slot.required,
+                        "aiNames": list(slot_ai_placeholder_names(spec.name, slot.path)),
+                        "compatiblePlaceholderTypes": list(SLOT_KIND_PLACEHOLDER_TYPES[slot.kind]),
+                        "capacityGuidance": SLOT_CAPACITY_GUIDANCE[slot.kind],
+                    }
                     for slot in spec.slots
                 ],
+                "templateAuthoring": _layout_authoring_contract(spec),
                 "example": spec.example,
             }
             for spec in LAYOUT_SPECS.values()

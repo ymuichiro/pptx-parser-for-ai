@@ -1,0 +1,160 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Enterprise Slide Reference</title>
+    <style>
+      :root {
+        --navy: #17233f;
+        --ink: #1f2937;
+        --muted: #667085;
+        --line: #d9e2ef;
+        --panel: #f7f9fc;
+        --accent: #2f80ed;
+        --teal: #12a594;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        background: #edf2f7;
+        font-family: Arial, Helvetica, sans-serif;
+      }
+      .slide {
+        width: 1600px;
+        height: 900px;
+        margin: 0;
+        background: white;
+        color: var(--ink);
+        position: relative;
+        overflow: hidden;
+      }
+      .bar {
+        position: absolute;
+        inset: 0 0 auto 0;
+        height: 18px;
+        background: linear-gradient(90deg, var(--navy), #25436b 58%, var(--accent));
+      }
+      .content {
+        padding: 72px 92px 56px;
+      }
+      .eyebrow {
+        color: var(--accent);
+        font-size: 22px;
+        font-weight: 700;
+        letter-spacing: 0;
+        margin-bottom: 18px;
+      }
+      h1 {
+        color: var(--navy);
+        font-size: 56px;
+        line-height: 1.08;
+        margin: 0 0 18px;
+        max-width: 1100px;
+      }
+      .subtitle {
+        color: var(--muted);
+        font-size: 26px;
+        line-height: 1.35;
+        margin-bottom: 44px;
+        max-width: 1060px;
+      }
+      .grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 32px;
+      }
+      .panel {
+        border: 1px solid var(--line);
+        background: var(--panel);
+        border-radius: 8px;
+        padding: 34px 34px 30px;
+        min-height: 420px;
+      }
+      .panel h2 {
+        color: var(--navy);
+        font-size: 31px;
+        line-height: 1.2;
+        margin: 0 0 14px;
+      }
+      .panel p {
+        color: var(--muted);
+        font-size: 22px;
+        line-height: 1.38;
+        margin: 0 0 26px;
+      }
+      ul {
+        margin: 0;
+        padding: 0;
+        list-style: none;
+      }
+      li {
+        display: grid;
+        grid-template-columns: 18px 1fr;
+        gap: 14px;
+        color: var(--ink);
+        font-size: 22px;
+        line-height: 1.35;
+        margin: 18px 0;
+      }
+      li::before {
+        content: "";
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        background: var(--teal);
+        margin-top: 10px;
+      }
+      .footer {
+        position: absolute;
+        left: 92px;
+        right: 92px;
+        bottom: 36px;
+        border-top: 1px solid var(--line);
+        padding-top: 18px;
+        color: var(--muted);
+        font-size: 18px;
+        display: flex;
+        justify-content: space-between;
+      }
+    </style>
+  </head>
+  <body>
+    <main class="slide">
+      <div class="bar"></div>
+      <section class="content">
+        <div class="eyebrow">AI Governance Readiness</div>
+        <h1>Move from local experimentation to enterprise-grade control</h1>
+        <p class="subtitle">
+          A production-ready deck should feel restrained, dense enough for executive review,
+          and structured around clear decisions rather than decoration.
+        </p>
+        <div class="grid">
+          <article class="panel">
+            <h2>Current pattern</h2>
+            <p>Teams run isolated pilots with uneven review depth and limited reuse of controls.</p>
+            <ul>
+              <li>Policy interpretation varies by business unit</li>
+              <li>Evidence collection happens late in delivery</li>
+              <li>Model and data reviews are often manual</li>
+            </ul>
+          </article>
+          <article class="panel">
+            <h2>Target pattern</h2>
+            <p>A repeatable intake, review, and evidence model supports faster scaled deployment.</p>
+            <ul>
+              <li>One intake standard for risk classification</li>
+              <li>Control templates embedded in product delivery</li>
+              <li>Continuous evidence capture for audit readiness</li>
+            </ul>
+          </article>
+        </div>
+      </section>
+      <footer class="footer">
+        <span>Enterprise AI Office</span>
+        <span>Reference quality target</span>
+      </footer>
+    </main>
+  </body>
+</html>

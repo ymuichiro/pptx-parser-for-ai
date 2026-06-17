@@ -12,9 +12,14 @@ AIまたは開発者が実装・修正を行う場合、まずこのファイル
 このアプリケーションは、**PowerPoint テンプレートをサーバー側で管理し、semantic deck JSON を差し込んで `.pptx` を生成する MCP サーバー**である。
 
 - テンプレートの見た目・レイアウトは、事前に用意された `.pptx` / `.potx` が持つ
+- `default` テンプレートは、白地、黒/チャコール文字、大きめの本文階層、枠線なしの淡灰カード、見た目が正円の黒丸アイコンバッジを基調にした premium monochrome tone を標準デザインとする
+- slide 背景専用の画像やシェイプ、watermark、背景装飾だけを目的とする visual field は採用しない。デザインは placeholder、カード、パネル、罫線、badge などのコンテンツ領域を構成する shape で成立させる
+- `default` の文字レンダリングは、欧文テキストでは `Aptos`、日本語/CJK を含むテキストでは `Yu Gothic` を優先し、日本語資料を `Aptos` 固定の代替表示に任せない
 - コンテンツは deck JSON が持つ
-- manifest が semantic slot と PowerPoint placeholder `idx` を結び付ける
+- manifest は semantic slot を、PowerPoint layout 名と authoritative な `AI_*` placeholder 名に結び付け、render 用に placeholder `idx` を保持する
+- mapping は **PowerPoint layout 名 + `AI_*` Selection Pane 名** だけから strict に生成する
 - 通常の render では、Python が新しいスライド UI やレイアウトを描き起こさず、template の既存 placeholder / content 領域へ差し込む
+- production 契約として、legacy heuristic や fallback naming に依存した mapping は扱わない
 - deck JSON の詳細仕様は `SEMANTIC_DECK_SPEC.md` を参照する
 
 ### 主な利用者
@@ -43,6 +48,8 @@ AIまたは開発者が実装・修正を行う場合、まずこのファイル
 - 環境変数 JSON による `名前 -> テンプレートパス` のマッピング
 - 任意画像パス、base64 画像、外部 URL 画像の受け入れ
 - 組み込みの認証・認可基盤
+- `slot__...` / `placeholder__...` 命名、placeholder type、geometry、left/right/card 推測などによる legacy mapping fallback
+- PowerPoint placeholder ではない任意 shape への通常 render
 
 補足:
 
@@ -60,10 +67,10 @@ AIまたは開発者が実装・修正を行う場合、まずこのファイル
 | Streamable HTTP MCP | `/mcp` / `/mcp/` で MCP ツールを提供する | implemented |
 | Supported layout listing | semantic layout 一覧を返す | implemented |
 | Icon listing | 利用可能なアイコン参照を返す | implemented |
-| Template inspection | `.pptx` / `.potx` の layout / placeholder 情報を調査する | implemented |
-| Mapping proposal | inspection から manifest 候補を作る | implemented |
-| Manifest finalization | proposal と override から manifest を確定する | implemented |
-| Manifest validation | template bytes と manifest の整合性を検証する | implemented |
+| Template inspection | `.pptx` / `.potx` の layout / placeholder / Selection Pane 名を調査する | implemented |
+| Mapping proposal | inspection から layout 名 + `AI_*` 名ベースの strict manifest 候補を作る | implemented |
+| Manifest finalization | strict contract を満たす manifest を確定する | implemented |
+| Manifest validation | template bytes、`AI_*` naming、idx/name 整合性を検証する | implemented |
 | Deck validation | deck schema と manifest 収容性を検証する | implemented |
 | Template registry | テンプレートディレクトリを走査しサーバー管理テンプレートをロードする | implemented |
 | Template listing | `list_templates` で利用可能テンプレートを列挙する | implemented |
@@ -87,14 +94,15 @@ AIまたは開発者が実装・修正を行う場合、まずこのファイル
 | 用語 | 意味 |
 | ---- | ---- |
 | Template file | サーバーが保持する `.pptx` または `.potx`。見た目と slide layout を定義する |
-| Manifest | semantic layout / slot を PowerPoint placeholder `idx` に対応付けた JSON。起動時に template から生成される |
+| Manifest | semantic layout / slot を PowerPoint layout 名、authoritative な `AI_*` placeholder 名、cached placeholder `idx` に対応付けた JSON。起動時に template から生成される |
 | Template registry | テンプレートディレクトリを走査して有効テンプレートをメモリ上へロードしたもの |
 | Template name | テンプレートファイルの stem を lowercase 正規化した名前 |
-| Default template | stem が `default` のテンプレート。未指定系入力のフォールバック先 |
+| Default template | stem が `default` のテンプレート。未指定系入力のフォールバック先。標準デザインは premium monochrome tone |
 | Deck | 生成対象の semantic deck JSON |
 | Semantic layout | `cover_title` や `list_basic` など、アプリケーションが理解する論理スライド種別 |
 | Slot | 各 semantic layout 内の差し込み単位。例: `title`, `items`, `metric.value` |
-| Placeholder idx | PowerPoint 側 placeholder の `idx`。manifest はこれに対して書き込む |
+| AI placeholder name | Selection Pane で設定する `AI_*` 形式の placeholder 名。template authoring と mapping の authoritative contract |
+| Placeholder idx | PowerPoint 側 placeholder の `idx`。renderer が内部 locator / cache として使えるが、authoring contract ではない |
 | Artifact | 一時保存された生成済み `.pptx` と、そのダウンロード URL |
 | Icon ref | 内蔵アイコンを指定する JSON。画像の唯一の通常入力形式 |
 
@@ -109,15 +117,21 @@ AIまたは開発者が実装・修正を行う場合、まずこのファイル
 実装時に絶対に壊してはいけないルール。
 
 - テンプレートは **テンプレートディレクトリ配下の `.pptx` / `.potx`** のみを通常フローで利用する
+- テンプレート運用者は、テンプレートディレクトリへ配置する前に `make sanitize-template PPTX=path/to/template.pptx` を実行し、識別可能な metadata の除去、暗号化・hidden/comment/macro/embedded parts の検出、`AI_*` contract 検証を通さなければならない。暗号化された Office package は `SANITIZE_ARGS='--password ...'` で復号してから保存する
 - 通常フローでは、各テンプレートの manifest は **起動時に template bytes から自動生成**する
 - 生成された manifest の `template_fingerprint` は、対応するテンプレート bytes と一致しなければならない
 - 生成された manifest が template と整合しない場合、そのテンプレートはロードしてはいけない
 - template name はファイル stem を **lowercase 正規化**して扱う
 - Microsoft Office 組み込みの slide layout 名は、既知の locale 名から **英語 canonical 名として自動解釈**できなければならない
+- テンプレート運用者は、サポート対象の各 PowerPoint layout 上の bindable placeholder に **authoritative な `AI_*` Selection Pane 名**を設定しなければならない
+- mapping は **PowerPoint layout 名 + `AI_*` placeholder 名**だけから生成し、legacy naming、placeholder type、geometry、left/right/card 推測を supported behavior にしてはいけない
+- v1 の bindable target は **PowerPoint placeholder のみ** とし、任意 non-placeholder shape は通常フローで対象にしてはいけない
+- finalized manifest では `AI_*` 名 / `shape_name` が authoritative contract であり、`idx` は renderer の内部 locator / cache に留める
 - `default.pptx` と `default.potx` は同時に有効化できない。normalized name が重複するため **起動エラー** とする
 - `render_presentation` で `template_name` が **未指定 / null / 空文字 / 空白のみ** の場合は、`default` へフォールバックする
 - フォールバック要求時に `default` が存在しない場合は、`TEMPLATE_NOT_FOUND` ではなく **`DEFAULT_TEMPLATE_NOT_FOUND`** を返す
 - 発見した各 template は、**同じ semantic layout 群**を満たさなければならない
+- required `AI_*` placeholder の欠落、unknown 名、重複、non-placeholder 命名、slot との互換性不整合、name と cached `idx` の不整合があれば **起動失敗** とする
 - 起動時に template の mapping 生成や contract 検証に失敗した場合は、warning で継続せず **起動失敗** とする
 - deck の入力契約は **JSON** であり、root は `version`, `meta`, `slides` を基本とする
 - slide の種別指定は `type` ではなく **`layout`** を使う
@@ -140,21 +154,29 @@ AIまたは開発者が実装・修正を行う場合、まずこのファイル
 
 手順:
 
-1. 運用者が `.pptx` または `.potx` を準備する
-2. テンプレートファイルをテンプレートディレクトリへ配置する
-3. サーバーを再起動する
+1. 運用者が、サポート対象 layout の bindable placeholder に `AI_*` Selection Pane 名を設定した `.pptx` または `.potx` を準備する
+2. `make sanitize-template PPTX=path/to/template.pptx` を実行し、識別可能な metadata が除去され、暗号化や hidden/comment/macro/embedded parts が残っておらず、`AI_*` contract を満たすことを確認する。暗号化ファイルの場合は `SANITIZE_ARGS='--password ...'` を指定する
+3. テンプレートファイルをテンプレートディレクトリへ配置する
+4. サーバーを再起動する
 
 正常系:
 
-- テンプレートが起動時に解析され、mapping が自動生成され、registry にロードされる
+- テンプレートが起動時に解析され、PowerPoint layout 名 + `AI_*` placeholder 名から strict mapping が自動生成され、registry にロードされる
 - 組み込み layout 名が日本語などに localize されていても、既知の Microsoft Office 名は英語 canonical 名として解釈される
 
 異常系:
 
 - template を開けない: 起動失敗
-- mapping を生成できない: 起動失敗
+- required `AI_*` placeholder が足りない: 起動失敗
+- semantic layout に存在しない `AI_*` placeholder 名が置かれている: 起動失敗
+- 同一 layout 内で `AI_*` placeholder 名が重複している: 起動失敗
+- `AI_*` 名が non-placeholder shape に付いている: 起動失敗
+- `AI_*` 名付き placeholder が slot 種別と互換でない: 起動失敗
+- named placeholder と cached `idx` の整合が取れない: 起動失敗
+- strict mapping を生成できない: 起動失敗
 - 共通 semantic layout contract を満たさない: 起動失敗
 - normalized name 重複: 起動失敗
+- サニタイズ時に暗号化、hidden/comment/macro/embedded parts、識別可能な metadata、`AI_*` contract 違反が見つかる: 配置前に修正が必要
 
 完了条件:
 
@@ -248,17 +270,18 @@ AIまたは開発者が実装・修正を行う場合、まずこのファイル
 - ツールエラーは `DomainError` を `ToolError` として返す
 - 通常フローの資料生成は `render_presentation` を使う
 - 高度用途や運用用途のみ `render_presentation_custom` を使う
+- `inspect_template` / `propose_mapping` / `finalize_manifest` / `validate_manifest` は **`AI_*` Selection Pane naming contract** を前提にする
 
 ### 主要 MCP ツール
 
 | ツール名 | 用途 |
 | -------- | ---- |
-| `list_supported_layouts` | semantic layout と slot 契約を返す |
+| `list_supported_layouts` | semantic layout、deck field、template authoring 用の `AI_*` slot 契約を返す |
 | `list_icons` | 利用可能な icon ref を返す |
-| `inspect_template` | `.pptx` / `.potx` から layout / placeholder 情報を取得する |
-| `propose_mapping` | inspection から manifest 候補を作る |
-| `finalize_manifest` | proposal を完成 manifest にする |
-| `validate_manifest` | manifest と template bytes の整合性を検証する |
+| `inspect_template` | `.pptx` / `.potx` から layout / placeholder / Selection Pane 名を取得する |
+| `propose_mapping` | inspection から layout 名 + `AI_*` placeholder 名ベースの strict manifest 候補を作る |
+| `finalize_manifest` | required `AI_*` contract を満たす proposal だけを完成 manifest にする |
+| `validate_manifest` | manifest と template bytes の整合性、`AI_*` 名の一意性・placeholder 性・idx/name 整合を検証する |
 | `validate_deck` | deck schema と manifest 収容性を検証する |
 | `list_templates` | 現在ロード済み template 一覧を返す |
 | `render_presentation` | サーバー管理テンプレートで `.pptx` を生成する |
@@ -288,6 +311,7 @@ AIまたは開発者が実装・修正を行う場合、まずこのファイル
 - `template_name` は任意
 - `template_name` が omitted / `null` / `""` / whitespace-only の場合は `default` へフォールバックする
 - `file_name` は任意。未指定時は `deck.meta.title` か `presentation.pptx` を使う
+- `download_url` は一時 URL であり、既定では **30 分** 有効。`ARTIFACT_TTL_SECONDS` で上書きできる
 
 成功時レスポンスの要点:
 
@@ -318,7 +342,7 @@ AIまたは開発者が実装・修正を行う場合、まずこのファイル
 | name | normalized template name | lowercase stem |
 | description | 人間向け説明 | manifest 由来 |
 | template_bytes | 元の `.pptx` / `.potx` bytes | レンダリング元 |
-| manifest | template に対応する finalized manifest | fingerprint 一致必須 |
+| manifest | template に対応する finalized manifest | authoritative `AI_*` 名 + cached idx を保持し、fingerprint 一致必須 |
 | supported_layouts | template が収容できる semantic layout 一覧 | `list_templates` で返す |
 
 #### Deck
@@ -347,7 +371,7 @@ AIまたは開発者が実装・修正を行う場合、まずこのファイル
 | ---- | ---- | ---- |
 | layout | semantic layout 名 | `type` ではない |
 | title | タイトル | 多くの layout で必須 |
-| subtitle / items / table / chart など | layout ごとの slot 値 | manifest で placeholder に流し込む |
+| subtitle / items / table / chart など | layout ごとの slot 値 | authoritative `AI_*` placeholder contract に従って placeholder に流し込む |
 
 #### Artifact
 
@@ -361,8 +385,8 @@ AIまたは開発者が実装・修正を行う場合、まずこのファイル
 | ---- | ---- | ---- |
 | token | artifact 識別子 | download path に使う |
 | file_name | ダウンロード名 | 出力ファイル名 |
-| download_url | ダウンロード URL | TTL あり |
-| expires_at | 有効期限 | artifact TTL に従う |
+| download_url | ダウンロード URL | 一時 URL。既定 TTL は 30 分 |
+| expires_at | 有効期限 | `ARTIFACT_TTL_SECONDS` に従う |
 
 関係:
 
@@ -400,7 +424,7 @@ AIまたは開発者が実装・修正を行う場合、まずこのファイル
 - semantic deck JSON を組み立てる
 - 必要なら `list_templates` で利用可能テンプレートを確認する
 - 通常は `render_presentation` で資料生成を実行する
-- template 運用時には `inspect_template -> propose_mapping -> finalize_manifest` を使う
+- template 運用時には `inspect_template -> propose_mapping -> finalize_manifest` を使い、`AI_*` placeholder contract を満たすことを確認する
 
 ### AIがしてはいけないこと
 
@@ -409,6 +433,8 @@ AIまたは開発者が実装・修正を行う場合、まずこのファイル
 - 任意画像 URL やローカルファイルパスを image slot として送らない
 - `template_name` を空文字にしてもエラーになると誤解しない。現在仕様では `default` へフォールバックする
 - 高度用途でないのに `render_presentation_custom` を通常フローとして使わない
+- `AI_*` 名のない placeholder でも production では自動推測されると期待しない
+- `slot__...` / `placeholder__...` / geometry fallback を supported behavior とみなさない
 
 ### プロンプト・ツール利用方針
 
@@ -416,6 +442,8 @@ AIまたは開発者が実装・修正を行う場合、まずこのファイル
 - 特定 template を使いたい場合のみ `template_name` を明示指定する
 - template 指定に自信がない場合は、`list_templates` を確認するか `template_name` を省略して `default` を使う
 - deck schema や manifest に存在しない field を作らない
+- template authoring / 運用では、サポート対象 layout ごとに必要な `AI_*` placeholder 名を先に満たす
+- template authoring / 運用では、`list_supported_layouts` の `templateAuthoring` / `slots[].aiNames` / `compatiblePlaceholderTypes` / `capacityGuidance` を authoring checklist として使う
 
 ---
 
@@ -450,6 +478,12 @@ AIまたは開発者が実装・修正を行う場合、まずこのファイル
 - `TEMPLATE_REGISTRY_LOAD_FAILED`: 起動時の template 解析・mapping 生成に失敗した
 - `TEMPLATE_LAYOUT_CONTRACT_MISMATCH`: template が共通 semantic layout contract を満たさない
 - `DUPLICATE_TEMPLATE_NAME`: lowercase 正規化後の template 名が重複した
+- `AI_PLACEHOLDER_MISSING`: required `AI_*` placeholder が存在しない
+- `AI_PLACEHOLDER_UNKNOWN`: semantic layout contract に存在しない `AI_*` placeholder 名がある
+- `AI_PLACEHOLDER_DUPLICATED`: 同一 layout 内で同じ `AI_*` placeholder 名が重複した
+- `AI_TARGET_NOT_PLACEHOLDER`: `AI_*` 名が PowerPoint placeholder ではない shape に付いている
+- `AI_PLACEHOLDER_INCOMPATIBLE`: named placeholder が slot 種別と互換でない
+- `AI_PLACEHOLDER_IDX_MISMATCH`: authoritative な `AI_*` 名と cached `idx` の整合が取れない
 - `DECK_SCHEMA_INVALID`: deck JSON の構造が不正
 - `SEMANTIC_LAYOUT_NOT_FOUND`: 未知の layout、または manifest に存在しない layout
 - `PLACEHOLDER_IDX_NOT_FOUND`: manifest が指す idx が実 template に存在しない
@@ -491,14 +525,16 @@ AIまたは開発者が実装・修正を行う場合、まずこのファイル
 
 ### 必須テスト
 
-- template registry のロード、重複、missing manifest、stale manifest のユニットテスト
+- template registry のロード、重複、strict `AI_*` contract 違反（missing / unknown / duplicated / non-placeholder / incompatible / idx mismatch）のユニットテスト
+- `propose_mapping` / `finalize_manifest` が layout 名 + `AI_*` 名だけを supported signal とし、legacy fallback を許容しないテスト
 - `render_presentation` の default fallback、named template、missing default のサーバーテスト
-- `.pptx` / `.potx` を使った render flow の統合テスト
+- default 以外の named `.pptx` template が registry load、manifest generation、render を通る統合テスト
+- `.pptx` / `.potx` を使った strict `AI_*` placeholder 前提の render flow の統合テスト
 - deck validation のユニットテスト
 - `/mcp` と `/mcp/` が redirect なしで同等に動くテスト
 
 ### AIがコード変更時に確認すべきコマンド
 
 ```bash
-.venv/bin/pytest tests/ -x -q
+uv run pytest tests/ -x -q
 ```

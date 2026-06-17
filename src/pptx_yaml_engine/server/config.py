@@ -45,7 +45,7 @@ def load_config() -> ServerConfig:
     return ServerConfig(
         allowed_hosts=_hosts(),
         artifact_root_dir=os.getenv("ARTIFACT_ROOT_DIR", "/tmp/pptx-mcp-artifacts"),
-        artifact_ttl_seconds=_positive_int("ARTIFACT_TTL_SECONDS", 900),
+        artifact_ttl_seconds=_positive_int("ARTIFACT_TTL_SECONDS", 1800),
         enable_operator_tools=_flag("ENABLE_OPERATOR_TOOLS", False),
         host=os.getenv("LISTEN", "0.0.0.0"),
         max_output_bytes=_positive_int("MAX_OUTPUT_BYTES", 26_214_400),

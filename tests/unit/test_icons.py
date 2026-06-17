@@ -29,3 +29,18 @@ def test_fallback_png_varies_by_icon_name() -> None:
     assert cloud.startswith(b"\x89PNG")
     assert chart.startswith(b"\x89PNG")
     assert cloud != chart
+
+
+def test_fallback_png_distinguishes_enterprise_heroicons() -> None:
+    names = [
+        "beaker",
+        "shield-check",
+        "clipboard-document-check",
+        "command-line",
+        "calendar-days",
+        "presentation-chart-line",
+    ]
+    images = [_fallback_png(name, 96, "#111827", None, 0.12) for name in names]
+
+    assert all(image.startswith(b"\x89PNG") for image in images)
+    assert len(set(images)) == len(names)

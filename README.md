@@ -2,18 +2,51 @@
 
 Template-driven PowerPoint generation MCP server.
 
-This project maps semantic deck JSON into placeholders from a pre-authored `.pptx` template. The template owns visual design; the deck owns content; the manifest connects semantic slots to PowerPoint placeholder `idx` values. In the normal render path, Python does not synthesize new slide layouts or redraw card/timeline UI; it fills the template's existing placeholders and content regions.
+This project renders semantic deck JSON into pre-authored `.pptx` / `.potx`
+templates. In production, each PowerPoint slide layout must be named for a
+supported semantic layout such as `cover_title`, `agenda`, or `table_basic`,
+and each bindable placeholder must use the authoritative `AI_*` Selection Pane
+name for that semantic slot. The server generates and validates manifests from
+template bytes at startup; normal rendering does not depend on companion
+manifest files living beside the template.
 
-Server-managed templates are loaded from the templates directory at startup.
-Each `.pptx` / `.potx` is inspected once, mapped once, and the generated
-mapping is reused for later render requests. If `default.pptx` or `default.potx`
-is present, `render_presentation` uses it automatically when the caller omits
-`template_name` or passes `null` / blank input.
+Server-managed templates are loaded from `templates/` at startup. Each template
+is inspected once, mapped once from PowerPoint layout names plus strict `AI_*`
+placeholder names, and reused for later render requests. If `default.pptx` or
+`default.potx` is present, `render_presentation` uses it automatically when the
+caller omits `template_name` or passes `null` / blank input.
 
-The repository ships with a generated production-oriented `templates/default.pptx`.
-Its source is `scripts/make_default_template.py`, and the visual direction is
-derived from the reference PNGs in `examples/`. The examples are 4:3 screenshots,
-but the generated PowerPoint template is 16:9.
+The repository ships with a production-oriented strict template at
+`templates/default.pptx`. Its source is `scripts/make_default_template.py`, and
+the visual direction is derived from the reference PNGs in `examples/`. The
+examples are 4:3 screenshots, but the generated PowerPoint template is 16:9.
+
+## Production template authoring
+
+1. Create one PowerPoint slide layout for each supported semantic layout and
+   name the layout with that semantic key.
+2. In PowerPoint's Selection Pane, rename every bindable placeholder to the
+   required `AI_*` name for that layout.
+3. Place the `.pptx` / `.potx` file in `templates/` and restart the server.
+
+Do not rely on generic built-in layout names such as `Title Slide` /
+`Title and Content`, and do not rely on legacy `slot__...`,
+`placeholder__...`, placeholder-type-only, or geometry fallback behavior.
+Startup fails if the strict `AI_*` contract is incomplete or invalid.
+
+The authoring checklist is machine-readable through `list_supported_layouts`.
+Each layout entry includes:
+
+- `templateAuthoring.powerPointLayoutNames`: semantic layout name and accepted
+  aliases for the PowerPoint layout.
+- `slots[].aiNames`: Selection Pane names accepted for that semantic slot.
+- `slots[].compatiblePlaceholderTypes`: placeholder types that can receive the
+  slot.
+- `slots[].capacityGuidance`: practical content limits for keeping slides
+  readable.
+
+The complete static authoring table is also documented in
+`templates/README.md`.
 
 ## Run
 
@@ -98,8 +131,11 @@ set `ENABLE_OPERATOR_TOOLS=true` and restart the app.
 
 ## Local YAML -> PPTX generation
 
-For manual/operator rendering from local assets, use the dedicated CLI with a
-template file, a finalized manifest JSON, and a deck YAML file:
+For local/operator rendering from local assets, use the dedicated CLI with the
+exact template file, a finalized manifest generated from that same template, and
+a deck YAML file. This is separate from the server-managed runtime, which
+regenerates manifests in memory at startup and does not require
+`name.manifest.json` companion files in `templates/`.
 
 ```bash
 uv run pptx-template-render \
@@ -109,21 +145,30 @@ uv run pptx-template-render \
   --output examples/review/sample-deck.generated.pptx
 ```
 
-This command uses the mapper's finalized manifest as the contract between the
-semantic deck YAML and the PowerPoint template placeholders.
+This command uses a finalized strict manifest as the contract between the
+semantic deck YAML and the template's `AI_*` placeholders.
 
 ## Tools
 
+Public tools:
+
 - `list_supported_layouts`
 - `list_icons`
+- `list_templates`
+- `render_presentation`
+
+Operator-only tools when `ENABLE_OPERATOR_TOOLS=true`:
+
 - `inspect_template`
 - `propose_mapping`
 - `finalize_manifest`
 - `validate_manifest`
 - `validate_deck`
-- `render_presentation`
+- `render_presentation_custom`
 
 Use `list_templates` to inspect the templates currently loaded on the server.
+The operator-only inspection/mapping tools assume the strict `AI_*` naming
+contract and are not legacy fallback mappers.
 
 Deck image fields accept only `icon` objects:
 

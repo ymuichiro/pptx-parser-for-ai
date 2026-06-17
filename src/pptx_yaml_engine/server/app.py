@@ -112,8 +112,13 @@ def create_mcp(config: ServerConfig, artifact_store: ArtifactStore, template_reg
         instructions=(
             "Generate PowerPoint files with server-managed templates only; never ask the user for "
             "template files, template_b64, or manifest JSON. Start by calling list_templates() and "
-            "list_supported_layouts(), then plan a varied deck. Prefer richer layouts when they fit: "
-            "use comparison_2col for two viewpoints, three_cards_vertical for three stacked items, "
+            "list_supported_layouts(), then build a complete deck object before rendering. "
+            "Do not probe render_presentation() with missing, partial, or schema-discovery calls: "
+            "it expects a concrete deck JSON object with version=1 and a slides array on the first call. "
+            "After render_presentation() returns success=true with a download_url, treat that as final output "
+            "and do not call render_presentation() again for the same deck unless you are intentionally revising the deck. "
+            "Prefer richer layouts when they fit: "
+            "use comparison_2col for two viewpoints, three_cards_vertical for three side-by-side items, "
             "and chart_basic or table_basic for evidence. Use agenda once near the front, use "
             "section_divider only for major transitions, and avoid repetitive runs of section_divider "
             "or list_basic if a richer layout matches the content. Use icon refs only for visual/image slots."
@@ -136,7 +141,12 @@ def create_mcp(config: ServerConfig, artifact_store: ArtifactStore, template_reg
 
     @mcp.tool()
     def list_icons(pack: str | None = None, variant: str | None = None, query: str | None = None) -> dict[str, Any]:
-        """List built-in icon names. Only these icon refs are allowed in deck payloads."""
+        """List built-in icon names. Only these icon refs are allowed in deck payloads.
+
+        Call this only when you actually need to discover or verify icon names.
+        Do not repeat the same list_icons lookup multiple times in one task once
+        you already have the needed icon names.
+        """
         try:
             logger.info("Tool call: list_icons")
             return list_icon_registry(pack=pack, variant=variant, query=query)
@@ -166,14 +176,22 @@ def create_mcp(config: ServerConfig, artifact_store: ArtifactStore, template_reg
         Call list_templates() first to discover available template names and
         which semantic layouts each one supports, then call
         list_supported_layouts() to choose slide types intentionally. Build the
-        deck using only layouts that appear in the chosen template's
-        supported_layouts list. Prefer a varied outline instead of repeating
-        ``section_divider`` and ``list_basic`` unless the content is truly just
-        a section break or bullet list.
+        full ``deck`` object before calling this tool: at minimum it must be a
+        JSON object like ``{"version": 1, "slides": [...]}``, and each slide
+        must already include a concrete ``layout`` and its required fields.
+        Do not use render_presentation() as a schema-discovery or dry-run call;
+        it is meant to receive the finished deck payload. Use only layouts that
+        appear in the chosen template's supported_layouts list. Prefer a varied
+        outline instead of repeating ``section_divider`` and ``list_basic``
+        unless the content is truly just a section break or bullet list.
+        If the call succeeds and returns ``success=true`` plus a ``download_url``,
+        use that result directly and do not immediately render the same deck
+        again unless the deck content or filename actually changed.
         If ``template_name`` is omitted, ``null``, empty, or whitespace-only,
         the server falls back to the template named ``default``.
 
-        On success returns a temporary ``download_url`` (valid for ~15 minutes)
+        On success returns a temporary ``download_url`` (valid for ~30 minutes
+        by default)
         together with slide_count and expiry metadata.
         """
         normalized_name = template_registry.normalize_name(template_name)
@@ -227,7 +245,13 @@ def create_mcp(config: ServerConfig, artifact_store: ArtifactStore, template_reg
     if config.enable_operator_tools:
         @mcp.tool()
         def inspect_template(template_b64: str) -> dict[str, Any]:
-            """Inspect a .pptx/.potx template and return layouts, placeholders, geometry, and fingerprint."""
+            """Inspect a .pptx/.potx template for strict AI_* authoring.
+
+            Returns PowerPoint layout names, placeholder metadata, Selection
+            Pane names, geometry, and the template fingerprint so operators can
+            verify that the template follows the strict semantic layout plus
+            AI_* placeholder contract.
+            """
             try:
                 logger.info("Tool call: inspect_template")
                 return {"inspection": inspect_template_impl(decode_b64(template_b64))}
@@ -236,7 +260,12 @@ def create_mcp(config: ServerConfig, artifact_store: ArtifactStore, template_reg
 
         @mcp.tool()
         def propose_mapping(inspection: dict[str, Any], ruleset: dict[str, Any] | None = None) -> dict[str, Any]:
-            """Generate a semantic layout/slot mapping proposal from an inspection result."""
+            """Build a strict semantic mapping proposal from layout names and AI_* placeholders.
+
+            The proposal reports contract violations such as missing, unknown,
+            duplicated, non-placeholder, or incompatible AI_* targets. It is
+            not a legacy fallback or geometry-driven mapper.
+            """
             try:
                 logger.info("Tool call: propose_mapping")
                 return {"proposal": propose_mapping_impl(inspection, ruleset)}
@@ -249,7 +278,12 @@ def create_mcp(config: ServerConfig, artifact_store: ArtifactStore, template_reg
             proposal: dict[str, Any],
             overrides: dict[str, Any] | None = None,
         ) -> dict[str, Any]:
-            """Finalize a template manifest. Required unresolved slots fail explicitly."""
+            """Finalize a manifest only when the strict AI_* contract is fully resolved.
+
+            Every required semantic layout and required AI_* placeholder binding
+            must be valid. Unresolved or invalid contract violations fail
+            explicitly instead of being filled by fallback behavior.
+            """
             try:
                 logger.info("Tool call: finalize_manifest")
                 return {"manifest": finalize_manifest_impl(inspection, proposal, overrides)}
@@ -258,7 +292,12 @@ def create_mcp(config: ServerConfig, artifact_store: ArtifactStore, template_reg
 
         @mcp.tool()
         def validate_manifest(template_b64: str, manifest: dict[str, Any]) -> dict[str, Any]:
-            """Validate that a manifest still matches the supplied template bytes."""
+            """Validate template bytes and a manifest against the strict AI_* contract.
+
+            This checks that authoritative AI_* shape names, placeholder-ness,
+            compatibility, and cached idx values still match the supplied
+            template bytes.
+            """
             try:
                 logger.info("Tool call: validate_manifest")
                 return validate_manifest_impl(decode_b64(template_b64), manifest)
@@ -287,8 +326,9 @@ def create_mcp(config: ServerConfig, artifact_store: ArtifactStore, template_reg
             render_presentation() with a server-managed template instead.
 
             ``template_b64`` must be the base-64-encoded bytes of a ``.pptx`` or
-            ``.potx`` file.  ``manifest`` must be a finalized manifest whose
-            ``template_fingerprint`` matches the supplied template bytes.
+            ``.potx`` file. ``manifest`` must be a finalized strict manifest
+            whose ``template_fingerprint`` matches the supplied template bytes
+            and whose bindings refer to authoritative `AI_*` placeholders.
             """
             try:
                 logger.info("Tool call: render_presentation_custom slides=%d", len(deck.get("slides", [])))
