@@ -123,44 +123,6 @@ def _check_comparison(slide: dict[str, Any], issues: list[dict[str, Any]], index
             _check_icon(value["icon"], f"slides[{index}].{side}.icon", issues)
 
 
-def _check_timeline(slide: dict[str, Any], issues: list[dict[str, Any]], index: int, manifest: dict[str, Any] | None) -> None:
-    events = slide.get("events")
-    if not isinstance(events, list) or not events:
-        issues.append(error_dict("DECK_SCHEMA_INVALID", "events must be a non-empty array", {"slide_index": index, "path": "events"}))
-        return
-    capacity = 8
-    if manifest is not None:
-        slots = manifest.get("layouts", {}).get("timeline", {}).get("slots", {})
-        indexes = [
-            int(path.split("[", 1)[1].split("]", 1)[0])
-            for path in slots
-            if path.startswith("events[") and path.split("[", 1)[1].split("]", 1)[0].isdigit()
-        ]
-        if indexes:
-            capacity = max(indexes) + 1
-    if len(events) > capacity:
-        issues.append(error_dict("OVERFLOW_POLICY_VIOLATION", "events exceed manifest capacity", {"slide_index": index, "capacity": capacity, "received": len(events)}))
-    for event_idx, event in enumerate(events):
-        if not isinstance(event, dict):
-            issues.append(error_dict("DECK_SCHEMA_INVALID", "event must be an object", {"slide_index": index, "path": f"events[{event_idx}]"}))
-            continue
-        _check_unknown_keys(event, {"label", "title", "description", "icon"}, f"slides[{index}].events[{event_idx}]", issues)
-        if not any(_is_non_empty_string(event.get(field)) for field in ("label", "title", "description")):
-            issues.append(error_dict("REQUIRED_SLOT_MISSING", "event needs label, title, or description", {"slide_index": index, "slot": f"events[{event_idx}]"}))
-        if "icon" in event:
-            _check_icon(event["icon"], f"slides[{index}].events[{event_idx}].icon", issues)
-
-
-def _check_metric(slide: dict[str, Any], issues: list[dict[str, Any]], index: int) -> None:
-    metric = slide.get("metric")
-    if not isinstance(metric, dict):
-        issues.append(error_dict("REQUIRED_SLOT_MISSING", "metric object is required", {"slide_index": index, "slot": "metric"}))
-        return
-    _check_unknown_keys(metric, {"value", "label", "unit", "delta"}, f"slides[{index}].metric", issues)
-    if not _is_non_empty_string(str(metric.get("value", "")).strip()):
-        issues.append(error_dict("REQUIRED_SLOT_MISSING", "metric.value is required", {"slide_index": index, "slot": "metric.value"}))
-
-
 def _check_slide(slide: Any, index: int, manifest: dict[str, Any] | None, issues: list[dict[str, Any]]) -> None:
     if not isinstance(slide, dict):
         issues.append(error_dict("DECK_SCHEMA_INVALID", "slide must be an object", {"slide_index": index}))
@@ -183,14 +145,10 @@ def _check_slide(slide: Any, index: int, manifest: dict[str, Any] | None, issues
         "table_basic": common | {"table", "caption"},
         "comparison_2col": common | {"left", "right"},
         "three_cards_vertical": common | {"cards"},
-        "three_cards_horizontal": common | {"cards"},
-        "timeline": common | {"events"},
         "closing_end": common | {"message", "contact", "cta"},
-        "kpi_big_number": common | {"metric", "supporting_points"},
         "chart_basic": common | {"chart", "caption"},
         "image_caption": common | {"icon", "caption", "attribution"},
         "appendix_backup": common | {"body", "items", "references"},
-        "eol_notice": common | {"product_name", "end_of_sale", "end_of_support", "replacement", "actions"},
     }
     _check_unknown_keys(slide, allowed_by_layout[layout], f"slides[{index}]", issues)
     _check_title(slide, issues, index)
@@ -205,14 +163,8 @@ def _check_slide(slide: Any, index: int, manifest: dict[str, Any] | None, issues
         _check_chart(slide.get("chart"), f"slides[{index}].chart", issues)
     elif layout == "comparison_2col":
         _check_comparison(slide, issues, index)
-    elif layout in {"three_cards_vertical", "three_cards_horizontal"}:
+    elif layout in {"three_cards_vertical"}:
         _check_cards(slide, issues, index)
-    elif layout == "timeline":
-        _check_timeline(slide, issues, index, manifest)
-    elif layout == "kpi_big_number":
-        _check_metric(slide, issues, index)
-        if "supporting_points" in slide:
-            _check_items(slide["supporting_points"], f"slides[{index}].supporting_points", issues)
     elif layout == "image_caption":
         if "icon" not in slide:
             issues.append(error_dict("REQUIRED_SLOT_MISSING", "icon is required", {"slide_index": index, "slot": "icon"}))
@@ -222,11 +174,6 @@ def _check_slide(slide: Any, index: int, manifest: dict[str, Any] | None, issues
         for field in ("items", "references"):
             if field in slide:
                 _check_items(slide[field], f"slides[{index}].{field}", issues)
-    elif layout == "eol_notice":
-        if not _is_non_empty_string(slide.get("product_name")):
-            issues.append(error_dict("REQUIRED_SLOT_MISSING", "product_name is required", {"slide_index": index, "slot": "product_name"}))
-        if "actions" in slide:
-            _check_items(slide["actions"], f"slides[{index}].actions", issues)
 
 
 def validate_deck(deck: dict[str, Any], manifest: dict[str, Any] | None = None) -> dict[str, Any]:

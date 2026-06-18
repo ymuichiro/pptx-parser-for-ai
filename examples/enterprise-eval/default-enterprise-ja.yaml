@@ -1,0 +1,138 @@
+version: 1
+meta:
+  title: 生成AI活用基盤の運用モデル
+  language: ja
+slides:
+  - layout: cover_title
+    title: 生成AI活用基盤の運用モデル
+    subtitle: 全社展開に向けた経営会議向けレビュー
+    date: 2026年6月
+    organization: エンタープライズAI推進室
+    author: 戦略・リスク統括チーム
+  - layout: section_divider
+    title: 現状認識
+    subtitle: 全社展開に向けて経営判断が必要な論点
+    section_no: "01"
+  - layout: agenda
+    title: 本日の論点
+    subtitle: 活用状況、統制モデル、実行計画を順に確認する
+    items:
+      - 活用拡大の兆候とリスク露出
+      - ガバナンスモデルと意思決定権限
+      - 統制成熟度と実装ロードマップ
+      - 経営として承認が必要な事項
+  - layout: comparison_2col
+    title: ガバナンスモデルの転換
+    subtitle: 個別実験から、再現性のある全社統制へ移行する
+    left:
+      title: 現在の状態
+      description: 各部門が個別に実証を進めており、審査深度と証跡の粒度にばらつきがある。
+      bullets:
+        - text: 部門ごとにポリシー解釈が異なる
+          level: 0
+        - text: モデル・データ審査が手作業に依存
+          level: 0
+        - text: 証跡収集がリリース直前に集中
+          level: 0
+      icon:
+        pack: heroicons
+        name: beaker
+        variant: outline
+    right:
+      title: 目指す状態
+      description: 共通の受付、審査、証跡モデルにより、安全性と展開速度を両立する。
+      bullets:
+        - text: リスク分類のための共通受付基準
+          level: 0
+        - text: 開発プロセスに統制テンプレートを組み込む
+          level: 0
+        - text: 監査に備えた証跡を継続的に蓄積
+          level: 0
+      icon:
+        pack: heroicons
+        name: shield-check
+        variant: outline
+  - layout: three_cards_vertical
+    title: 優先ワークストリーム
+    subtitle: 三つの取り組みを一つのプログラムとして管理する
+    cards:
+      - title: ポリシーの業務化
+        description: AIポリシーを受付項目、審査観点、証跡テンプレートに落とし込む。
+        icon:
+          pack: heroicons
+          name: clipboard-document-check
+          variant: outline
+      - title: プラットフォーム統制
+        description: ログ、プロンプト確認、データ境界、モデル利用承認を標準化する。
+        icon:
+          pack: heroicons
+          name: command-line
+          variant: outline
+      - title: 運用会議体
+        description: 週次トリアージ、月次リスク確認、四半期の経営レビューを定着させる。
+        icon:
+          pack: heroicons
+          name: calendar-days
+          variant: outline
+  - layout: chart_basic
+    title: 四半期別の統制成熟度
+    subtitle: 第4四半期までに再利用可能な統制資産へ育てる
+    chart:
+      kind: column
+      categories: [Q1, Q2, Q3, Q4]
+      series:
+        - name: 受付網羅率
+          values: [35, 58, 76, 90]
+        - name: 証跡自動化
+          values: [18, 36, 61, 82]
+    caption: 優先AIユースケース全体に対する統制カバレッジの概算値。
+  - layout: table_basic
+    title: 意思決定事項
+    subtitle: 個別実証から再現性ある本番運用へ移行するための承認事項
+    table:
+      headers: [決定事項, オーナー, 時期, 効果]
+      rows:
+        - [共通受付分類を承認, AIステアリング委員会, 6月, ポートフォリオ管理を可能にする]
+        - [証跡テンプレートを必須化, リスク・コンプライアンス, 7月, 監査準備工数を削減する]
+        - [統制自動化に投資, テクノロジー部門, 7月, リリース速度を高める]
+    caption: 各決定は、統制の一貫性を高めながら現場の負荷を下げるために設計する。
+  - layout: list_basic
+    title: 実装ロードマップ
+    subtitle: 承認済み案件の速度を落とさず、運用能力を段階的に高める
+    items:
+      - text: "1-2週目: ポリシー分類と部門別受付責任者を確定"
+        level: 0
+      - text: "3-6週目: 統制テンプレートと証跡例を公開"
+        level: 0
+      - text: "7-10週目: ログと承認状態の自動取得を開始"
+        level: 0
+      - text: "11-12週目: 例外管理を含む経営レビューを実施"
+        level: 0
+  - layout: image_caption
+    title: 運用モデルの見える化
+    subtitle: 分散した台帳ではなく、一つの説明責任システムへ統合する
+    icon:
+      pack: heroicons
+      name: presentation-chart-line
+      variant: outline
+    caption: ユースケースの段階、リスク分類、統制証跡、リリース判断を一つの画面で確認する。
+    attribution: 経営会議向けの内部運用モデル案。
+  - layout: appendix_backup
+    title: "補足: 本番承認の条件"
+    subtitle: パイロットから本番利用へ移行するための最低条件
+    body: 以下の条件を満たすことで、AIユースケースを管理された本番利用へ進められる。
+    items:
+      - 受付分類が完了している
+      - データ境界が確認されている
+      - 人による監督方法が文書化されている
+      - プロンプトとモデル評価の証跡が添付されている
+    references:
+      - 全社AIポリシー v2.1
+      - モデルリスク審査チェックリスト
+      - セキュリティログ標準
+  - layout: closing_end
+    title: 経営判断のお願い
+    subtitle: 次フェーズの運用モデル整備を承認する
+    message: ガバナンス範囲、統制自動化の投資、レビュー頻度を確定する。
+    contact: エンタープライズAI推進室
+    cta: 6月末までに第2フェーズの開始を承認

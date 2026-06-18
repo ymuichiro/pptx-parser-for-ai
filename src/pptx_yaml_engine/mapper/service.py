@@ -7,9 +7,18 @@ from typing import Any, cast
 from pptx import Presentation
 
 from pptx_yaml_engine.errors import DomainError, error_dict
-from pptx_yaml_engine.layouts import LAYOUT_ALIASES, LAYOUT_SPECS, SlotSpec, get_slot_spec
+from pptx_yaml_engine.layouts import (
+    LAYOUT_ALIASES,
+    LAYOUT_SPECS,
+    SLOT_KIND_PLACEHOLDER_TYPES,
+    get_slot_spec,
+    slot_ai_placeholder_names,
+)
 from pptx_yaml_engine.utils.fingerprint import template_fingerprint
-from pptx_yaml_engine.utils.layout_names import canonical_builtin_layout_name, layout_names_match, normalize_layout_lookup_name
+from pptx_yaml_engine.utils.layout_names import (
+    canonical_builtin_layout_name,
+    layout_names_match,
+)
 from pptx_yaml_engine.utils.pptx import placeholder_type_name
 from pptx_yaml_engine.utils.template_bytes import normalize_template_for_python_pptx
 
@@ -77,64 +86,15 @@ def inspect_template(template_bytes: bytes) -> dict[str, Any]:
     }
 
 
-def _norm(value: str) -> str:
-    return (
-        value.lower()
-        .replace("yaml__", "")
-        .replace(" ", "_")
-        .replace("-", "_")
-        .replace("/", "_")
-    )
+AI_PLACEHOLDER_PREFIX = "AI_"
 
-
-def _slot_from_shape_name(name: str) -> str | None:
-    lowered = _norm(name)
-    for prefix in ("slot__", "slot_", "placeholder__", "placeholder_"):
-        if lowered.startswith(prefix):
-            lowered = lowered[len(prefix) :]
-            break
-    else:
-        return None
-
-    direct = {
-        "section_no": "section_no",
-        "product_name": "product_name",
-        "end_of_sale": "end_of_sale",
-        "end_of_support": "end_of_support",
-        "list_style": "list_style",
-        "supporting_points": "supporting_points",
-    }
-    if lowered in direct:
-        return direct[lowered]
-
-    lowered = lowered.replace("card_1_", "cards[0].")
-    lowered = lowered.replace("card_2_", "cards[1].")
-    lowered = lowered.replace("card_3_", "cards[2].")
-    lowered = lowered.replace("event_1_", "events[0].")
-    lowered = lowered.replace("event_2_", "events[1].")
-    lowered = lowered.replace("event_3_", "events[2].")
-    lowered = lowered.replace("event_4_", "events[3].")
-    lowered = lowered.replace("event_5_", "events[4].")
-    lowered = lowered.replace("event_6_", "events[5].")
-    lowered = lowered.replace("event_7_", "events[6].")
-    lowered = lowered.replace("event_8_", "events[7].")
-    lowered = lowered.replace("left_", "left.")
-    lowered = lowered.replace("right_", "right.")
-    lowered = lowered.replace("metric_", "metric.")
-    return lowered
-
-
-def _shape_kind(shape: dict[str, Any], slot_spec: SlotSpec | None = None) -> str:
-    if slot_spec is not None:
-        return slot_spec.kind
-    ph_type = str(shape.get("placeholder_type", "")).upper()
-    if "PICTURE" in ph_type:
-        return "icon"
-    if "TABLE" in ph_type:
-        return "table"
-    if "CHART" in ph_type:
-        return "chart"
-    return "text"
+_PLACEHOLDER_KIND_COMPATIBILITY: dict[str, frozenset[str]] = {
+    "text": frozenset({"TITLE", "CENTER_TITLE", "SUBTITLE", "BODY", "OBJECT"}),
+    "list": frozenset({"TITLE", "CENTER_TITLE", "SUBTITLE", "BODY", "OBJECT"}),
+    "table": frozenset({"TABLE"}),
+    "chart": frozenset({"CHART"}),
+    "icon": frozenset({"PICTURE"}),
+}
 
 
 def _placeholder_binding(shape: dict[str, Any], *, kind: str) -> dict[str, Any]:
@@ -148,198 +108,260 @@ def _placeholder_binding(shape: dict[str, Any], *, kind: str) -> dict[str, Any]:
     }
 
 
-def _score_layout(layout: dict[str, Any], semantic: str, aliases: tuple[str, ...]) -> tuple[float, str]:
-    layout_name = normalize_layout_lookup_name(str(layout["layout_name"]))
-    alias_norms = {normalize_layout_lookup_name(alias) for alias in aliases}
-    placeholders = layout.get("placeholders", [])
-    shape_names = " ".join(_norm(str(shape.get("shape_name", ""))) for shape in placeholders)
-    types = [str(shape.get("placeholder_type", "")).upper() for shape in placeholders]
-    type_counts = {kind: sum(1 for value in types if kind in value) for kind in ("TITLE", "SUBTITLE", "BODY", "OBJECT", "PICTURE", "TABLE", "CHART")}
-
-    if layout_name in alias_norms or any(alias in layout_name for alias in alias_norms):
-        return 0.98, "explicit_name"
-    if semantic.replace("_", "") in shape_names.replace("_", ""):
-        return 0.86, "shape_name_hint"
-    if semantic in {"cover_title", "section_divider"} and type_counts["TITLE"] >= 1:
-        return 0.72, "placeholder_geometry"
-    if semantic in {"agenda", "list_basic", "appendix_backup"} and type_counts["TITLE"] >= 1 and (type_counts["BODY"] + type_counts["OBJECT"]) >= 1:
-        return 0.74, "placeholder_geometry"
-    if semantic == "comparison_2col" and type_counts["TITLE"] >= 1 and len(placeholders) >= 3:
-        return 0.78, "placeholder_geometry"
-    if semantic.startswith("three_cards") and type_counts["TITLE"] >= 1 and len(placeholders) >= 4:
-        return 0.76, "placeholder_geometry"
-    if semantic == "timeline" and len(placeholders) >= 4:
-        return 0.72, "placeholder_geometry"
-    if semantic in {"table_basic", "chart_basic", "image_caption", "kpi_big_number", "eol_notice"} and type_counts["TITLE"] >= 1:
-        return 0.70, "placeholder_geometry"
-    return 0.0, "not_matched"
+def _is_ai_placeholder_name(value: str) -> bool:
+    return value.startswith(AI_PLACEHOLDER_PREFIX)
 
 
-def _top_title(placeholders: list[dict[str, Any]]) -> dict[str, Any] | None:
-    title_shapes = [shape for shape in placeholders if "TITLE" in str(shape.get("placeholder_type", "")).upper()]
-    if title_shapes:
-        return sorted(title_shapes, key=lambda item: (item["norm_top"], item["norm_left"]))[0]
-    if placeholders:
-        return sorted(placeholders, key=lambda item: (item["norm_top"], item["norm_left"]))[0]
-    return None
+def _compatible_placeholder_types(kind: str) -> frozenset[str]:
+    return _PLACEHOLDER_KIND_COMPATIBILITY.get(kind, frozenset())
 
 
-def _subtitle(
-    placeholders: list[dict[str, Any]], title_idx: int | None, *, allow_fallback: bool = False
-) -> dict[str, Any] | None:
-    subtitle_shapes = [shape for shape in placeholders if "SUBTITLE" in str(shape.get("placeholder_type", "")).upper()]
-    if subtitle_shapes:
-        return sorted(subtitle_shapes, key=lambda item: (item["norm_top"], item["norm_left"]))[0]
-    if not allow_fallback:
-        return None
-    candidates = [shape for shape in placeholders if shape.get("placeholder_idx") != title_idx]
-    if candidates:
-        return sorted(candidates, key=lambda item: (item["norm_top"], item["norm_left"]))[0]
-    return None
+def _placeholder_is_compatible(kind: str, placeholder_type: str) -> bool:
+    return placeholder_type.upper() in _compatible_placeholder_types(kind)
 
 
-def _content_shapes(placeholders: list[dict[str, Any]], excluded: set[int]) -> list[dict[str, Any]]:
-    return [
-        shape
-        for shape in placeholders
-        if shape.get("placeholder_idx") not in excluded
-        and "DATE" not in str(shape.get("placeholder_type", "")).upper()
-        and "FOOTER" not in str(shape.get("placeholder_type", "")).upper()
-        and "SLIDE_NUMBER" not in str(shape.get("placeholder_type", "")).upper()
-    ]
+def _layout_name_candidates(
+    semantic: str,
+    ruleset: dict[str, Any] | None = None,
+) -> list[tuple[str, str]]:
+    candidates: list[tuple[str, str]] = [(semantic, "semantic_name")]
+    seen = {semantic}
+    for alias in LAYOUT_ALIASES.get(semantic, ()):
+        if alias in seen:
+            continue
+        seen.add(alias)
+        candidates.append((alias, "explicit_name"))
+    if ruleset and isinstance(ruleset.get("aliases"), dict):
+        for alias in ruleset["aliases"].get(semantic, []):
+            alias_text = str(alias)
+            if alias_text in seen:
+                continue
+            seen.add(alias_text)
+            candidates.append((alias_text, "ruleset_alias"))
+    return candidates
 
 
-def _assign_common(semantic: str, slots: dict[str, Any], placeholders: list[dict[str, Any]]) -> set[int]:
-    used: set[int] = set()
-    title = _top_title(placeholders)
-    if title is not None:
-        slots["title"] = _placeholder_binding(title, kind="text")
-        used.add(int(title["placeholder_idx"]))
-    subtitle = _subtitle(
-        placeholders,
-        next(iter(used), None),
-        allow_fallback=semantic in {"section_divider"},
+def _resolve_layout_binding(
+    inspection: dict[str, Any],
+    semantic: str,
+    ruleset: dict[str, Any] | None = None,
+) -> tuple[dict[str, Any] | None, str, list[dict[str, Any]]]:
+    candidates = _layout_name_candidates(semantic, ruleset)
+    matches: list[tuple[dict[str, Any], str]] = []
+    for layout in inspection.get("layouts", []):
+        for candidate, strategy in candidates:
+            if layout_names_match(str(layout.get("layout_name", "")), candidate):
+                matches.append((layout, strategy))
+                break
+    if not matches:
+        return (
+            None,
+            "not_found",
+            [
+                error_dict(
+                    "PPT_LAYOUT_NOT_FOUND",
+                    "PowerPoint layout not found for semantic layout",
+                    {"layout": semantic, "expected_layout_names": [candidate for candidate, _ in candidates]},
+                )
+            ],
+        )
+    if len(matches) > 1:
+        return (
+            None,
+            "ambiguous",
+            [
+                error_dict(
+                    "DUPLICATE_LAYOUT_NAME",
+                    "Multiple PowerPoint layouts match the semantic layout",
+                    {
+                        "layout": semantic,
+                        "expected_layout_names": [candidate for candidate, _ in candidates],
+                        "matched_layout_names": [layout["layout_name"] for layout, _ in matches],
+                    },
+                )
+            ],
+        )
+    layout, strategy = matches[0]
+    return layout, strategy, []
+
+
+def _ai_shapes_by_name(layout: dict[str, Any]) -> dict[str, list[dict[str, Any]]]:
+    grouped: dict[str, list[dict[str, Any]]] = defaultdict(list)
+    for shape in layout.get("shapes", []):
+        shape_name = str(shape.get("shape_name", ""))
+        if _is_ai_placeholder_name(shape_name):
+            grouped[shape_name].append(shape)
+    return dict(grouped)
+
+
+def _allowed_ai_placeholder_names(semantic: str) -> frozenset[str]:
+    return frozenset(
+        name
+        for slot in LAYOUT_SPECS[semantic].slots
+        for name in slot_ai_placeholder_names(semantic, slot.path)
     )
-    if subtitle is not None and subtitle.get("placeholder_idx") not in used:
-        slots["subtitle"] = _placeholder_binding(subtitle, kind="text")
-        used.add(int(subtitle["placeholder_idx"]))
-    return used
 
 
-def _bind_named_slots(layout_name: str, placeholders: list[dict[str, Any]]) -> dict[str, Any]:
-    slots: dict[str, Any] = {}
-    for shape in placeholders:
-        slot_path = _slot_from_shape_name(str(shape.get("shape_name", "")))
-        if slot_path is None:
-            continue
-        slot_spec = get_slot_spec(layout_name, slot_path)
-        if slot_spec is None:
-            continue
-        slots[slot_path] = _placeholder_binding(shape, kind=slot_spec.kind)
-    return slots
-
-
-def _bind_generic(semantic: str, placeholders: list[dict[str, Any]]) -> dict[str, Any]:
-    slots = _bind_named_slots(semantic, placeholders)
-    used = {int(binding["placeholder"]["idx"]) for binding in slots.values()}
-    used.update(_assign_common(semantic, slots, placeholders))
-    content = _content_shapes(placeholders, used)
-    textish = [shape for shape in content if _shape_kind(shape) == "text"]
-    iconish = [shape for shape in content if _shape_kind(shape) == "icon"]
-    tableish = [shape for shape in content if _shape_kind(shape) == "table"]
-    chartish = [shape for shape in content if _shape_kind(shape) == "chart"]
-
-    def bind_first(path: str, shapes: list[dict[str, Any]], kind: str) -> None:
-        if path not in slots and shapes:
-            slots[path] = _placeholder_binding(shapes.pop(0), kind=kind)
-
-    def bind_same(path: str, shape: dict[str, Any] | None, kind: str) -> None:
-        if path not in slots and shape is not None:
-            slots[path] = _placeholder_binding(shape, kind=kind)
-
-    primary_text = textish[0] if textish else (content[0] if content else None)
-    secondary_text = textish[1] if len(textish) > 1 else None
-    primary_visual = content[0] if content else None
-
-    if semantic in {"agenda", "list_basic"}:
-        bind_same("items", primary_text, "list")
-    elif semantic == "table_basic":
-        bind_same("table", tableish[0] if tableish else (textish[0] if textish else primary_visual), "table")
-        bind_same("caption", secondary_text, "text")
-    elif semantic == "chart_basic":
-        bind_same("chart", chartish[0] if chartish else (textish[0] if textish else primary_visual), "chart")
-        bind_same("caption", secondary_text, "text")
-    elif semantic == "image_caption":
-        bind_same("icon", iconish[0] if iconish else (textish[0] if textish else primary_visual), "icon")
-        bind_same("caption", primary_text, "text")
-        bind_same("attribution", secondary_text, "text")
-    elif semantic == "comparison_2col":
-        grouped = sorted(content, key=lambda item: item["norm_center_x"])
-        left = sorted(grouped[: max(1, len(grouped) // 2)], key=lambda item: item["norm_center_y"])
-        right = sorted(grouped[max(1, len(grouped) // 2) :], key=lambda item: item["norm_center_y"])
-        for side, shapes in (("left", left), ("right", right)):
-            icons = [shape for shape in shapes if _shape_kind(shape) == "icon"]
-            texts = [shape for shape in shapes if _shape_kind(shape) != "icon"]
-            bind_first(f"{side}.icon", icons, "icon")
-            bind_first(f"{side}.title", texts, "text")
-            bind_first(f"{side}.description", texts, "text")
-            bind_first(f"{side}.bullets", texts, "list")
-    elif semantic.startswith("three_cards"):
-        grouped = sorted(content, key=lambda item: item["norm_center_x"])
-        if len(grouped) >= 3:
-            chunk = max(1, (len(grouped) + 2) // 3)
-            groups = [grouped[index * chunk : (index + 1) * chunk] for index in range(3)]
-            for index, shapes in enumerate(groups):
-                ordered = sorted(shapes, key=lambda item: item["norm_center_y"])
-                icons = [shape for shape in ordered if _shape_kind(shape) == "icon"]
-                texts = [shape for shape in ordered if _shape_kind(shape) != "icon"]
-                bind_first(f"cards[{index}].icon", icons, "icon")
-                if len(texts) >= 2:
-                    bind_first(f"cards[{index}].title", texts, "text")
-                    bind_first(f"cards[{index}].description", texts, "text")
-                elif texts:
-                    bind_first(f"cards[{index}].combined_text", texts, "text")
-        elif len(grouped) == 2:
-            left_shape, right_shape = grouped
-            mapping = (
-                [(0, left_shape), (1, left_shape), (2, right_shape)]
-                if semantic == "three_cards_vertical"
-                else [(0, left_shape), (1, right_shape), (2, right_shape)]
+def _validate_layout_ai_contract(
+    semantic: str,
+    layout: dict[str, Any],
+) -> tuple[dict[str, list[dict[str, Any]]], list[dict[str, Any]]]:
+    issues: list[dict[str, Any]] = []
+    allowed_names = _allowed_ai_placeholder_names(semantic)
+    valid_shapes_by_name: dict[str, list[dict[str, Any]]] = {}
+    for shape_name, matched_shapes in _ai_shapes_by_name(layout).items():
+        placeholder_shapes = [shape for shape in matched_shapes if bool(shape.get("is_placeholder"))]
+        if len(matched_shapes) > 1:
+            issues.append(
+                error_dict(
+                    "AI_PLACEHOLDER_DUPLICATED",
+                    "AI placeholder name is duplicated within the layout",
+                    {
+                        "layout": semantic,
+                        "ppt_layout_name": layout.get("layout_name"),
+                        "shape_name": shape_name,
+                        "count": len(matched_shapes),
+                    },
+                )
             )
-            for index, shape in mapping:
-                bind_same(f"cards[{index}].combined_text", shape, "text")
-        elif len(grouped) == 1:
-            for index in range(3):
-                bind_same(f"cards[{index}].combined_text", grouped[0], "text")
-    elif semantic == "timeline":
-        grouped = sorted(content, key=lambda item: item["norm_center_x"])
-        if grouped:
-            for index in range(8):
-                shape = grouped[min(index, len(grouped) - 1)]
-                kind = _shape_kind(shape)
-                path = f"events[{index}].icon" if kind == "icon" else f"events[{index}].combined_text"
-                slots.setdefault(path, _placeholder_binding(shape, kind=kind))
-    elif semantic == "kpi_big_number":
-        for path in ("metric.value", "metric.label", "metric.unit", "metric.delta"):
-            bind_same(path, primary_text, "text")
-        bind_same("supporting_points", primary_text, "list")
-    elif semantic == "appendix_backup":
-        for path, kind in (("body", "text"), ("items", "list"), ("references", "list")):
-            bind_same(path, primary_text, kind)
-    elif semantic == "eol_notice":
-        for path, kind in (
-            ("product_name", "text"),
-            ("end_of_sale", "text"),
-            ("end_of_support", "text"),
-            ("replacement", "text"),
-            ("actions", "list"),
-        ):
-            bind_same(path, primary_text, kind)
-    elif semantic in {"cover_title", "section_divider", "closing_end"}:
-        for path in ("date", "organization", "author", "section_no", "message", "contact", "cta"):
-            bind_same(path, primary_text, "text")
+        if len(placeholder_shapes) != len(matched_shapes):
+            issues.append(
+                error_dict(
+                    "AI_TARGET_NOT_PLACEHOLDER",
+                    "AI placeholder target must be a PowerPoint placeholder",
+                    {
+                        "layout": semantic,
+                        "ppt_layout_name": layout.get("layout_name"),
+                        "shape_name": shape_name,
+                    },
+                )
+            )
+        if shape_name not in allowed_names:
+            issues.append(
+                error_dict(
+                    "AI_PLACEHOLDER_UNKNOWN",
+                    "AI placeholder name is not allowed for the semantic layout",
+                    {
+                        "layout": semantic,
+                        "ppt_layout_name": layout.get("layout_name"),
+                        "shape_name": shape_name,
+                    },
+                )
+            )
+        if len(matched_shapes) == 1 and len(placeholder_shapes) == 1 and shape_name in allowed_names:
+            valid_shapes_by_name[shape_name] = placeholder_shapes
+    return valid_shapes_by_name, issues
 
-    return slots
+
+def _resolve_slot_binding(
+    semantic: str,
+    slot_path: str,
+    layout: dict[str, Any],
+    shapes_by_name: dict[str, list[dict[str, Any]]],
+) -> tuple[dict[str, Any] | None, list[dict[str, Any]]]:
+    slot_spec = get_slot_spec(semantic, slot_path)
+    if slot_spec is None:
+        return None, []
+
+    expected_names = slot_ai_placeholder_names(semantic, slot_path)
+    matched_names = [name for name in expected_names if name in shapes_by_name]
+    if not matched_names:
+        if slot_spec.required:
+            return (
+                None,
+                [
+                    error_dict(
+                        "AI_PLACEHOLDER_MISSING",
+                        "Required AI placeholder is missing",
+                        {
+                            "layout": semantic,
+                            "ppt_layout_name": layout.get("layout_name"),
+                            "slot": slot_path,
+                            "expected_names": list(expected_names),
+                        },
+                    )
+                ],
+            )
+        return None, []
+
+    if len(matched_names) > 1:
+        return (
+            None,
+            [
+                error_dict(
+                    "AI_PLACEHOLDER_DUPLICATED",
+                    "Multiple AI placeholder aliases are present for the same slot",
+                    {
+                        "layout": semantic,
+                        "ppt_layout_name": layout.get("layout_name"),
+                        "slot": slot_path,
+                        "expected_names": list(expected_names),
+                        "matched_names": matched_names,
+                    },
+                )
+            ],
+        )
+
+    matched_name = matched_names[0]
+    matched_shapes = shapes_by_name[matched_name]
+    placeholder_shapes = [shape for shape in matched_shapes if bool(shape.get("is_placeholder"))]
+    if len(placeholder_shapes) != len(matched_shapes):
+        return (
+            None,
+            [
+                error_dict(
+                    "AI_TARGET_NOT_PLACEHOLDER",
+                    "AI placeholder target must be a PowerPoint placeholder",
+                    {
+                        "layout": semantic,
+                        "ppt_layout_name": layout.get("layout_name"),
+                        "slot": slot_path,
+                        "shape_name": matched_name,
+                    },
+                )
+            ],
+        )
+
+    if len(placeholder_shapes) > 1:
+        return (
+            None,
+            [
+                error_dict(
+                    "AI_PLACEHOLDER_DUPLICATED",
+                    "AI placeholder name is duplicated within the layout",
+                    {
+                        "layout": semantic,
+                        "ppt_layout_name": layout.get("layout_name"),
+                        "slot": slot_path,
+                        "shape_name": matched_name,
+                    },
+                )
+            ],
+        )
+
+    placeholder = placeholder_shapes[0]
+    placeholder_type = str(placeholder.get("placeholder_type", "UNKNOWN")).upper()
+    if not _placeholder_is_compatible(slot_spec.kind, placeholder_type):
+        return (
+            None,
+            [
+                error_dict(
+                    "AI_PLACEHOLDER_INCOMPATIBLE",
+                    "AI placeholder type is incompatible with the semantic slot",
+                    {
+                        "layout": semantic,
+                        "ppt_layout_name": layout.get("layout_name"),
+                        "slot": slot_path,
+                        "shape_name": matched_name,
+                        "expected_names": list(expected_names),
+                        "kind": slot_spec.kind,
+                        "placeholder_type": placeholder_type,
+                    },
+                )
+            ],
+        )
+
+    return _placeholder_binding(placeholder, kind=slot_spec.kind), []
 
 
 def generate_manifest(
@@ -354,55 +376,62 @@ def generate_manifest(
 
 def _required_missing(semantic: str, slots: dict[str, Any]) -> list[str]:
     spec = LAYOUT_SPECS[semantic]
-    missing: list[str] = []
-    for slot in spec.slots:
-        if not slot.required:
+    return [slot.path for slot in spec.slots if slot.required and slot.path not in slots]
+
+
+def _missing_slot_details(semantic: str, missing: list[str]) -> list[dict[str, Any]]:
+    details: list[dict[str, Any]] = []
+    for slot_path in missing:
+        slot_spec = get_slot_spec(semantic, slot_path)
+        if slot_spec is None:
+            details.append({"slot": slot_path})
             continue
-        if slot.path in slots:
-            continue
-        if slot.path.endswith(".title") or slot.path.endswith(".description"):
-            combined = slot.path.rsplit(".", 1)[0] + ".combined_text"
-            if combined in slots:
-                continue
-        missing.append(slot.path)
-    return missing
+        details.append(
+            {
+                "slot": slot_path,
+                "kind": slot_spec.kind,
+                "expected_ai_names": list(slot_ai_placeholder_names(semantic, slot_path)),
+                "compatible_placeholder_types": list(SLOT_KIND_PLACEHOLDER_TYPES[slot_spec.kind]),
+            }
+        )
+    return details
+
+
+def _missing_semantic_layouts(layouts: dict[str, Any]) -> list[str]:
+    return sorted(set(LAYOUT_SPECS) - set(layouts))
 
 
 def propose_mapping(
     inspection: dict[str, Any], ruleset: dict[str, Any] | None = None
 ) -> dict[str, Any]:
-    aliases = {key: tuple(value) for key, value in LAYOUT_ALIASES.items()}
-    if ruleset and isinstance(ruleset.get("aliases"), dict):
-        for key, values in ruleset["aliases"].items():
-            if key in aliases and isinstance(values, list):
-                aliases[key] = tuple([*aliases[key], *[str(value) for value in values]])
-
-    layouts = inspection.get("layouts", [])
     proposal_layouts: dict[str, Any] = {}
 
     for semantic in LAYOUT_SPECS:
-        scored = [
-            (*_score_layout(layout, semantic, aliases[semantic]), layout)
-            for layout in layouts
-        ]
-        scored.sort(key=lambda item: item[0], reverse=True)
-        score, strategy, best_layout = scored[0] if scored else (0.0, "not_matched", None)
-        if best_layout is None or score == 0:
-            continue
-        placeholders = list(best_layout.get("placeholders", []))
-        slots = _bind_generic(semantic, placeholders)
+        matched_layout, strategy, issues = _resolve_layout_binding(inspection, semantic, ruleset)
+        slots: dict[str, Any] = {}
+        if matched_layout is not None:
+            shapes_by_name, ai_issues = _validate_layout_ai_contract(semantic, matched_layout)
+            issues.extend(ai_issues)
+            for slot in LAYOUT_SPECS[semantic].slots:
+                binding, slot_issues = _resolve_slot_binding(
+                    semantic,
+                    slot.path,
+                    matched_layout,
+                    shapes_by_name,
+                )
+                issues.extend(slot_issues)
+                if binding is not None:
+                    slots[slot.path] = binding
         missing = _required_missing(semantic, slots)
-        confidence = max(0.0, min(0.99, score - len(missing) * 0.08))
         proposal_layouts[semantic] = {
-            "ppt_layout_name": best_layout["layout_name"],
-            "match_confidence": round(confidence, 4),
+            "ppt_layout_name": matched_layout["layout_name"] if matched_layout is not None else None,
+            "match_confidence": 1.0 if matched_layout is not None and not issues and not missing else 0.0,
             "layout_match": {"strategy": strategy},
             "slots": slots,
             "required_missing": missing,
-            "warnings": [
-                f"Required slot '{slot}' is unresolved" for slot in missing
-            ],
-            "status": "override_required" if confidence < 0.75 or missing else "ready",
+            "issues": issues,
+            "warnings": [issue["message"] for issue in issues],
+            "status": "override_required" if issues or missing else "ready",
         }
 
     return {
@@ -416,6 +445,7 @@ def _merge_override(layout_binding: dict[str, Any], override: dict[str, Any]) ->
     merged = {
         **layout_binding,
         "layout_match": dict(layout_binding.get("layout_match", {})),
+        "issues": list(layout_binding.get("issues", [])),
         "slots": {key: dict(value) for key, value in layout_binding.get("slots", {}).items()},
     }
     if "ppt_layout_name" in override:
@@ -442,19 +472,41 @@ def _merge_override(layout_binding: dict[str, Any], override: dict[str, Any]) ->
 def finalize_manifest(
     inspection: dict[str, Any], proposal: dict[str, Any], overrides: dict[str, Any] | None = None
 ) -> dict[str, Any]:
+    proposal_layouts = proposal.get("layouts", {})
+    missing_semantics = _missing_semantic_layouts(proposal_layouts)
+    if missing_semantics:
+        raise DomainError(
+            "TEMPLATE_LAYOUT_CONTRACT_MISMATCH",
+            "Proposal does not satisfy the required semantic layout contract",
+            {
+                "expected": sorted(LAYOUT_SPECS),
+                "actual": sorted(proposal_layouts),
+                "missing": missing_semantics,
+            },
+        )
     layout_overrides = (overrides or {}).get("layouts", {}) if isinstance(overrides, dict) else {}
     manifest_layouts: dict[str, Any] = {}
 
-    for semantic, binding in proposal.get("layouts", {}).items():
-        if semantic not in LAYOUT_SPECS:
-            continue
+    for semantic in LAYOUT_SPECS:
+        binding = proposal_layouts[semantic]
         merged = _merge_override(binding, layout_overrides.get(semantic, {}))
+        if not merged.get("ppt_layout_name"):
+            raise DomainError(
+                "PPT_LAYOUT_NOT_FOUND",
+                "PowerPoint layout is unresolved for semantic layout",
+                {"layout": semantic},
+            )
         missing = _required_missing(semantic, merged.get("slots", {}))
         if missing:
             raise DomainError(
-                "REQUIRED_SLOT_MISSING",
-                f"Required slots are unresolved for layout '{semantic}'",
-                {"layout": semantic, "missing": missing},
+                "AI_PLACEHOLDER_MISSING",
+                f"Required AI placeholders are unresolved for layout '{semantic}'",
+                {
+                    "layout": semantic,
+                    "ppt_layout_name": merged.get("ppt_layout_name"),
+                    "missing": missing,
+                    "missing_placeholders": _missing_slot_details(semantic, missing),
+                },
             )
         manifest_layouts[semantic] = {
             "ppt_layout_name": merged["ppt_layout_name"],
@@ -476,7 +528,30 @@ def finalize_manifest(
 
 def validate_manifest_against_inspection(inspection: dict[str, Any], manifest: dict[str, Any]) -> dict[str, Any]:
     issues: list[dict[str, Any]] = []
-    for semantic, binding in manifest.get("layouts", {}).items():
+    manifest_layouts = manifest.get("layouts", {})
+    missing_semantics = _missing_semantic_layouts(manifest_layouts)
+    if missing_semantics:
+        issues.append(
+            error_dict(
+                "TEMPLATE_LAYOUT_CONTRACT_MISMATCH",
+                "Manifest does not satisfy the required semantic layout contract",
+                {
+                    "expected": sorted(LAYOUT_SPECS),
+                    "actual": sorted(manifest_layouts),
+                    "missing": missing_semantics,
+                },
+            )
+        )
+    for semantic, binding in manifest_layouts.items():
+        if semantic not in LAYOUT_SPECS:
+            issues.append(
+                error_dict(
+                    "SEMANTIC_LAYOUT_NOT_FOUND",
+                    "Semantic layout is not supported",
+                    {"layout": semantic},
+                )
+            )
+            continue
         exact_matches = [layout for layout in inspection.get("layouts", []) if layout.get("layout_name") == binding.get("ppt_layout_name")]
         if exact_matches:
             matches = exact_matches
@@ -499,14 +574,111 @@ def validate_manifest_against_inspection(inspection: dict[str, Any], manifest: d
             )
             continue
         layout = matches[0]
-        idx_to_type = {
-            placeholder["placeholder_idx"]: placeholder.get("placeholder_type")
-            for placeholder in layout.get("placeholders", [])
-        }
-        for slot_path, slot in binding.get("slots", {}).items():
-            idx = slot.get("placeholder", {}).get("idx")
-            if idx not in idx_to_type:
-                issues.append(error_dict("PLACEHOLDER_IDX_NOT_FOUND", "Placeholder idx not found", {"layout": semantic, "slot": slot_path, "idx": idx}))
+        shapes_by_name, ai_issues = _validate_layout_ai_contract(semantic, layout)
+        issues.extend(ai_issues)
+        slots = binding.get("slots", {})
+        missing = _required_missing(semantic, slots)
+        if missing:
+            issues.append(
+                error_dict(
+                    "AI_PLACEHOLDER_MISSING",
+                    "Manifest is missing required AI placeholder bindings",
+                    {
+                        "layout": semantic,
+                        "ppt_layout_name": binding.get("ppt_layout_name"),
+                        "missing": missing,
+                    },
+                )
+            )
+        for slot_path, slot in slots.items():
+            slot_spec = get_slot_spec(semantic, slot_path)
+            if slot_spec is None:
+                issues.append(
+                    error_dict(
+                        "SEMANTIC_LAYOUT_NOT_FOUND",
+                        "Semantic slot is not supported",
+                        {"layout": semantic, "slot": slot_path},
+                    )
+                )
+                continue
+            placeholder = slot.get("placeholder", {})
+            shape_name = str(placeholder.get("shape_name", ""))
+            idx = placeholder.get("idx")
+            expected_names = slot_ai_placeholder_names(semantic, slot_path)
+            if not shape_name or shape_name not in expected_names:
+                issues.append(
+                    error_dict(
+                        "AI_PLACEHOLDER_MISSING",
+                        "Manifest shape_name does not match the AI placeholder contract",
+                        {
+                            "layout": semantic,
+                            "slot": slot_path,
+                            "shape_name": shape_name,
+                            "expected_names": list(expected_names),
+                        },
+                    )
+                )
+                continue
+            matched_shapes = shapes_by_name.get(shape_name, [])
+            if not matched_shapes:
+                issues.append(
+                    error_dict(
+                        "AI_PLACEHOLDER_MISSING",
+                        "AI placeholder referenced by the manifest is missing",
+                        {"layout": semantic, "slot": slot_path, "shape_name": shape_name},
+                    )
+                )
+                continue
+            placeholder_shapes = [shape for shape in matched_shapes if bool(shape.get("is_placeholder"))]
+            if len(placeholder_shapes) != len(matched_shapes):
+                issues.append(
+                    error_dict(
+                        "AI_TARGET_NOT_PLACEHOLDER",
+                        "AI placeholder target must be a PowerPoint placeholder",
+                        {"layout": semantic, "slot": slot_path, "shape_name": shape_name},
+                    )
+                )
+                continue
+            if len(placeholder_shapes) > 1:
+                issues.append(
+                    error_dict(
+                        "AI_PLACEHOLDER_DUPLICATED",
+                        "AI placeholder name is duplicated within the layout",
+                        {"layout": semantic, "slot": slot_path, "shape_name": shape_name},
+                    )
+                )
+                continue
+            actual_placeholder = placeholder_shapes[0]
+            placeholder_type = str(actual_placeholder.get("placeholder_type", "UNKNOWN")).upper()
+            kind = str(slot.get("kind", slot_spec.kind))
+            if not _placeholder_is_compatible(kind, placeholder_type):
+                issues.append(
+                    error_dict(
+                        "AI_PLACEHOLDER_INCOMPATIBLE",
+                        "AI placeholder type is incompatible with the semantic slot",
+                        {
+                            "layout": semantic,
+                            "slot": slot_path,
+                            "shape_name": shape_name,
+                            "kind": kind,
+                            "placeholder_type": placeholder_type,
+                        },
+                    )
+                )
+            if idx != actual_placeholder.get("placeholder_idx"):
+                issues.append(
+                    error_dict(
+                        "AI_PLACEHOLDER_IDX_MISMATCH",
+                        "Manifest idx does not match the authoritative AI placeholder name",
+                        {
+                            "layout": semantic,
+                            "slot": slot_path,
+                            "shape_name": shape_name,
+                            "expected_idx": actual_placeholder.get("placeholder_idx"),
+                            "actual_idx": idx,
+                        },
+                    )
+                )
     return {"valid": not issues, "issues": issues}
 
 

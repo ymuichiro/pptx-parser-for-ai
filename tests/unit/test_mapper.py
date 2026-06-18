@@ -2,15 +2,17 @@ from __future__ import annotations
 
 from typing import Any
 
+import pytest
+
+from pptx_yaml_engine.errors import DomainError
 from pptx_yaml_engine.layouts import LAYOUT_SPECS
 from pptx_yaml_engine.mapper.service import (
     finalize_manifest,
     inspect_template,
     propose_mapping,
-    validate_manifest,
     validate_manifest_against_inspection,
 )
-from tests.conftest import make_potx_bytes, make_template_bytes
+from tests.conftest import make_potx_bytes
 
 
 def test_inspect_template_accepts_potx_bytes() -> None:
@@ -19,61 +21,41 @@ def test_inspect_template_accepts_potx_bytes() -> None:
     assert inspection["template_fingerprint"].startswith("sha256:")
 
 
-def test_propose_mapping_standard_template_covers_all_semantics() -> None:
-    inspection = inspect_template(make_template_bytes())
-    proposal = propose_mapping(inspection)
-
-    assert set(proposal["layouts"].keys()) == set(LAYOUT_SPECS.keys())
-
-
-def test_finalize_manifest_standard_template_succeeds_without_overrides() -> None:
-    template_bytes = make_template_bytes()
-    inspection = inspect_template(template_bytes)
-    proposal = propose_mapping(inspection)
-    manifest = finalize_manifest(inspection, proposal)
-
-    assert set(manifest["layouts"].keys()) == set(LAYOUT_SPECS.keys())
-    assert manifest["template_fingerprint"] == inspection["template_fingerprint"]
-
-
-def test_three_cards_bindings_follow_left_to_right_order_for_two_content_layout() -> None:
-    inspection = inspect_template(make_template_bytes())
-    manifest = finalize_manifest(inspection, propose_mapping(inspection))
-
-    vertical = manifest["layouts"]["three_cards_vertical"]["slots"]
-    horizontal = manifest["layouts"]["three_cards_horizontal"]["slots"]
-
-    assert vertical["cards[0].combined_text"]["placeholder"]["idx"] == 1
-    assert vertical["cards[1].combined_text"]["placeholder"]["idx"] == 1
-    assert vertical["cards[2].combined_text"]["placeholder"]["idx"] == 2
-    assert horizontal["cards[0].combined_text"]["placeholder"]["idx"] == 1
-    assert horizontal["cards[1].combined_text"]["placeholder"]["idx"] == 2
-    assert horizontal["cards[2].combined_text"]["placeholder"]["idx"] == 2
+def _shape(
+    name: str,
+    *,
+    idx: int | None = None,
+    placeholder_type: str = "BODY",
+    is_placeholder: bool = True,
+) -> dict[str, Any]:
+    shape: dict[str, Any] = {
+        "shape_name": name,
+        "is_placeholder": is_placeholder,
+        "left": 0,
+        "top": 0,
+        "width": 0,
+        "height": 0,
+        "norm_left": 0.0,
+        "norm_top": 0.0,
+        "norm_width": 0.0,
+        "norm_height": 0.0,
+        "norm_center_x": 0.0,
+        "norm_center_y": 0.0,
+    }
+    if is_placeholder:
+        shape["placeholder_idx"] = 0 if idx is None else idx
+        shape["placeholder_type"] = placeholder_type
+    return shape
 
 
-def test_timeline_manifest_exposes_eight_event_slots_on_standard_template() -> None:
-    inspection = inspect_template(make_template_bytes())
-    manifest = finalize_manifest(inspection, propose_mapping(inspection))
-
-    timeline_slots = manifest["layouts"]["timeline"]["slots"]
-    event_slots = sorted(path for path in timeline_slots if path.startswith("events["))
-    assert len(event_slots) == 8
-    assert event_slots[0] == "events[0].combined_text"
-    assert event_slots[-1] == "events[7].combined_text"
+def _layout(layout_name: str, *shapes: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "layout_name": layout_name,
+        "shapes": list(shapes),
+    }
 
 
-def test_validate_manifest_reports_unknown_placeholder_idx() -> None:
-    template_bytes = make_template_bytes()
-    inspection = inspect_template(template_bytes)
-    manifest = finalize_manifest(inspection, propose_mapping(inspection))
-    manifest["layouts"]["cover_title"]["slots"]["title"]["placeholder"]["idx"] = 999
-
-    report = validate_manifest(template_bytes, manifest)
-    assert not report["valid"]
-    assert any(issue["code"] == "PLACEHOLDER_IDX_NOT_FOUND" for issue in report["issues"])
-
-
-def _inspection_with_layout(name: str, placeholders: list[dict[str, Any]]) -> dict[str, Any]:
+def _inspection_with_layouts(*layouts: dict[str, Any]) -> dict[str, Any]:
     return {
         "version": 1,
         "template_fingerprint": "sha256:test",
@@ -81,191 +63,364 @@ def _inspection_with_layout(name: str, placeholders: list[dict[str, Any]]) -> di
         "slide_height_emu": 6858000,
         "layouts": [
             {
-                "layout_name": name,
-                "layout_index": 0,
-                "shapes": placeholders,
-                "placeholders": placeholders,
+                "layout_name": layout["layout_name"],
+                "layout_index": index,
+                "shapes": layout["shapes"],
+                "placeholders": [shape for shape in layout["shapes"] if shape.get("is_placeholder")],
             }
+            for index, layout in enumerate(layouts)
         ],
     }
 
 
-def test_propose_mapping_uses_placeholder_types_not_idx_order_for_title_and_content() -> None:
-    inspection = _inspection_with_layout(
-        "Title and Content",
-        [
-            {
-                "shape_name": "Content Placeholder 2",
-                "is_placeholder": True,
-                "placeholder_idx": 4,
-                "placeholder_type": "OBJECT",
-                "norm_left": 0.2,
-                "norm_top": 0.25,
-                "norm_width": 0.6,
-                "norm_height": 0.5,
-                "norm_center_x": 0.5,
-                "norm_center_y": 0.5,
-            },
-            {
-                "shape_name": "Title 1",
-                "is_placeholder": True,
-                "placeholder_idx": 90,
-                "placeholder_type": "TITLE",
-                "norm_left": 0.1,
-                "norm_top": 0.05,
-                "norm_width": 0.8,
-                "norm_height": 0.1,
-                "norm_center_x": 0.5,
-                "norm_center_y": 0.1,
-            },
-        ],
-    )
-
-    proposal = propose_mapping(inspection)
-    agenda_slots = proposal["layouts"]["agenda"]["slots"]
-
-    assert agenda_slots["title"]["placeholder"]["idx"] == 90
-    assert agenda_slots["items"]["placeholder"]["idx"] == 4
+def _issue_codes(issues: list[dict[str, Any]]) -> set[str]:
+    return {issue["code"] for issue in issues}
 
 
-def test_propose_mapping_three_cards_uses_left_to_right_geometry_with_irregular_idx_values() -> None:
-    inspection = _inspection_with_layout(
-        "Two Content",
-        [
-            {
-                "shape_name": "Right Content",
-                "is_placeholder": True,
-                "placeholder_idx": 99,
-                "placeholder_type": "OBJECT",
-                "norm_left": 0.55,
-                "norm_top": 0.3,
-                "norm_width": 0.3,
-                "norm_height": 0.4,
-                "norm_center_x": 0.75,
-                "norm_center_y": 0.5,
-            },
-            {
-                "shape_name": "Title 1",
-                "is_placeholder": True,
-                "placeholder_idx": 80,
-                "placeholder_type": "TITLE",
-                "norm_left": 0.1,
-                "norm_top": 0.05,
-                "norm_width": 0.8,
-                "norm_height": 0.1,
-                "norm_center_x": 0.5,
-                "norm_center_y": 0.1,
-            },
-            {
-                "shape_name": "Left Content",
-                "is_placeholder": True,
-                "placeholder_idx": 7,
-                "placeholder_type": "OBJECT",
-                "norm_left": 0.1,
-                "norm_top": 0.3,
-                "norm_width": 0.3,
-                "norm_height": 0.4,
-                "norm_center_x": 0.25,
-                "norm_center_y": 0.5,
-            },
-        ],
-    )
-
-    proposal = propose_mapping(inspection)
-    vertical = proposal["layouts"]["three_cards_vertical"]["slots"]
-    horizontal = proposal["layouts"]["three_cards_horizontal"]["slots"]
-
-    assert vertical["cards[0].combined_text"]["placeholder"]["idx"] == 7
-    assert vertical["cards[1].combined_text"]["placeholder"]["idx"] == 7
-    assert vertical["cards[2].combined_text"]["placeholder"]["idx"] == 99
-    assert horizontal["cards[0].combined_text"]["placeholder"]["idx"] == 7
-    assert horizontal["cards[1].combined_text"]["placeholder"]["idx"] == 99
-    assert horizontal["cards[2].combined_text"]["placeholder"]["idx"] == 99
-
-
-def test_propose_mapping_normalizes_japanese_builtin_layout_name_to_title_and_content() -> None:
-    inspection = _inspection_with_layout(
-        "タイトルとコンテンツ",
-        [
-            {
-                "shape_name": "Content Placeholder 2",
-                "is_placeholder": True,
-                "placeholder_idx": 4,
-                "placeholder_type": "OBJECT",
-                "norm_left": 0.2,
-                "norm_top": 0.25,
-                "norm_width": 0.6,
-                "norm_height": 0.5,
-                "norm_center_x": 0.5,
-                "norm_center_y": 0.5,
-            },
-            {
-                "shape_name": "Title 1",
-                "is_placeholder": True,
-                "placeholder_idx": 90,
-                "placeholder_type": "TITLE",
-                "norm_left": 0.1,
-                "norm_top": 0.05,
-                "norm_width": 0.8,
-                "norm_height": 0.1,
-                "norm_center_x": 0.5,
-                "norm_center_y": 0.1,
-            },
-        ],
-    )
-
-    proposal = propose_mapping(inspection)
-
-    assert proposal["layouts"]["agenda"]["ppt_layout_name"] == "タイトルとコンテンツ"
-    assert proposal["layouts"]["list_basic"]["ppt_layout_name"] == "タイトルとコンテンツ"
-
-
-def test_validate_manifest_accepts_english_builtin_layout_name_for_localized_inspection() -> None:
-    inspection = _inspection_with_layout(
-        "タイトル スライド",
-        [
-            {
-                "shape_name": "Title 1",
-                "is_placeholder": True,
-                "placeholder_idx": 0,
-                "placeholder_type": "TITLE",
-                "norm_left": 0.1,
-                "norm_top": 0.05,
-                "norm_width": 0.8,
-                "norm_height": 0.1,
-                "norm_center_x": 0.5,
-                "norm_center_y": 0.1,
-            },
-            {
-                "shape_name": "Subtitle 2",
-                "is_placeholder": True,
-                "placeholder_idx": 1,
-                "placeholder_type": "SUBTITLE",
-                "norm_left": 0.2,
-                "norm_top": 0.25,
-                "norm_width": 0.6,
-                "norm_height": 0.15,
-                "norm_center_x": 0.5,
-                "norm_center_y": 0.325,
-            },
-        ],
-    )
-    manifest = {
-        "manifest_version": 1,
-        "template_fingerprint": "sha256:test",
-        "layouts": {
-            "cover_title": {
-                "ppt_layout_name": "Title Slide",
-                "match_confidence": 0.98,
-                "layout_match": {"strategy": "explicit_name"},
-                "slots": {
-                    "title": {"kind": "text", "placeholder": {"idx": 0, "type": "TITLE", "shape_name": "Title 1"}},
-                    "subtitle": {"kind": "text", "placeholder": {"idx": 1, "type": "SUBTITLE", "shape_name": "Subtitle 2"}},
-                },
-            }
+def _binding(
+    shape_name: str,
+    idx: int,
+    *,
+    kind: str = "text",
+    placeholder_type: str = "BODY",
+) -> dict[str, Any]:
+    return {
+        "kind": kind,
+        "placeholder": {
+            "idx": idx,
+            "type": placeholder_type,
+            "shape_name": shape_name,
         },
     }
 
+
+def _manifest(inspection: dict[str, Any], layouts: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "manifest_version": 1,
+        "template_fingerprint": inspection["template_fingerprint"],
+        "layouts": layouts,
+    }
+
+
+def test_propose_mapping_binds_ai_names_and_three_column_aliases() -> None:
+    inspection = _inspection_with_layouts(
+        _layout(
+            "three_columns",
+            _shape("AI_TITLE", idx=0, placeholder_type="TITLE"),
+            _shape("AI_COL1_TITLE", idx=1),
+            _shape("AI_COL1_BODY", idx=2),
+            _shape("AI_COL2_TITLE", idx=3),
+            _shape("AI_COL2_BODY", idx=4),
+            _shape("AI_COL3_TITLE", idx=5),
+            _shape("AI_COL3_BODY", idx=6),
+        )
+    )
+
+    proposal = propose_mapping(inspection)
+    binding = proposal["layouts"]["three_cards_vertical"]
+
+    assert binding["status"] == "ready"
+    assert binding["ppt_layout_name"] == "three_columns"
+    assert binding["required_missing"] == []
+    assert binding["slots"]["title"]["placeholder"]["shape_name"] == "AI_TITLE"
+    assert binding["slots"]["cards[0].title"]["placeholder"]["shape_name"] == "AI_COL1_TITLE"
+    assert binding["slots"]["cards[0].description"]["placeholder"]["shape_name"] == "AI_COL1_BODY"
+    assert binding["slots"]["cards[2].description"]["placeholder"]["shape_name"] == "AI_COL3_BODY"
+
+
+def test_propose_mapping_requires_explicit_layout_name_match() -> None:
+    inspection = _inspection_with_layouts(
+        _layout(
+            "Title and Content",
+            _shape("AI_TITLE", idx=0, placeholder_type="TITLE"),
+            _shape("AI_BODY", idx=1),
+        )
+    )
+
+    proposal = propose_mapping(inspection)
+    binding = proposal["layouts"]["agenda"]
+
+    assert binding["ppt_layout_name"] is None
+    assert binding["status"] == "override_required"
+    assert "PPT_LAYOUT_NOT_FOUND" in _issue_codes(binding["issues"])
+
+
+def test_finalize_manifest_fails_when_required_ai_placeholder_is_missing() -> None:
+    inspection = _inspection_with_layouts(
+        _layout(
+            "agenda",
+            _shape("AI_TITLE", idx=0, placeholder_type="TITLE"),
+        )
+    )
+    proposal = propose_mapping(inspection)
+    complete_proposal_layouts = {}
+    for semantic, spec in LAYOUT_SPECS.items():
+        complete_proposal_layouts[semantic] = {
+            "ppt_layout_name": f"{semantic}-layout",
+            "match_confidence": 1.0,
+            "layout_match": {"strategy": "semantic_name"},
+            "slots": {
+                slot.path: _binding(f"AI_FAKE_{semantic.upper()}_{index}", index, kind=slot.kind)
+                for index, slot in enumerate(spec.slots)
+                if slot.required
+            },
+            "required_missing": [],
+            "issues": [],
+            "warnings": [],
+            "status": "ready",
+        }
+    complete_proposal_layouts["agenda"] = proposal["layouts"]["agenda"]
+
+    with pytest.raises(DomainError) as exc_info:
+        finalize_manifest(
+            inspection,
+            {
+                "version": 1,
+                "template_fingerprint": inspection["template_fingerprint"],
+                "layouts": complete_proposal_layouts,
+            },
+        )
+
+    assert exc_info.value.code == "AI_PLACEHOLDER_MISSING"
+    assert exc_info.value.details["layout"] == "agenda"
+    assert exc_info.value.details["ppt_layout_name"] == "agenda"
+    assert exc_info.value.details["missing"] == ["items"]
+    assert exc_info.value.details["missing_placeholders"] == [
+        {
+            "slot": "items",
+            "kind": "list",
+            "expected_ai_names": ["AI_ITEMS", "AI_BODY", "AI_AGENDA_ITEMS"],
+            "compatible_placeholder_types": ["TITLE", "CENTER_TITLE", "SUBTITLE", "BODY", "OBJECT"],
+        }
+    ]
+
+
+def test_propose_mapping_reports_duplicate_ai_placeholder_name() -> None:
+    inspection = _inspection_with_layouts(
+        _layout(
+            "agenda",
+            _shape("AI_TITLE", idx=0, placeholder_type="TITLE"),
+            _shape("AI_ITEMS", idx=1),
+            _shape("AI_ITEMS", idx=2),
+        )
+    )
+
+    proposal = propose_mapping(inspection)
+    binding = proposal["layouts"]["agenda"]
+
+    assert binding["status"] == "override_required"
+    assert binding["required_missing"] == ["items"]
+    assert "AI_PLACEHOLDER_DUPLICATED" in _issue_codes(binding["issues"])
+
+
+def test_propose_mapping_reports_non_placeholder_ai_target() -> None:
+    inspection = _inspection_with_layouts(
+        _layout(
+            "agenda",
+            _shape("AI_TITLE", idx=0, placeholder_type="TITLE"),
+            _shape("AI_ITEMS", is_placeholder=False),
+        )
+    )
+
+    proposal = propose_mapping(inspection)
+    binding = proposal["layouts"]["agenda"]
+
+    assert binding["status"] == "override_required"
+    assert binding["required_missing"] == ["items"]
+    assert "AI_TARGET_NOT_PLACEHOLDER" in _issue_codes(binding["issues"])
+
+
+def test_propose_mapping_does_not_bind_legacy_non_ai_shape_names() -> None:
+    inspection = _inspection_with_layouts(
+        _layout(
+            "agenda",
+            _shape("slot__title", idx=0, placeholder_type="TITLE"),
+            _shape("slot__items", idx=1),
+        )
+    )
+
+    proposal = propose_mapping(inspection)
+    binding = proposal["layouts"]["agenda"]
+
+    assert binding["status"] == "override_required"
+    assert binding["slots"] == {}
+    assert binding["required_missing"] == ["title", "items"]
+    assert _issue_codes(binding["issues"]) == {"AI_PLACEHOLDER_MISSING"}
+
+
+def test_validate_manifest_reports_ai_placeholder_idx_mismatch() -> None:
+    inspection = _inspection_with_layouts(
+        _layout(
+            "agenda",
+            _shape("AI_TITLE", idx=0, placeholder_type="TITLE"),
+            _shape("AI_ITEMS", idx=1),
+        )
+    )
+    manifest = _manifest(
+        inspection,
+        {
+            "agenda": {
+                "ppt_layout_name": "agenda",
+                "match_confidence": 1.0,
+                "layout_match": {"strategy": "semantic_name"},
+                "slots": {
+                    "title": _binding("AI_TITLE", 0, placeholder_type="TITLE"),
+                    "items": _binding("AI_ITEMS", 99, kind="list"),
+                },
+            }
+        },
+    )
+
     report = validate_manifest_against_inspection(inspection, manifest)
 
-    assert report["valid"], report["issues"]
+    assert not report["valid"]
+    assert "AI_PLACEHOLDER_IDX_MISMATCH" in _issue_codes(report["issues"])
+
+
+def test_validate_manifest_fails_when_required_slot_is_missing_from_manifest() -> None:
+    inspection = _inspection_with_layouts(
+        _layout(
+            "agenda",
+            _shape("AI_TITLE", idx=0, placeholder_type="TITLE"),
+            _shape("AI_ITEMS", idx=1),
+        )
+    )
+    manifest = _manifest(
+        inspection,
+        {
+            "agenda": {
+                "ppt_layout_name": "agenda",
+                "match_confidence": 1.0,
+                "layout_match": {"strategy": "semantic_name"},
+                "slots": {
+                    "title": _binding("AI_TITLE", 0, placeholder_type="TITLE"),
+                },
+            }
+        },
+    )
+
+    report = validate_manifest_against_inspection(inspection, manifest)
+
+    assert not report["valid"]
+    assert "AI_PLACEHOLDER_MISSING" in _issue_codes(report["issues"])
+    assert any(issue["details"].get("missing") == ["items"] for issue in report["issues"])
+
+
+def test_validate_manifest_fails_when_manifest_omits_semantic_layouts() -> None:
+    inspection = _inspection_with_layouts(
+        _layout(
+            "agenda",
+            _shape("AI_TITLE", idx=0, placeholder_type="TITLE"),
+            _shape("AI_ITEMS", idx=1),
+        )
+    )
+    manifest = _manifest(
+        inspection,
+        {
+            "agenda": {
+                "ppt_layout_name": "agenda",
+                "match_confidence": 1.0,
+                "layout_match": {"strategy": "semantic_name"},
+                "slots": {
+                    "title": _binding("AI_TITLE", 0, placeholder_type="TITLE"),
+                    "items": _binding("AI_ITEMS", 1, kind="list"),
+                },
+            }
+        },
+    )
+
+    report = validate_manifest_against_inspection(inspection, manifest)
+
+    assert not report["valid"]
+    assert "TEMPLATE_LAYOUT_CONTRACT_MISMATCH" in _issue_codes(report["issues"])
+    mismatch_issue = next(
+        issue for issue in report["issues"] if issue["code"] == "TEMPLATE_LAYOUT_CONTRACT_MISMATCH"
+    )
+    assert mismatch_issue["details"]["expected"] == sorted(LAYOUT_SPECS)
+    assert mismatch_issue["details"]["actual"] == ["agenda"]
+    assert set(mismatch_issue["details"]["missing"]) == set(LAYOUT_SPECS) - {"agenda"}
+
+
+def test_validate_manifest_fails_on_duplicate_ai_name_not_selected_by_manifest() -> None:
+    inspection = _inspection_with_layouts(
+        _layout(
+            "agenda",
+            _shape("AI_TITLE", idx=0, placeholder_type="TITLE"),
+            _shape("AI_ITEMS", idx=1),
+            _shape("AI_SUBTITLE", idx=2),
+            _shape("AI_SUBTITLE", idx=3),
+        )
+    )
+    manifest = _manifest(
+        inspection,
+        {
+            "agenda": {
+                "ppt_layout_name": "agenda",
+                "match_confidence": 1.0,
+                "layout_match": {"strategy": "semantic_name"},
+                "slots": {
+                    "title": _binding("AI_TITLE", 0, placeholder_type="TITLE"),
+                    "items": _binding("AI_ITEMS", 1, kind="list"),
+                },
+            }
+        },
+    )
+
+    report = validate_manifest_against_inspection(inspection, manifest)
+
+    assert not report["valid"]
+    assert "AI_PLACEHOLDER_DUPLICATED" in _issue_codes(report["issues"])
+    assert any(issue["details"].get("shape_name") == "AI_SUBTITLE" for issue in report["issues"])
+
+
+def test_validate_manifest_fails_on_unknown_ai_typo_on_selected_layout() -> None:
+    inspection = _inspection_with_layouts(
+        _layout(
+            "agenda",
+            _shape("AI_TITLE", idx=0, placeholder_type="TITLE"),
+            _shape("AI_ITEMS", idx=1),
+            _shape("AI_ITMES", idx=2),
+        )
+    )
+    manifest = _manifest(
+        inspection,
+        {
+            "agenda": {
+                "ppt_layout_name": "agenda",
+                "match_confidence": 1.0,
+                "layout_match": {"strategy": "semantic_name"},
+                "slots": {
+                    "title": _binding("AI_TITLE", 0, placeholder_type="TITLE"),
+                    "items": _binding("AI_ITEMS", 1, kind="list"),
+                },
+            }
+        },
+    )
+
+    report = validate_manifest_against_inspection(inspection, manifest)
+
+    assert not report["valid"]
+    assert "AI_PLACEHOLDER_UNKNOWN" in _issue_codes(report["issues"])
+    assert any(issue["details"].get("shape_name") == "AI_ITMES" for issue in report["issues"])
+
+
+def test_finalize_manifest_fails_when_proposal_is_missing_semantic_layout() -> None:
+    inspection = _inspection_with_layouts(
+        _layout(
+            "agenda",
+            _shape("AI_TITLE", idx=0, placeholder_type="TITLE"),
+            _shape("AI_ITEMS", idx=1),
+        )
+    )
+    proposal = propose_mapping(inspection)
+    partial_proposal = {
+        "version": proposal["version"],
+        "template_fingerprint": proposal["template_fingerprint"],
+        "layouts": {"agenda": proposal["layouts"]["agenda"]},
+    }
+
+    with pytest.raises(DomainError) as exc_info:
+        finalize_manifest(inspection, partial_proposal)
+
+    assert exc_info.value.code == "TEMPLATE_LAYOUT_CONTRACT_MISMATCH"
+    assert "cover_title" in exc_info.value.details["missing"]

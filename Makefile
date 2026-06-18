@@ -1,10 +1,15 @@
-.PHONY: help init-env up up-quicktunnel up-tunnel down logs-app quicktunnel-url
+.PHONY: help init-env sanitize-template up up-quicktunnel up-tunnel down logs-app quicktunnel-url
 
 COMPOSE := docker compose
+PPTX ?= templates/default.pptx
+SANITIZE_ARGS ?=
 
 help:
 	@echo "Available targets:"
 	@echo "  make init-env        Create .env from .env.example if missing"
+	@echo "  make sanitize-template PPTX=path/to/template.pptx"
+	@echo "  make sanitize-template PPTX=path/to/template.pptx SANITIZE_ARGS='--password ...'"
+	@echo "                       Remove template metadata and validate the AI_* contract"
 	@echo "  make up              Start the local app stack on 127.0.0.1:13001"
 	@echo "  make up-quicktunnel  Start the app plus an ephemeral Cloudflare Quick Tunnel"
 	@echo "  make up-tunnel       Start the app plus a named Cloudflare Tunnel"
@@ -14,6 +19,9 @@ help:
 
 init-env:
 	@if [ ! -f .env ]; then cp .env.example .env; echo "Created .env from .env.example"; else echo ".env already exists"; fi
+
+sanitize-template:
+	uv run python scripts/sanitize_pptx_template.py "$(PPTX)" $(SANITIZE_ARGS)
 
 up:
 	$(COMPOSE) up -d --build

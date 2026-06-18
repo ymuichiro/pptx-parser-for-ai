@@ -3,7 +3,7 @@ from __future__ import annotations
 import pytest
 
 from pptx_yaml_engine.errors import DomainError
-from pptx_yaml_engine.icons.registry import list_icons, resolve_icon
+from pptx_yaml_engine.icons.registry import _fallback_png, list_icons, resolve_icon
 
 
 def test_lists_builtin_icons() -> None:
@@ -20,3 +20,27 @@ def test_invalid_icon_name_errors() -> None:
     with pytest.raises(DomainError) as exc:
         resolve_icon({"pack": "heroicons", "name": "missing-icon"}, target_px=64)
     assert exc.value.code == "ICON_NAME_NOT_FOUND"
+
+
+def test_fallback_png_varies_by_icon_name() -> None:
+    cloud = _fallback_png("cloud-arrow-up", 96, "#111827", None, 0.12)
+    chart = _fallback_png("chart-bar", 96, "#111827", None, 0.12)
+
+    assert cloud.startswith(b"\x89PNG")
+    assert chart.startswith(b"\x89PNG")
+    assert cloud != chart
+
+
+def test_fallback_png_distinguishes_enterprise_heroicons() -> None:
+    names = [
+        "beaker",
+        "shield-check",
+        "clipboard-document-check",
+        "command-line",
+        "calendar-days",
+        "presentation-chart-line",
+    ]
+    images = [_fallback_png(name, 96, "#111827", None, 0.12) for name in names]
+
+    assert all(image.startswith(b"\x89PNG") for image in images)
+    assert len(set(images)) == len(names)

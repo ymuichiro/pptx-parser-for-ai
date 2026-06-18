@@ -1,15 +1,17 @@
 from __future__ import annotations
 
 import json
+from dataclasses import replace
 from pathlib import Path
 
 import pytest
 from starlette.testclient import TestClient
 
+import pptx_yaml_engine.server.template_registry as template_registry_module
+from pptx_yaml_engine.errors import DomainError
+from pptx_yaml_engine.layouts import LAYOUT_SPECS
 from pptx_yaml_engine.server.app import create_app
 from pptx_yaml_engine.server.config import ServerConfig
-from pptx_yaml_engine.errors import DomainError
-import pptx_yaml_engine.server.template_registry as template_registry_module
 
 _VALID_DECK = {
     "version": 1,
@@ -32,7 +34,8 @@ def _make_config(tmp_path: Path, template_dir: str | None = None) -> ServerConfi
     return ServerConfig(
         allowed_hosts=["testserver", "127.0.0.1", "localhost"],
         artifact_root_dir=str(tmp_path),
-        artifact_ttl_seconds=900,
+        artifact_ttl_seconds=1800,
+        enable_operator_tools=False,
         host="127.0.0.1",
         max_output_bytes=1_000_000,
         max_request_bytes=1_000_000,
@@ -128,6 +131,14 @@ def _render_call(arguments: dict) -> dict:
     }
 
 
+_MCP_TOOLS_LIST = {
+    "jsonrpc": "2.0",
+    "id": 11,
+    "method": "tools/list",
+    "params": {},
+}
+
+
 def test_list_templates_returns_empty_when_no_templates(tmp_path: Path) -> None:
     """list_templates returns an empty list when no templates are configured."""
     app = create_app(_make_config(tmp_path))
@@ -141,6 +152,40 @@ def test_list_templates_returns_empty_when_no_templates(tmp_path: Path) -> None:
     assert result["templates"] == []
 
 
+def test_public_server_hides_operator_tools_by_default(tmp_path: Path) -> None:
+    app = create_app(_make_config(tmp_path))
+    with TestClient(app) as client:
+        client.post("/mcp/", json=_MCP_INIT, headers={"Accept": "application/json", "Content-Type": "application/json"})
+        body = _mcp_post(client, _MCP_TOOLS_LIST)
+
+    tools = body["result"]["tools"]
+    names = {tool["name"] for tool in tools}
+    assert names == {"list_supported_layouts", "list_icons", "list_templates", "render_presentation"}
+
+
+def test_operator_server_exposes_manifest_authoring_tools(tmp_path: Path) -> None:
+    config = _make_config(tmp_path)
+    config = replace(config, enable_operator_tools=True)
+    app = create_app(config)
+    with TestClient(app) as client:
+        client.post("/mcp/", json=_MCP_INIT, headers={"Accept": "application/json", "Content-Type": "application/json"})
+        body = _mcp_post(client, _MCP_TOOLS_LIST)
+
+    tools = {tool["name"]: tool for tool in body["result"]["tools"]}
+    names = set(tools)
+    assert "inspect_template" in names
+    assert "propose_mapping" in names
+    assert "finalize_manifest" in names
+    assert "validate_manifest" in names
+    assert "validate_deck" in names
+    assert "render_presentation_custom" in names
+    assert "AI_*" in tools["inspect_template"]["description"]
+    assert "AI_*" in tools["propose_mapping"]["description"]
+    assert "heuristic" not in tools["propose_mapping"]["description"].lower()
+    assert "AI_*" in tools["finalize_manifest"]["description"]
+    assert "AI_*" in tools["validate_manifest"]["description"]
+
+
 def test_render_presentation_no_templates_configured(tmp_path: Path) -> None:
     """render_presentation raises NO_TEMPLATES_CONFIGURED when registry is empty."""
     app = create_app(_make_config(tmp_path))
@@ -152,7 +197,7 @@ def test_render_presentation_no_templates_configured(tmp_path: Path) -> None:
     assert "NO_TEMPLATES_CONFIGURED" in error_text or "TEMPLATE_NOT_FOUND" in error_text
 
 
-def test_list_templates_returns_registered_template(tmp_path: Path, template_bytes: bytes, template_manifest: dict) -> None:
+def test_list_templates_returns_registered_template(tmp_path: Path, template_bytes: bytes) -> None:
     """list_templates returns templates that were loaded from TEMPLATE_DIR."""
     tpl_dir = tmp_path / "templates"
     tpl_dir.mkdir()
@@ -166,10 +211,11 @@ def test_list_templates_returns_registered_template(tmp_path: Path, template_byt
     result = _tool_json(body)
     assert result["count"] == 1
     assert result["templates"][0]["name"] == "mytemplate"
+    assert sorted(result["templates"][0]["supported_layouts"]) == sorted(LAYOUT_SPECS.keys())
 
 
 def test_render_presentation_uses_default_template_when_name_omitted(
-    tmp_path: Path, template_bytes: bytes, template_manifest: dict
+    tmp_path: Path, template_bytes: bytes
 ) -> None:
     tpl_dir = tmp_path / "templates"
     tpl_dir.mkdir()
@@ -183,11 +229,12 @@ def test_render_presentation_uses_default_template_when_name_omitted(
     result = _tool_json(body)
     assert result["success"] is True
     assert result["slideCount"] == 1
+    assert result["downloadUrl"].startswith("http://testserver/artifacts/")
 
 
 @pytest.mark.parametrize("template_name", [None, "", "   "])
 def test_render_presentation_blank_or_null_template_name_uses_default(
-    tmp_path: Path, template_bytes: bytes, template_manifest: dict, template_name: str | None
+    tmp_path: Path, template_bytes: bytes, template_name: str | None
 ) -> None:
     tpl_dir = tmp_path / "templates"
     tpl_dir.mkdir()
@@ -204,7 +251,7 @@ def test_render_presentation_blank_or_null_template_name_uses_default(
 
 
 def test_render_presentation_explicit_named_template_still_works(
-    tmp_path: Path, template_bytes: bytes, template_manifest: dict
+    tmp_path: Path, template_bytes: bytes
 ) -> None:
     tpl_dir = tmp_path / "templates"
     tpl_dir.mkdir()
@@ -222,7 +269,7 @@ def test_render_presentation_explicit_named_template_still_works(
 
 @pytest.mark.parametrize("arguments", [{"deck": _VALID_DECK}, {"deck": _VALID_DECK, "template_name": None}, {"deck": _VALID_DECK, "template_name": ""}])
 def test_render_presentation_missing_default_template_returns_clear_error(
-    tmp_path: Path, template_bytes: bytes, template_manifest: dict, arguments: dict
+    tmp_path: Path, template_bytes: bytes, arguments: dict
 ) -> None:
     tpl_dir = tmp_path / "templates"
     tpl_dir.mkdir()
@@ -238,7 +285,7 @@ def test_render_presentation_missing_default_template_returns_clear_error(
 
 
 def test_render_presentation_missing_named_template_still_returns_template_not_found(
-    tmp_path: Path, template_bytes: bytes, template_manifest: dict
+    tmp_path: Path, template_bytes: bytes
 ) -> None:
     tpl_dir = tmp_path / "templates"
     tpl_dir.mkdir()
@@ -260,9 +307,8 @@ def test_app_startup_fails_fast_for_invalid_template(tmp_path: Path) -> None:
 
     app = create_app(_make_config(tmp_path, template_dir=str(tpl_dir)))
 
-    with pytest.raises(Exception):
-        with TestClient(app):
-            pass
+    with pytest.raises(DomainError), TestClient(app):
+        pass
 
 
 def test_app_startup_fails_fast_for_template_contract_mismatch(
@@ -283,6 +329,5 @@ def test_app_startup_fails_fast_for_template_contract_mismatch(
 
     app = create_app(_make_config(tmp_path, template_dir=str(tpl_dir)))
 
-    with pytest.raises(Exception):
-        with TestClient(app):
-            pass
+    with pytest.raises(DomainError), TestClient(app):
+        pass

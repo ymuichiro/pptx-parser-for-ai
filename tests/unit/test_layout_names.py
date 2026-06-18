@@ -2,7 +2,11 @@ from __future__ import annotations
 
 from types import SimpleNamespace
 
-from pptx_yaml_engine.utils.layout_names import canonical_builtin_layout_name, layout_names_match, normalize_layout_lookup_name
+from pptx_yaml_engine.utils.layout_names import (
+    canonical_builtin_layout_name,
+    layout_names_match,
+    normalize_layout_lookup_name,
+)
 from pptx_yaml_engine.utils.pptx import find_layout_by_name
 
 

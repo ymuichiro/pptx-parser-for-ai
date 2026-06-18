@@ -20,6 +20,13 @@ def _hosts() -> list[str]:
     return [item.strip() for item in raw.split(",") if item.strip()]
 
 
+def _flag(name: str, default: bool) -> bool:
+    value = os.getenv(name)
+    if value is None or value == "":
+        return default
+    return value.strip().lower() in {"1", "true", "yes", "on"}
+
+
 @dataclass(frozen=True, slots=True)
 class ServerConfig:
     allowed_hosts: list[str]
@@ -31,13 +38,15 @@ class ServerConfig:
     port: int
     public_base_url: str
     template_dir: str
+    enable_operator_tools: bool = False
 
 
 def load_config() -> ServerConfig:
     return ServerConfig(
         allowed_hosts=_hosts(),
         artifact_root_dir=os.getenv("ARTIFACT_ROOT_DIR", "/tmp/pptx-mcp-artifacts"),
-        artifact_ttl_seconds=_positive_int("ARTIFACT_TTL_SECONDS", 900),
+        artifact_ttl_seconds=_positive_int("ARTIFACT_TTL_SECONDS", 1800),
+        enable_operator_tools=_flag("ENABLE_OPERATOR_TOOLS", False),
         host=os.getenv("LISTEN", "0.0.0.0"),
         max_output_bytes=_positive_int("MAX_OUTPUT_BYTES", 26_214_400),
         max_request_bytes=_positive_int("MAX_REQUEST_BYTES", 2_097_152),

@@ -1,0 +1,91 @@
+version: 1
+meta:
+  title: Fixture Deck
+  language: en
+slides:
+  - layout: cover_title
+    title: Cover
+    subtitle: Subtitle
+  - layout: section_divider
+    title: Section
+  - layout: agenda
+    title: Agenda
+    items:
+      - One
+      - Two
+  - layout: list_basic
+    title: List
+    items:
+      - text: A
+        level: 0
+      - text: B
+        level: 1
+  - layout: table_basic
+    title: Table
+    table:
+      headers: [A, B]
+      rows:
+        - [1, 2]
+  - layout: comparison_2col
+    title: Compare
+    left:
+      title: Old
+      description: Before
+      icon:
+        pack: heroicons
+        name: cloud-arrow-up
+        variant: outline
+    right:
+      title: New
+      description: After
+      icon:
+        pack: heroicons
+        name: cloud-arrow-up
+        variant: outline
+  - layout: three_cards_vertical
+    title: Cards V
+    cards:
+      - title: A
+        description: AA
+        icon:
+          pack: heroicons
+          name: cloud-arrow-up
+          variant: outline
+      - title: B
+        description: BB
+        icon:
+          pack: heroicons
+          name: cloud-arrow-up
+          variant: outline
+      - title: C
+        description: CC
+        icon:
+          pack: heroicons
+          name: cloud-arrow-up
+          variant: outline
+  - layout: closing_end
+    title: Thanks
+  - layout: chart_basic
+    title: Chart
+    chart:
+      kind: column
+      categories: [Q1, Q2]
+      series:
+        - name: Sales
+          values: [10, 12]
+  - layout: image_caption
+    title: Icon
+    icon:
+      pack: heroicons
+      name: cloud-arrow-up
+      variant: outline
+    caption: Built-in picture placeholder rendering sample
+  - layout: appendix_backup
+    title: Appendix
+    body: Supporting notes
+    items:
+      - Ref
+      - Checklist
+    references:
+      - Source A
+      - Source B

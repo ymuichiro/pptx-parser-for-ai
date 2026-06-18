@@ -1,0 +1,140 @@
+version: 1
+meta:
+  title: AI Governance Readiness Review
+  language: en
+slides:
+  - layout: cover_title
+    title: AI Governance Readiness Review
+    subtitle: Executive operating model for enterprise adoption
+    date: May 2026
+    organization: Enterprise AI Office
+    author: Strategy and Risk Enablement
+  - layout: section_divider
+    title: Current State
+    subtitle: Where the operating model needs executive attention
+    section_no: "01"
+  - layout: agenda
+    title: Discussion Flow
+    subtitle: From current-state risk to the next operating cadence
+    items:
+      - Adoption signals and risk exposure
+      - Governance model and decision rights
+      - Control maturity and implementation roadmap
+      - Executive decisions requested
+  - layout: comparison_2col
+    title: Governance Model Shift
+    subtitle: Moving from local experimentation to enterprise-grade control
+    left:
+      title: Current pattern
+      description: Teams run isolated pilots with uneven review depth and limited reuse of controls.
+      bullets:
+        - text: Policy interpretation varies by business unit
+          level: 0
+        - text: Model and data reviews are often manual
+          level: 0
+        - text: Evidence collection happens late in the delivery cycle
+          level: 0
+      icon:
+        pack: heroicons
+        name: beaker
+        variant: outline
+    right:
+      title: Target pattern
+      description: A repeatable intake, review, and evidence model supports faster scaled deployment.
+      bullets:
+        - text: One intake standard for risk classification
+          level: 0
+        - text: Control templates embedded in product delivery
+          level: 0
+        - text: Continuous evidence capture for audit readiness
+          level: 0
+      icon:
+        pack: heroicons
+        name: shield-check
+        variant: outline
+  - layout: three_cards_vertical
+    title: Priority Workstreams
+    subtitle: Three workstreams should be managed as one program
+    cards:
+      - title: Policy to workflow
+        description: Translate AI policy into intake questions, review checkpoints, and evidence artifacts.
+        icon:
+          pack: heroicons
+          name: clipboard-document-check
+          variant: outline
+      - title: Platform controls
+        description: Standardize logging, prompt review, data boundary controls, and model access approvals.
+        icon:
+          pack: heroicons
+          name: command-line
+          variant: outline
+      - title: Operating cadence
+        description: Establish weekly triage, monthly risk review, and quarterly executive steering.
+        icon:
+          pack: heroicons
+          name: calendar-days
+          variant: outline
+  - layout: chart_basic
+    title: Control Maturity by Quarter
+    subtitle: Target state assumes controls become reusable assets by Q4
+    chart:
+      kind: column
+      categories: [Q1, Q2, Q3, Q4]
+      series:
+        - name: Intake coverage
+          values: [35, 58, 76, 90]
+        - name: Evidence automation
+          values: [18, 36, 61, 82]
+    caption: Scores represent estimated percentage coverage across prioritized AI use cases.
+  - layout: table_basic
+    title: Decision Register
+    subtitle: Decisions required to move from pilots to repeatable production governance
+    table:
+      headers: [Decision, Owner, Timing, Impact]
+      rows:
+        - [Approve common intake taxonomy, AI Steering Committee, May, Enables portfolio reporting]
+        - [Mandate evidence template, Risk and Compliance, June, Reduces audit preparation time]
+        - [Fund control automation, Technology, July, Improves release throughput]
+        - [Launch monthly control review, Business Operations, July, Creates sustained accountability]
+    caption: Each decision is scoped to reduce delivery friction while increasing control consistency.
+  - layout: list_basic
+    title: Implementation Roadmap
+    subtitle: Build the governance muscle without slowing approved delivery
+    items:
+      - text: "Weeks 1-2: confirm policy taxonomy and business-unit intake owners"
+        level: 0
+      - text: "Weeks 3-6: publish control templates and evidence examples"
+        level: 0
+      - text: "Weeks 7-10: automate logging and approval-state capture in delivery tooling"
+        level: 0
+      - text: "Weeks 11-12: run first executive readiness review with exception tracking"
+        level: 0
+  - layout: image_caption
+    title: Operating Model Signal
+    subtitle: One visible system of accountability should replace fragmented local trackers
+    icon:
+      pack: heroicons
+      name: presentation-chart-line
+      variant: outline
+    caption: A single operating dashboard should show use-case stage, risk class, control evidence, and release decision.
+    attribution: Internal operating model concept for executive review.
+  - layout: appendix_backup
+    title: "Appendix: Readiness Criteria"
+    subtitle: Minimum conditions for production approval
+    body: These criteria define whether an AI use case can move from pilot to controlled production use.
+    items:
+      - Intake classification completed
+      - Data boundary reviewed
+      - Human oversight documented
+      - Prompt and model evaluation evidence attached
+      - Incident owner and rollback path assigned
+    references:
+      - Enterprise AI Policy v2.1
+      - Model Risk Review Checklist
+      - Security Logging Standard
+  - layout: closing_end
+    title: Executive Decisions Requested
+    subtitle: Approve the next operating-model phase
+    message: Confirm governance scope, control automation funding, and review cadence.
+    contact: Enterprise AI Office
+    cta: Approve phase 2 mobilization by June 7

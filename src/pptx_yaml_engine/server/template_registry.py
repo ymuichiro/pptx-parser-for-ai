@@ -1,9 +1,10 @@
 """Server-managed template registry.
 
-Templates are ``.pptx`` or ``.potx`` files placed in the configured ``TEMPLATE_DIR``
-directory by the operator. At startup, the server inspects each template,
-generates a manifest in memory, validates it, and reuses that generated mapping
-for all later render requests.
+Templates are ``.pptx`` or ``.potx`` files placed in the configured
+``TEMPLATE_DIR`` directory by the operator. At startup, the server inspects
+each template, generates a strict manifest in memory from PowerPoint layout
+names plus authoritative ``AI_*`` placeholder names, validates it, and reuses
+that generated mapping for all later render requests.
 """
 
 from __future__ import annotations

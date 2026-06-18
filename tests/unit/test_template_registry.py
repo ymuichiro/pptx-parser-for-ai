@@ -6,15 +6,20 @@ from pathlib import Path
 
 import pytest
 
+import pptx_yaml_engine.server.template_registry as template_registry_module
 from pptx_yaml_engine.errors import DomainError
 from pptx_yaml_engine.layouts import LAYOUT_SPECS
 from pptx_yaml_engine.server.template_registry import DEFAULT_TEMPLATE_NAME, TemplateRegistry
 from pptx_yaml_engine.utils.fingerprint import template_fingerprint
-import pptx_yaml_engine.server.template_registry as template_registry_module
 
 
 def _write_template(directory: Path, stem: str, template_bytes: bytes, suffix: str = ".pptx") -> None:
     (directory / f"{stem}{suffix}").write_bytes(template_bytes)
+
+
+def _assert_wrapped_cause(exc_info: pytest.ExceptionInfo[DomainError], expected_code: str) -> None:
+    assert exc_info.value.code == "TEMPLATE_REGISTRY_LOAD_FAILED"
+    assert exc_info.value.details["cause"]["code"] == expected_code
 
 
 def test_load_missing_directory(tmp_path: Path) -> None:
@@ -183,8 +188,8 @@ def test_load_raises_when_mapping_generation_fails(
 
     def fake_generate_manifest(_template_bytes: bytes) -> dict[str, object]:
         raise DomainError(
-            "REQUIRED_SLOT_MISSING",
-            "Required slots are unresolved for layout 'agenda'",
+            "AI_PLACEHOLDER_MISSING",
+            "Required AI placeholders are unresolved for layout 'agenda'",
             {"layout": "agenda", "missing": ["items"]},
         )
 
@@ -194,8 +199,32 @@ def test_load_raises_when_mapping_generation_fails(
     with pytest.raises(DomainError) as exc:
         registry.load()
 
-    assert exc.value.code == "TEMPLATE_REGISTRY_LOAD_FAILED"
-    assert exc.value.details["cause"]["code"] == "REQUIRED_SLOT_MISSING"
+    _assert_wrapped_cause(exc, "AI_PLACEHOLDER_MISSING")
+
+
+def test_load_raises_when_unknown_ai_placeholder_detected(
+    tmp_path: Path, template_bytes: bytes, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _write_template(tmp_path, "unknown_ai_name", template_bytes)
+
+    def fake_generate_manifest(_template_bytes: bytes) -> dict[str, object]:
+        raise DomainError(
+            "AI_PLACEHOLDER_UNKNOWN",
+            "AI placeholder name is not allowed for the semantic layout",
+            {
+                "layout": "agenda",
+                "ppt_layout_name": "agenda",
+                "shape_name": "AI_SURPRISE_SLOT",
+            },
+        )
+
+    monkeypatch.setattr(template_registry_module, "generate_manifest", fake_generate_manifest)
+
+    registry = TemplateRegistry(str(tmp_path))
+    with pytest.raises(DomainError) as exc:
+        registry.load()
+
+    _assert_wrapped_cause(exc, "AI_PLACEHOLDER_UNKNOWN")
 
 
 def test_reload_clears_previous_entries(tmp_path: Path, template_bytes: bytes) -> None:
